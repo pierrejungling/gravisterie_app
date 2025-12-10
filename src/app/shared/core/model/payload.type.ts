@@ -1,0 +1,2 @@
+export type Payload = Object;
+

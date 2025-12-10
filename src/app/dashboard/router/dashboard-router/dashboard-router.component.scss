@@ -1,0 +1,55 @@
+@use 'sass:color';
+
+.dashboard-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  background: #fff;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  gap: 1.25rem;
+
+  &__header {
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 0.75rem;
+  }
+
+  &__nav {
+    display: flex;
+    gap: 1.5rem;
+    font-weight: 600;
+
+    a {
+      color: #475569;
+      text-decoration: none;
+      position: relative;
+      padding-bottom: 0.25rem;
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: #0ea5e9;
+      }
+
+      &.is-active {
+        color: #0ea5e9;
+
+        &::after {
+          content: '';
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: -0.2rem;
+          height: 2px;
+          background: #0ea5e9;
+        }
+      }
+    }
+  }
+
+  &__content {
+    flex: 1;
+  }
+}
+

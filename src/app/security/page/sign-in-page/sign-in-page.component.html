@@ -1,0 +1,31 @@
+<div id="sign-in-wrapper">
+  <span class="title">{{title}}</span>
+  <span class="sub-title">{{subTitle}}</span>
+  
+  <div class="error-area" *ngIf="errors().length > 0">
+    <p>{{'security-feature.sign-in-page.error.description' | translate: {count: errors().length} }}</p>
+    <p *ngFor="let error of errors()">{{error.control}} {{error.error}}</p>
+  </div>
+
+  <form [formGroup]="formGroup">
+
+    <section id="content">
+      <app-floating-label-input
+        [label]="'security-feature.sign-in-page.label.username' | translate"
+        [control]="get('username')"
+        [formGroup]="formGroup">
+      </app-floating-label-input>
+      
+      <app-floating-label-input
+        [label]="'security-feature.sign-in-page.label.password' | translate"
+        [control]="get('password')"
+        [formGroup]="formGroup"
+        type="password">
+      </app-floating-label-input>
+    </section>
+
+    <div class="button-area">
+      <button (click)="signIn()">se connecter</button>
+    </div>
+  </form>
+</div>

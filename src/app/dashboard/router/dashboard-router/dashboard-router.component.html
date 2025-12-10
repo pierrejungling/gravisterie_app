@@ -1,0 +1,23 @@
+<section class="dashboard-shell">
+  <header class="dashboard-shell__header">
+    <nav class="dashboard-shell__nav">
+      <a
+        [routerLink]="routes.AUTHENTICATED"
+        routerLinkActive="is-active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Home
+      </a>
+      <a
+        [routerLink]="detailLink(detailExampleId)"
+        routerLinkActive="is-active"
+      >
+        ID {{ detailExampleId }}
+      </a>
+    </nav>
+  </header>
+
+  <main class="dashboard-shell__content">
+    <router-outlet></router-outlet>
+  </main>
+</section>

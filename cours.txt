@@ -1,0 +1,2352 @@
+TYPESCRIPT
+ANGULAR NESTJS
+Introduction au développement d’une application avec Typescript
+Nicolas Ledent 2024
+TABLE DES MATIÈRES
+1. ANGULAR 3
+2. ARCHITECTURE ET CONCEPT 4
+2.1. LES MODULES 4
+2.2. LES COMPOSANTS 4
+2.3. LES TEMPLATES 4
+2.3. LES MÉTADONNÉES 4
+2.5. LE BINDING 5
+2.6. LES DIRECTIVES 5
+2.7. LES SERVICES 6
+2.8. L’INJECTION DE DÉPENDANCE 7
+2.09. STANDALONE 8
+2.10. LES OBSERVABLES (RXJS) 8
+3. LES SIGNAUX, LA PROBLÉMATIQUE ET LE DÉBUT DE SOLUTION 9
+3.1. ZONEJS 9
+3.2. LES SIGNAUX 10
+3.3. EN PRODUCTION ? 10
+4. INITIATION D’UN PROJET 11
+4.1. LA COMMANDE, STRUCTURE DU PROJET GÉNÉRÉ 11
+4.2. EXÉCUTION DU PROJET 11
+4.3. STRUCTURE CLAIRE ET PROPRE – MON OPINION 12
+4.4. NOTRE PREMIER COMPOSANT 15
+4.5. NOTRE SECOND COMPOSANT 16
+5. LE DATA BINDING PAR L’EXEMPLE 17
+5.1. INTERPOLATION 17
+5.2. EVENT BINDING 17
+5.3. PROPERTY BINDING 19
+5.4. TWO-WAY BINDING 20
+5.5. COMMENT TESTER ? 21
+6. LES BONNES PRATIQUES PARTIE 1 23
+6.1. LES IMPORTS 23
+6.2. DÉPLACEMENT DU APP DANS UN DOSSIER ROOT 24
+6.3. ANGULAR.JSON 25
+7. LE ROUTING 28
+7.1. LA BASE DU ROUTING 28
+7.2. LE LAZY LOADING 29
+7.3. PROTECTION DES ROUTES, LES GUARDS 31
+7.4. LA ROUTE PAR DÉFAUT 33
+7.5. REDIRECTION 34
+7.6. MATCHING STRATEGY 35
+7.7. LES PARAMÈTRES 35
+7.8. LES ROUTES DANS LES ROUTES : LES POUPÉES RUSSES 38
+8. LES BONNES PRATIQUES PARTIE 2 41
+8.1.UN FICHIER ROUTES PAR FEATURES 41
+8.2. ENUM 41
+8.3. CONCLUSION 44
+9. LES SIGNAUX VS RXJS 45
+9.1. RXJS 45
+9.2. LES SUJETS 45
+PARTIE 4 ANGULAR 1
+9.3. TRANSFORMATION DES DONNÉES 46
+9.4. SIGNAL 46
+9.5. COMPUTED 47
+9.6. EFFECT 48
+9.7. CONCLUSION 48
+10. LES SERVICES 49
+10.1. LE RÔLE 49
+10.2. EXEMPLE DE SERVICE 50
+11. CALL API 52
+11.1. LES VARIABLES D’ENVIRONNEMENT 52
+11.2. LE SERVICE API 54
+11.3. GÉNÉRIQUES 55
+11.4. LE SERVICE TOKEN 59
+11.5. LE LOCALSTORAGE 60
+11.6. L’INTERCEPTEUR 60
+12. LES FORMULAIRES 68
+5.1. FORMGROUP 69
+5.2. FORMCONTROL 69
+5.3. LA VALIDATION 70
+5.4. UTILISATION DANS LE TEMPLATE 70
+5.5. VALUESCHANGES 72
+5.6. GESTION DES ERREURS 73
+13. LA TRADUCTION 75
+13.1. LA LIBRAIRIE 75
+13.2. IMPORT DE LA TRADUCTION 75
+13.3. LES FICHIER DE TRADUCTION 75
+13.4. INITIALISATION DE LA TRADUCTION 76
+13.5. UTILISATION BASIQUE 76
+13.6. LES PARAMÈTRES 77
+13.8. PLURIEL / SINGULIER 77
+13.7. LABELWITHPARAM 79
+14. LES DIRECTIVES 80
+13.1. NOTRE DIRECTIVE CUSTOM 80
+13.2. UN PIPE 81
+PARTIE 4 ANGULAR 2
+1. ANGULAR
+Angular est un Framework développé principalement par l’équipe google.
+Il y a à minima une version majeure par an (souvent deux).
+Le Framework est basé sur Type Script. A l’inverse de React ou de VueJs, Angular « impose
+» une
+certaine structure dû à ses concepts fondamentaux.
+Pour rappel, ce document sert d’introduction au Framework Angular , pour aller plus loin il
+vous faudra explorer le site officiel, forum, tuto et autres ressources disponibles sur la toile.
+https://angular.io/
+PARTIE 4 ANGULAR 3
+2. ARCHITECTURE ET CONCEPT
+Certains concepts présents ici vous seront assez familier , cela est logique car NestJS est
+fortement inspirés d’Angular
+2.1. LES MODULES
+Un module Angular est un mécanisme permettant de :
+o Regrouper des composants (mais aussi des services, directives, pipes etc....)
+o Définir leurs dépendances
+o Définir leur visibilité
+Elle est définie simplement avec une classe (généralement vide) et le décorateur NgModule.
+2.2. LES COMPOSANTS
+L'un des principaux concepts d'Angular est de voir une application comme une arborescence
+de
+composants.
+Un composant est un élément graphique, par exemple un composant liste todo. Ce
+composant va
+certainement posséder une liste d’un autre composant (todo détail) et ainsi de suite.
+2.3. LES TEMPLATES
+Un template rassemble du HTML mais il contient également la syntaxe du modèle Angular,
+qui modifie le HTML en fonction de la logique de votre application et de l'état de l'application
+et des données DOM. Votre modèle peut utiliser la liaison de données pour coordonner
+l'application et les données DOM, des tuyaux pour transformer les données avant qu'elles ne
+soient affichées et des
+directives pour appliquer la logique de l'application à ce qui est affiché.
+2.3. LES MÉTADONNÉES
+Ceci est exactement la même mécanique que l’on retrouve dans NestJS
+PARTIE 4 ANGULAR 4
+2.5. LE BINDING
+Le binding est le concept développé dans quasi tous les frameworks. Angular propose quatre
+types :
+Interpolation
+Le composant possède une variable (propriété de la classe) qui sera affiché dans le template
+Property Binding
+Concept utilisé quand vous voulez passer une variable (propriété de classe) d’un composant
+parent à un composant enfant
+Event Binding
+Comme son nom l’indique cela nous permet d’écouter les évènements , par exemple le clic
+d’une souris, une touche enfoncée , etc ..
+Two Way Binding
+C’est un mix de event et property. Cela permet la communication entre le composant enfant
+et parent
+2.6. LES DIRECTIVES
+PARTIE 4 ANGULAR 5
+Un composant est techniquement une directive. Cependant, les composants sont si distinctifs
+et essentiels dans les applications Angular qu'il définit le décorateur @Component (), qui étend
+le décorateur @Directive () avec des fonctionnalités orientées modèles.
+Outre les composants, il existe deux autres types de directives : structurelles et d'attribut.
+Angular
+définit un certain nombre de directives des deux types, et vous pouvez définir les vôtres à
+l'aide du décorateur @Directive ().
+Tout comme pour les composants, les métadonnées d'une directive associent la classe
+décorée à un élément sélecteur que vous utilisez pour l'insérer en HTML. Dans les modèles,
+les directives apparaissent généralement dans une balise d'élément sous forme d'attributs,
+soit par nom, soit comme cible d'une affectation ou d'une liaison.
+Directive structurelle
+Les directives structurelles modifient la disposition en ajoutant, en supprimant et en remplaçant
+des éléments dans le DOM. L'exemple de modèle utilise deux directives structurelles intégrées
+pour ajouter une logique d'application au rendu de la vue.
+o *ngFor est itérative
+o *ngIf est conditionnel
+Attribut de directive
+Les directives d'attribut modifient l'apparence ou le comportement d'un élément existant. Dans
+les
+modèles, ils ressemblent à des attributs HTML normaux, d'où leur nom.
+La directive ngModel, qui implémente la liaison de données bidirectionnelle (wo-way data
+binding),
+est un exemple de directive d'attribut. ngModel modifie le comportement d'un élément existant
+(généralement ‹input›) en définissant sa propriété de valeur d'affichage et en répondant aux
+événements de modification.
+2.7. LES SERVICES
+Avec Angular, une dépendance est généralement l'instance d'une classe permettant de
+factoriser certaines fonctionnalités ou d'accéder à un état permettant ainsi aux composants
+de communiquer entre eux.
+Dans le vocabulaire Angular, ces classes sont appelées "services".
+Les services sont le plus souvent des singletons, c’est-à-dire des instances uniques.
+PARTIE 4 ANGULAR 6
+2.8. L’INJECTION DE DÉPENDANCE
+La "Dependency Injection" est un "design pattern" qui consiste à séparer l'instanciation (et
+donc
+l'implémentation) d'une dépendance et son utilisation.
+Ce "design pattern" permet :
+o D’inverser les dépendances,
+o D’éviter le couplage fort avec les dépendances,
+o De factoriser l'instanciation d'une dépendance,
+o De faciliter le remplacement d'une dépendance par une autre implémentation à des
+fins fonctionnelles ou de "testing“.
+Voici un schéma sans injection de dépendance
+Voici le schéma avec injection de dépendance
+Sans Di
+A chaque instance du composant, nous allons devoir créer manuellement une instance de
+chaque dépendance dans le constructeur.
+Avec DI
+La dépendance est gérée en amont et est injecter lorsque l’on en a besoin !
+PARTIE 4 ANGULAR 7
+2.09. STANDALONE
+Standalone est stable depuis la version 15 d’Angular.
+L’avantage principal c’est qu’un composant peut ne pas être lié à un module.
+Jusque-là cela ne vous dit pas grand-chose, mais ! Le gros avantages c’est que l’on pourrait
+importer des composants sans devoir importer le module et donc éviter de charger
+l’ensemble des autres composants du module dans la foulée.
+Nous allons principalement utiliser cette aspect dans les composants qui seront partagés au
+travers de l’application !
+2.10. LES OBSERVABLES (RXJS)
+Un observable est un objet qui émet des données sur lesquelles nous pouvons vouloir réagir.
+Ces informations peuvent prévenir d’un peu près tout que ce soit d’un champ texte, d’un call
+http,d’une méthode qui prend du temps et que nous voulons l’exécuter de manière
+asynchrone. Cet objet provient de la célèbre librairie RxJs. Ce n’est donc pas une
+mécanique développée par Angular mais fortement utilisé par celui-ci !
+Ce chapitre n’a pas pour but de faire de vous des experts en rxJS. Cela mériterait un cours
+complet ! Nous allons cependant essayer de comprendre les points fondamentaux !
+C’est parti !
+Il est bon de savoir que ce pattern (patron de conception cf : cours de POO) existe depuis
+longtemps et est déjà utilisé dans le monde du développement backend.
+Il s’agit du pattern Observer
+Qu’est-ce qui se passe ?
+Donc nous avons un sujet (subject) qui est défini par un observable (il étend de la super
+classe
+Observable).
+Nous avons également des observer.
+L’observer va écouter les changements du sujet via la méthode subscribe()
+Le sujet va émettre des informations via la méthode next()
+PARTIE 4 ANGULAR 8
+3. LES SIGNAUX, LA PROBLÉMATIQUE ET LE DÉBUT DE SOLUTION
+3.1. ZONEJS
+ZoneJS est une bibliothèque utiliser par Angular. Cette bibliothèque a pour but de créer une
+zone . Une zone, en théorie, permet d’écouter les changements d’état et donc d’exécuter du
+code à des moments « précis » en cours de vie de l’application.
+En pratique, ZoneJS réécrit l’api de votre navigateur (api ➔ interface et non webservice) et
+« détourne » tous les évènements asynchrones.
+Elle stock l’état, les évènements dans la zoneJS .
+Dit ainsi cela n’a pas l’air compliqué ou anormal mais il faut savoir que cette bibliothèque a
+été créée en 2014 ( pas loin de 10 ans – ce qui est énorme surtout si l’on considère la
+courbe de croissance et d’évolution de javascript ces dernières années).
+Le problème de cette librairie est le suivant :
+zoneJS permet de dire à Angular : y a eu du changement mais sans préciser où
+Donc Angular va vérifier tout l’arbre des composants voir ce qui a changé et rafraîchir en
+conséquence.
+Encore une fois, pour une petite application cela ne sera pas impactant mais plus vous aurez
+de composant et plus cela risque de perdre en performance
+Même si cette librairie fonctionne toujours bien, il faut considéré que d’un point de vue
+performance (pour les toutes grosses applications) c’est très impactant.
+Angular va alors gentiment se baser sur une nouvelle libraire solid.js qui fait grosso modo la
+même chose mais avec une granularité plus fine. Et donc beaucoup plus performante.
+Il est clair que pour la taille de l’application que nous allons développer, nous n’allez pas
+ressentir une énorme différence. Mais comme c’est le nouveau gros buzz de la toute
+dernière version, nous allons l’implémenter pour le fun
+PARTIE 4 ANGULAR 9
+3.2. LES SIGNAUX
+Les signaux vont simplement permettre à Angular de savoir exactement quel composant a
+changé et donc de mettre à jours le bon composant sans devoir parcourir l’arbre des
+composants.
+Pour ce faire nous avons trois nouvelles primitives :
+Signal
+Valeur qui sera en lecture et écriture, on pourrait dire que cela remplacerait les subjects
+En pratique, ce sera une variable qui peut être lue et modifiée et qui préviendra Angular dès
+que la valeur aura changé.
+Computed
+Valeur uniquement en lecture seule, cela signifie que l’on ne peut pas modifier la valeur, ni
+même lui en assigné une car celle-ci est calculée sur base d’autres signaux.
+Donc cette valeur sera automatiquement mis à jours dès qu’une valeur d’un des signaux
+aura changé.
+Effet
+Fonction évaluée lors des changements des signaux utilisés.
+Cela correspond environ à un observer. La particularité est qu’il ne faudra pas manuellement
+de désinscrire
+Nous verrons tous ces éléments en pratique lorsque l’on parcourra les observables
+3.3. EN PRODUCTION ?
+Signal, à l’heure où j’écris ces lignes, l’ensemble des fonctionnalités est disponible sauf le
+routing.
+Le concept est toujours en développeur preview , cela signifie que potentiellement la version
+« stable » pourrait subir des changements.
+A savoir que Signal ne remplace pas RxJS, en tout cas pas pour l’instant.
+PARTIE 4 ANGULAR 10
+4. INITIATION D’UN PROJET
+4.1. LA COMMANDE, STRUCTURE DU PROJET GÉNÉRÉ
+Tout comme NestJS, Angular offre un CLI, celui commencera par la commande ng suivit d’un
+tas de commande.
+Pour créer une application nous devrez :
+ng new app --standalone --routing=true --style=scss
+Décortiquons un peu tout cela :
+ng
+on indique à notre terminal qu’on veut de le cli d’Angular
+New
+On demande au cli d’Angular de nous créer un nouveau projet
+App
+C’est le nom de l’application
+--standalone
+C’est nouveau (depuis la 14 visiblement) cela permet d’être plus performant, donc on va
+tester. En bref bye bye les modules. Ce qui veut dire optimisation des imports. Mais aussi
+code dans les component.ts un peu plus brouillon.
+--routing=yes
+On spécifie que l’on veut utiliser les routes
+--style=scss
+On indique notre préférence pour le style.
+Pour les deux derniers paramètres, si vous ne les indiquez pas alors le terminal vous
+demandera de répondre aux questions.
+4.2. EXÉCUTION DU PROJET
+Une fois votre IDE ouvert, ouvrez un terminal et exécutez
+ng serve --open
+PARTIE 4 ANGULAR 11
+Cela aura pour effet, après chargement, d’ouvrir votre navigateur.
+Vous devriez avoir ce type d’écran
+4.3. STRUCTURE CLAIRE ET PROPRE – MON OPINION
+Dans cette partie, nous allons voir la structure générée par le CLI, et une qui me semble
+« propre »
+J’expliquerais également comment je créé mon module et comment je le structure. Libre à
+vous de choisir cela ou de faire autrement. Cependant les bonnes pratiques Angular limite un
+peu (si on veut pas faire du react poubelle spaghetti )
+Le code généré
+Le CLI aura chargé une structure un peu similaire à celle de NestJS.
+o Deux dossiers de configuration d’environnement et de caching au root du folder
+projet (.angular, .vscode)
+o Un dossier node_module que l’on ne présente plus
+o Un dossier src , équivalent à NestJS
+o Une série de fichier de configuration que nous ne devrions pas trop modifier dans le
+cadre de ce projet (sauf tsconfig pour les paths)
+Dans le dossier source (src) :
+o Un dossier app contenant le point d’entrée de l’application et un ensemble de fichier
+minimum pour un module et un composant. Personnellement j’aurais rangé ce
+dossier, mais bon nous pourrions le faire plus tard.
+o Un dossier assets, c’est là que vous allez mettre le style , image, bref les fichiers
+statiques.
+o Un fichier index.html, le point d’entrée de votre application web
+o Main.ts le fichier d’entrée de l’application Angular
+o Style.scss qui est le design global de l’application
+Ma vision du code propre
+PARTIE 4 ANGULAR 12
+Je vais pour l’exemple créer le module Sécurity, qui sera le coté frontend de l’api gérant la
+sécurité de l’application :
+Connexion
+Token
+Il n’y aura pas d’inscription ici car je me servirais de l’application d’administration de la salle
+de CrossFit.
+Le compte admin sera créé au préalable.
+Voici comment je structurerais par exemple la page signin
+Donc pour un « module » (notez que nous n’allons plus créer de module mais la notion de
+module ici signifie un ensemble de composant sous un même domaine)
+PARTIE 4 ANGULAR 13
+J’aurais en général la structure suivante , en tout pour les module métier
+Mon dossier contiendra quatre sous-dossiers et deux fichiers.
+Component
+Ce dossier contiendra les composants, les pages sont aussi des composants mais la
+différence entre les deux c’est qu’une page sera appelable par une route (mais aussi par
+injection)
+Page
+Ce dossier contiendra l’ensemble des composants qui sont appelable « classiquement »
+mais aussi par route.
+Enum
+Ce dossier contient l’ensemble des enums, j’ai hésité à la mettre dans le dossier model.
+Potentiellement, pendant les démos je le déplacerais peux être dans le dossier model.
+Model
+Contient les différents modèles pour le domaine métier. Cette structure pourrait être
+développé par exemple si nous avons plusieurs dto , possiblement j’ajouterais des dossiers
+pour dto / payload / business, histoire que ce soit plus claire.
+Route
+Ce fichier contient les routes liées à notre domaine (métier)
+Service
+Ce fichier content le service , si nous devions avoir plusieurs service, alors j’ajouterais un
+dossier service.
+PARTIE 4 ANGULAR 14
+4.4. NOTRE PREMIER COMPOSANT
+Pour l’exemple je vais utiliser le composant signIn.
+ng g c security/page/SignInPage
+Cela aura pour effet de créer un dossier security (si il n’existe pas) puis un dossier page
+(idem si il n’existe pas) ensuite un dossier sign-in-page et finalement quatre fichiers :
+Tous les fichiers commencerons par sign-in-page.component puis auront une des quatre
+extension
+.html ➔ le fichier template
+.scss ➔ la feuille de style du composant, cela signifie que le code css n’impactera que ce
+composant (sauf si vous importez cette feuille de style dans un autre
+.spec.ts (fichier de test)
+.ts ➔ Notre composant
+Analysons le contenu du component.ts
+@Component({
+selector: 'app-sign-in-page',
+standalone: true,
+imports: [CommonModule],
+templateUrl: './sign-in-page.component.html',
+styleUrls: ['./sign-in-page.component.scss']
+})
+export class SignInPageComponent {
+}
+Vous remarquerez que nous avons un décorateur @Component.
+Celui permet de spécifier à Angular que la classe est un composant.
+Ce décorateur prend une configuration minimum :
+Selector
+Cette propriété permet de définir le tag de la balise html que nous allons devoir utiliser pour
+créer ce composant dans un autre composant. Nous le verrons en pratique dans le prochain
+chapitre.
+Standalone
+Cette propriété est assez nouvelle, elle permet de définir que le composant peut être
+importer sans importer tout un module.
+Imports
+Si vous utilisez le standalone, vous devez définir ici l’ensemble des imports pour votre
+composant, c’est un peu plus verbeux mais plus optimisé.
+templateUrl
+Permet de donner le lien du template. Vous pourriez faire du template en direct dans le
+composant (je n’aime pas ca du tout !)
+PARTIE 4 ANGULAR 15
+styleUrls
+Le tableau de feuille de style lié à votre composant. Vous ne devez pas lier le style.scss du
+root, il sera automatiquement ajouté !
+4.5. NOTRE SECOND COMPOSANT
+Pour le second je vais choisir de créer un input qui sera partagé au travers de toute
+l’application. Pour cela je vais créer un dossier shared.
+Ce dossier sera composé de sous dossier par domaine fonctionnel :
+UI ➔ pour la partie graphique
+model ➔ pour la partie modèle
+Possiblement d’autre plus tard en fonction du besoin.
+ng g c --standalone shared/ui/form/component/Input
+Voyons maintenant les différents bindings !
+PARTIE 4 ANGULAR 16
+5. LE DATA BINDING PAR L’EXEMPLE
+5.1. INTERPOLATION
+Ce type est le plus « simple » a utiliser. Nous allons le faire dans notre premier composant
+Créons une propriété dans la classe
+export class SignInPageComponent {
+title: string = 'Welcome back!';
+subTitle: string = 'Identifiez-vous pour accéder à l\'administration';
+}
+Dans le template
+<div id="sign-in-wrapper">
+<span class="title">{{title}}</span>
+<span class="sub-title">{{subTitle}}</span>
+</div>
+Donc pour faire de l’interpolation, vous devez simplement utiliser une paire d’accolade
+ouvrante et fermante. {{}}
+Si la valeur de la variable (propriété de la classe) change , le template sera alors rechargé.
+5.2. EVENT BINDING
+Modifions notre template comme ceci
+<div id="sign-in-wrapper">
+<span class="title">{{title}}</span>
+<span class="sub-title">{{subTitle}}</span>
+<section id="content">
+du contenu qu'on modifiera après
+</section>
+<div class="button-area">
+<button (click)="signIn()">se connecter</button>
+</div>
+</div>
+Dans le composant
+signIn(): void {
+alert('je clique');
+}
+Nous avons ici créé un event binding grâce au () dans le bouton. Ensuite nous devons définir
+quel évènement nous voulons binder , dans notre cas c’est le clique qui nous intéresse !
+Ensuite nous devons définir ce que va faire notre composant de ce clique. Pour ce faire, la
+version propre est de créer une méthode dans le composant
+PARTIE 4 ANGULAR 17
+PARTIE 4 ANGULAR 18
+5.3. PROPERTY BINDING
+Pour ce binding nous allons utiliser notre second composant dans le premier, comme ceci
+<div id="sign-in-wrapper">
+<span class="title">{{title}}</span>
+<span class="sub-title">{{subTitle}}</span>
+<section id="content">
+<app-input></app-input>
+</section>
+<div class="button-area">
+<button (click)="signIn()">se connecter</button>
+</div>
+</div>
+Remarquez que nous avons créé un tag custom , ce tag est en fait le selector de notre
+composant.
+Maintenant modifions notre input.component.ts
+export class InputComponent {
+@Input({required: true }) title!: string ;
+}
+@Input() permet de définir une propriété qui sera fournie par l’appellant, dans notre cas
+SignInPageComponent.
+Notre décorateur prendra (non obligatoire mais fortement conseillé pour la lisibilité) une
+propriété required : true ou false.
+Si true ➔ vous ajoutez (non obligatoire mais fortement conseillé) un ! à la fin du nom de la
+variable
+Si false ➔ vous ajoutez le ? ou fournissez une valeur par défaut.
+Le ! permet de préciser que le titre sera fourni et donc non null
+Le ? permet de dire que la valeur n’est pas encore définie mais le sera potentiellement plus
+tard. Vous allez alors devoir checker la variable lorsque vous utiliserez cette variable
+@Input({required: true}) title!: string;
+@Input({required:false}) icon?:string;
+@Input({required:false}) placeholder:string ='Placeholder par défaut'
+Voici les trois cas de figures possible
+Comme angular fonctionne en hot reload, vous devez avoir une erreur dans votre console
+Erreur logique, car vous avez dit que vous devez obligatoirement fournir un titre ! Cette
+mécanique est super pratique pour éviter des effets de bord. En effet mettre le ! ne sécurise
+absolument pas votre composant ! Vous pouvez simplement ne pas fournir de valeur et alors
+vous vous trouverez potentiellement dans un cas non traité !
+Maintenant donnons un titre à notre input , dans le fichier template du
+SignInPageComponent
+PARTIE 4 ANGULAR 19
+<section id="content">
+<app-input [title]="'mon title'"></app-input>
+</section>
+Vous pouvez donner directement une valeur ou alors une variable
+<section id="content">
+<app-input [title]="title"></app-input>
+</section>
+Vous constaterez alors que pour faire du property binding nous devons utiliser [] autour d’un
+input reconnu par le composant appelé.
+A noter que vous pouvez aussi le faire sur des balises html standard.
+5.4. TWO-WAY BINDING
+Pour rappel un two binding est la fusion entre un property binding et un event binding.
+Autrement dit, vous allez passer en paramètre de votre composant enfant une variable.
+Le composant enfant pourra également changer la valeur !
+Comment ?
+Vous devez ajouter cette ligne dans le composant Input
+@Input({required: true}) title!: string;
+@Output() titleChange = new EventEmitter<string>();
+De manière global, le @Output permet de créer des évènements custom. Pour faire du two-
+way vous devez impérativement nommé votre évènement avec le nom de l’input suffixé de
+Change
+Ensuite modifier votre SignInPage comme ceci
+<app-input [(title)]="title"></app-input>
+Remarquez alors que le two-way nous utilisons un (event binding) encapsulé dans un
+[property binding]
+Avant de passer au test de ceci, nous allons voir l’event custom
+Modifier votre Input comme ceci
+export class InputComponent {
+@Input({required: true}) title!: string;
+@Output() titleChange = new EventEmitter<string>();
+@Input({required:false}) icon?:string;
+@Input({required:false}) placeholder:string ='Placeholder par défaut'
+@Output() coucou= new EventEmitter<string>();
+onClick():void{
+this.coucou.emit('Coucou petite perruche');
+}
+}
+PARTIE 4 ANGULAR 20
+Afin d’émettre un évènement de type coucou, nous devons simplement utiliser la méthode
+emit() ; Modifions maintenant le template
+<button (click)="onClick()">Say Hello</button>
+Puis le template du SignInPage
+<app-input (coucou)="coucouHandler($event)" [(title)]="title"></app-input>
+Constatez ici la notion du $event, c’est important d’utiliser ce mot clé pour récupérer le
+contenu envoyé depuis le composant enfant. Finalement la méthode dans le composant
+coucouHandler(str: string): void {
+alert(str);
+}
+5.5. COMMENT TESTER ?
+Démarrez le serveur si ce n’est pas encore fait. Puis vous pouvez constater qu’il n’y a eu
+aucun changement ! C’est logique. Notre app.component.template.html contient toujours le
+contenu de base. Pour l’instant , nous n’avons pas encore vu les routes. De ce fait nous
+allons simplement utiliser notre composant en direct dans le template du app
+Votre app.component.template.html
+<app-sign-in-page></app-sign-in-page>
+Vous devriez alors avoir ceci
+Cliquez sur say hello (notre évenement custom)
+PARTIE 4 ANGULAR 21
+Vous pouvez faire les autres tests !
+Avant de passer au route, faisons un peu de bonne pratique et code clean.
+PARTIE 4 ANGULAR 22
+6. LES BONNES PRATIQUES PARTIE 1
+6.1. LES IMPORTS
+Regardez par exemple le app.component.ts
+import {Component} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {SignInPageComponent} from './security/page/sign-in-page/sign-in-page.component';
+@Component({
+selector: 'app-root',
+standalone: true,
+imports: [CommonModule, SignInPageComponent],
+templateUrl: './app.component.html',
+styleUrls: ['./app.component.scss']
+})
+export class AppComponent {
+title = 'app';
+}
+L’import du composant n’est pas au top. Modifions notre fichier tsconfig
+"baseUrl": "./src",
+"paths": {
+"@security": ["./app/security/index.ts"]
+},
+N’oubliez pas, pour que cela fonctionne, d’avoir exporter votre composant dans le fichier
+security/page/index.ts et d’avoir exporté votre dossier page dans votre fichier
+security/index.ts.
+Vous devez arriver à ce résultat
+import {Component} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {SignInPageComponent} from '@security';
+@Component({
+selector: 'app-root',
+standalone: true,
+imports: [CommonModule, SignInPageComponent],
+templateUrl: './app.component.html',
+styleUrls: ['./app.component.scss']
+})
+export class AppComponent {
+title = 'app';
+}
+Clairement plus classe, surtout quand nous utiliserons plusieurs composants d’un même
+module
+Faite de même pour le shared
+PARTIE 4 ANGULAR 23
+6.2. DÉPLACEMENT DU APP DANS UN DOSSIER ROOT
+J’ai créé un dossier root dans le dossier app et j’ai déplacé les différents fichiers du app
+Ensuite dans mon tsconfig
+"@root": ["./app/root/index.ts"],
+Et finalement du nettoyage dans le fichier main.ts
+import {bootstrapApplication} from '@angular/platform-browser';
+import {AppComponent, appConfig} from '@root';
+bootstrapApplication(AppComponent, appConfig)
+.catch((err) => console.error(err));
+Cela clôture notre première partie des bonnes pratiques.
+PARTIE 4 ANGULAR 24
+6.3. ANGULAR.JSON
+Ce fichier contient la configuration d’angular et , ce qui nous intéresse, les schématique
+Les schématique permettent en gros de pouvoir utiliser le cli.
+D’ailleurs si vous travaillez avec IntelliJ (c’est peux être le cas aussi avec vs code) vous
+pouvez trouver les schématiques. Faites par exemple un clique droit sur le dossier page de
+Sécurity
+Ensuite vous pouvez cliquer sur Angular Schematic et voir alors l’ensemble des éléments
+proposés. Vous pouvez également directement choisir Angular generate et prendre le bon
+item.
+Ouvrons le fichier angular.json et rendons nous dans la partie @schematics
+"schematics": {
+"@schematics/angular:component": {
+"style": "scss",
+"standalone": true
+},
+"@schematics/angular:directive": {
+"standalone": true
+},
+"@schematics/angular:pipe": {
+"standalone": true
+}
+}
+Comme vous pouvez le constater, l’option standalone est déjà mis. De ce fait nous n’avons
+pas réellement besoin de faire
+ng g c –standalone
+Nous allons ajouter une propriété skipTests à true. Cela aura pour effet de ne plus ajouter le
+fichier test. En effet, je ne suis pas partisan des tests inutiles. De ce fait je ne vois pas
+l’intérêt d’avoir ce fichier présent ! Lorsque j’aurais besoin de faire des tests sur un
+composant, je pourrais toujours créer le fichier ! Ou alors ajouter l’option lors de la création
+du composant.
+Essayons en créant notre prochain composant
+PARTIE 4 ANGULAR 25
+ng g c shared/ui/button/SimpleButton
+Vous pouvez alors constater que nous n’avons plus que les trois fichiers de base.
+PARTIE 4 ANGULAR 26
+Ensuite si l’on regarde le contenu du component.ts
+@Component({
+selector: 'app-simple-button',
+standalone: true,
+imports: [CommonModule],
+templateUrl: './simple-button.component.html',
+styleUrls: ['./simple-button.component.scss']
+})
+export class SimpleButtonComponent {
+}
+Nous avons bien un composant standalone!
+Pour ceux que cela intéresse, je vous invite à lire la documentation sur ce fichier.
+PARTIE 4 ANGULAR 27
+7. LE ROUTING
+7.1. LA BASE DU ROUTING
+Nous continuerons ici à nous basé sur notre module Sécurity.
+Bon, pour créer une route, il faut d’abord avoir un endroit où l’on va pouvoir afficher cette
+route. Cet endroit on l’appelle le router-outlet.
+C’est, en résumé, un élément html dynamique. Vous allez pouvoir y charger le contenu de
+votre composant. Voici un petit schéma
+Le flow est assez simple. L’utilisateur via un clique dans l’interface ou une url, va demander à
+accéder à une route. Cette route est liée à un composant. Si la route existe , angular va
+générer le rendu html du composant et puis l’injecter dans le router outlet
+Si la route n’existe pas mais que nous avons une route par défaut alors il générera le rendu
+de ce composant. Si pas de route par défaut, il ne se passera « rien » pour l’utilisateur mais
+dans la console (chrome par exemple), il y a aura un message d’erreur.
+PARTIE 4 ANGULAR 28
+Notre première route
+Pour ce faire, nous allons créer notre fichier route dans le dossier security security.routes.ts
+export const securityRoutes: Routes = [
+{
+path: '',
+component: SignInPageComponent
+}
+]
+Nous allons maintenant voir comment chargé ces routes (la branche sécurity de l’arbre
+route) dans le système de routing d’angular.
+7.2. LE LAZY LOADING
+Rendez-vous dans le fichier app.routes.ts
+Et Modifiez le comme ceci
+export const routes: Routes = [
+{
+path: '',
+loadChildren: () => import('../security/security.routes').then(r => r.securityRoutes)
+}
+]
+Nous venons simplement de d’accrocher notre branche à l’arbre !
+Maintenant pourquoi utiliser loadChildren plutôt que une route classique.
+Le loadchildren va permettre le chargement des routes – et donc des composants associés-
+uniquement à la demande et non pas au chargement de l’application. Cela aura pour effet de
+rapidement afficher une page exploitable à l’utilisateur final.
+Ok, mais pourquoi ne pas simplement crée toutes les routes et utilisé un système pour
+charger les routes indépendamment ? C’est une bonne idée !
+Mais alors nous allons mettre cela en place pour les routes security. Par contre par rapport à
+notre système de routing principal (le tronc de l’arbre) nous ne changerons rien !
+Nous verrons pourquoi il est nécessaire de garder cette structure pour la protection des
+routes !
+LoadComponent vs Component
+Reprenons notre fichier security.routes.ts
+export const securityRoutes: Routes = [
+{
+path: '',
+component: SignInPageComponent
+}
+]
+PARTIE 4 ANGULAR 29
+Lorsque notre tronc (app.routes.ts) va importer (à la première demande) les routes de
+security.routes.ts il va charger l’ensemble des routes : cela pourrait s’apparenter à une
+cartographie des routes. Cependant avec
+Component : SignInPageComponent
+Nous allons automatiquement charger le composant, le composant étant standalone nous
+allons de facto chargé tous ses imports, et si ses imports ont des imports …
+Faire cela résumerait à refaire ce qu’on faisait dans les anciennes version – du code non
+optimisé à grande échelle , pour rappel à notre niveau d’application la différence n’est pas
+perceptible.
+Pour respecter le concept standalone et le chargement du minimum utile (optimisé), nous
+devons modifier la route pour faire ceci
+export const securityRoutes: Routes = [
+{
+path: '',
+loadComponent: () =>
+import('./page/sign-in-page/sign-in-page.component').then(c => c.SignInPageComponent),
+}
+]
+Ainsi nous faisons du lazyLoading par composant
+Nous avons maintenant un chargement optimisé !
+Maintenant voyons comment protéger nos routes
+PARTIE 4 ANGULAR 30
+7.3. PROTECTION DES ROUTES, LES GUARDS
+Pour pouvoir étudier le concept de protection des routes,
+nous allons avancer un peu plus loin dans la structure de notre application.
+Donc une fois connecté (nous le verrons plus tard grâce au service), nous allons redirigé
+notre utilisateur vers la zone protégée.
+De même si l’utilisateur tente d’accéder à une page protégée sans être connecté, alors nous
+allons devoir le redirigé vers la zone de connexion.
+Créons simplement un DashboardHomePage dans le dossier dashboard/home/page/
+ng g c dashboard/home/page/DashboardHomePage
+Ajoutons, les index.ts, et le tsconfig
+Une fois cela fait, créeons notre dashboard.routes.ts
+export const DashboardRoutes: Routes = [
+{
+path: '',
+loadComponent: () => import('./home/page/dashboard-home-page/dashboard-home-page.component').then(c =>
+c.DashboardHomePageComponent)
+}
+]
+Ajoutons maintenant cette branche sur le tronc commun
+export const routes: Routes = [
+{
+path: '',
+loadChildren: () => import('../security/security.routes').then(r => r.securityRoutes)
+},
+{
+path: 'dashboard',
+loadChildren: () => import('../dashboard/dashboard.routes').then(r => r.dashboardRoutes)
+}
+]
+Nous pouvons tester nos deux urls:
+http://localhost:4200/
+http://localhost:4200/dashboard
+Good ! Elle fonctionne.
+PARTIE 4 ANGULAR 31
+Maintenant, nous devons sécurisé la partie dashboard. En théorie nous passerions par un
+service qui pourrait valider si oui ou non, nous avons un accès pour l’instant on se
+contentera d’envoyer un false
+Créons maintenant dans le dossier dashboard un fichier dashboard.guard.ts et collez ceci :
+import {CanActivateFn} from '@angular/router';
+import {of} from 'rxjs';
+export const DashboardGuard:CanActivateFn = ()=>{
+return of(false);
+}
+C’est une simple fonction, de type CanActivateFn
+export declare type CanActivateFn = (route: ActivatedRouteSnapshot, state: RouterStateSnapshot) => Observable<boolean |
+UrlTree> | Promise<boolean | UrlTree> | boolean | UrlTree;
+Notre fonction doit simplement retourner un boolean. Ce boolean peut être une valeur directe
+(comme nous le faisons actuellement) ou alors une valeur asynchrone (observable, Promise)
+Ok et l’url tree ? C’est la seconde partir de ce chapitre.
+Rappelez-vous au début de celui-ci je vous indiquais que nous allions devoir rediriger
+l’utilisateur vers la bonne route en cas d’échec de validation. Voyons comment faire cela.
+export function DashboardGuard(redirectRoute: string = ''): CanActivateFn {
+return () => {
+const canAccess: boolean = false; // Cette valeur sera calculée par le service plus tard
+const router: Router = inject(Router);// Nous faisons une DI pour récupérer le système de Router
+return canAccess || router.createUrlTree([redirectRoute]);
+};
+}
+Nous avons modifier notre fonction, elle reçoit en paramètre une chaine de caractère qui
+aura pour valeur par défaut ‘’.
+Ensuite nous simulons notre retour de service.
+Finalement nous retournons soit canAccess (si true) soit (||) une redirection vers une autre
+route.
+Nous pouvons maintenant modifier notre tronc commun (app.routes.ts) et ajouter le guard à
+la partie dashboard
+{
+path: 'dashboard',
+canActivate: [DashboardGuard()],
+loadChildren: () => import('../dashboard/dashboard.routes').then(r => r.dashboardRoutes)
+}
+Testons: http://localhost:4200/dashboard
+Vous remarquerez que vous êtes automatiquement redirigé vers http://localhost:4200/
+PARTIE 4 ANGULAR 32
+7.4. LA ROUTE PAR DÉFAUT
+Laissons de côté la partie sécurité des routes, nous y reviendrons dans la notion de Service
+avec l’implémentation du token.
+Imaginons que vous vouliez accéder à la route suivante :
+http://localhost:4200/signup
+Voici le beau message d’erreur que vous recevrez dans la console.
+Mais l’utilisateur lui ne voit que du vide ! Nous pouvons alors donner une route par défaut qui
+aura pour effet de retourner un composant pour signaler à l’utilisateur une erreur !
+Créons d’abord notre composant dans shared/routes/GlobalFallBackPage
+Puis ajoutons cette route dans le tronc commun (app.routes.ts)
+{
+path: '**',
+loadComponent: () => import('../shared/routes/global-fall-back-page/global-fall-back-page.component').then(r =>
+r.GlobalFallBackPageComponent)
+}
+Retestons ensuite notre url http://localhost:4200/signup
+Cela fonctionne ! Parfait, vous pouvez choisir de vouloir créer un fallback spécial pour la
+sécurité.
+Créez alors la page security/page/SecurityFallBackPage
+Retestons alors l’url !
+Le système prendra la route de fallback la plus « proche » de la route manquante.
+PARTIE 4 ANGULAR 33
+Modifions maintenant notre security.routes pour ceci :
+export const securityRoutes: Routes = [
+{
+path: '**',
+loadComponent: () =>
+import('./page/security-fall-back-page/security-fall-back-page.component').then(c => c.SecurityFallBackPageComponent)
+},
+{
+path: '',
+loadComponent: () =>
+import('./page/sign-in-page/sign-in-page.component').then(c => c.SignInPageComponent),
+}
+]
+Puis testez : http://localhost:4200/
+Vous constaterez alors que c’est notre route de fallback qui est pris en compte, pourtant la
+bonne route existe ! Pourquoi ?
+Simplement parce que la route de fallback fonctionne par défaut.
+Comment fonctionne la cartographie ?
+Lorsque vous utilisez une url, le tronc d’arbre va parcourir de haut en bas vos différentes
+branches. Dès qu’il trouve un matching il utilise la route.
+Cela veut dire que vous devez absolument le mettre à la fin du tableau des routes.
+7.5. REDIRECTION
+Dans cette section voyons comment faire pour que http://localhost:4200/ redirige
+automatiquement sur http://localhost:4200/signin. Modifions le security.routes.ts
+export const securityRoutes: Routes = [
+{
+path: '',
+redirectTo: 'signin',
+pathMatch: 'full'
+},
+{
+path: 'signin',
+loadComponent: () =>
+import('./page/sign-in-page/sign-in-page.component').then(c => c.SignInPageComponent),
+},
+{
+path: '**',
+loadComponent: () =>
+import('./page/security-fall-back-page/security-fall-back-page.component').then(c => c.SecurityFallBackPageComponent)
+},
+]
+Testons d’abord la route http://localhost:4200/,
+elle vous redirige bien à http://localhost:4200/signin
+Nous avons simplement créé une route « d’entrée » du composant {path :’’}
+Ensuite nous disons simplement que la route d’entrée du composant doit pointer vers la
+route « signin » grâce au redirectTo. Vous pouvez aussi constater l’ajout du
+pathMatch : « full
+PARTIE 4 ANGULAR 34
+C’est le sujet du prochain point.
+7.6. MATCHING STRATEGY
+Le matching des routes est un peu abstrait à comprendre. Pour faire simple,
+Votre route est découpée en segment. Une Route est alors en réalité un arbre de segment.
+Lors de la résolution d’une route, le système va parcourir l’ensemble des routes jusqu’à
+trouver le bon élément. Par défaut, pour valider une route, le système va simplement vérifié
+le segment parent . Si c’est ok pour lui on est sur la bonne route.
+Lorsque vous faites une redirectTo , vous devez utiliser le pathMatch setter à full pour
+pouvoir être sûr de redirigé vers la bonne route.
+Le pathMatch full va checker l’ensemble de l’arbre de segment pour être sûr que l’on est sur
+la bonne route. Petit exemple
+http://localhost:4200/admin/user/list
+http://localhost:4200/user/list
+Imaginons que vous voulez redirigé vers la première url mais que dans votre système de
+routing la seconde est déclarée en première. Sans le pathMatch à full, vous serez alors
+redirigé vers la seconde url.
+7.7. LES PARAMÈTRES
+Pour cette mécanique, nous allons modifier notre DashBoardGuard pour retourner true plutôt
+que false
+export function DashboardGuard(redirectRoute: string = ''): CanActivateFn {
+return () => {
+const canAccess: boolean = true; // Cette valeur sera calculée par le service plus tard
+const router: Router = inject(Router);// Nous faisons une DI pour récupérer le système de Router
+return canAccess || router.createUrlTree([redirectRoute]);
+};
+}
+Ensuite, nous allons avoir besoin d’un composant pour afficher les détails d’un membre.
+Je rangerais la partie membre sous le dossier dashboard/feature/member
+ng g c dashboard/feature/member/page/MemberDetailPage
+Ajoutons la route paramétrisé dans le dashboard.routes.ts
+{
+path: 'member/detail/:id',
+loadComponent: () => import('./feature/member/page/member-detail-page/member-detail-page.component').then(c =>
+c.MemberDetailPageComponent)
+}
+PARTIE 4 ANGULAR 35
+Testons l’url suivante:
+http://localhost:4200/dashboard/member/detail/mon-id
+C’est logique! Pourquoi ? Regardez bien le fichier app.routes.ts , nous devons changer
+quelque chose.
+Cherchez un petit peu avant de passer à la page suivante !
+Vous devez modifier votre app.routes.ts comme ceci :
+export const routes: Routes = [
+{
+path: 'dashboard',
+canActivate: [DashboardGuard()],
+loadChildren: () => import('../dashboard/dashboard.routes').then(r => r.dashboardRoutes)
+},
+{
+path: '',
+loadChildren: () => import('../security/security.routes').then(r => r.securityRoutes)
+},
+{
+path: '**',
+loadComponent: () => import('../shared/routes/global-fall-back-page/global-fall-back-page.component').then(r =>
+r.GlobalFallBackPageComponent)
+}
+]
+Pourquoi?
+Rappelez-vous, dans les routes liées à la sécurité nous avons créé une route par défaut !
+Regardez ici l’arbre des routes AVANT notre changement
+PARTIE 4 ANGULAR 36
+Vous constatez que dans l’autre des routes , et particulièrement la troisième.
+Vous avez une fallback route. En d’autre terme , toutes les autres urls (4,5,6) ne seront
+jamais utilisés. Cela ne se produit pas uniquement à cause de la route de fallback mais
+surtout parce que les routes de sécurité sont directement branchés sur le path d’entrée de
+l’application. Rappelez-vous alors le matching des routes !
+Vous aurez alors compris les problèmes.
+Peu importe la route que l’on va appeler , on va d’abord chargé les routes security. Comme
+nous faisons de loadComponent, cela n’impactera pas les performance.
+Comme nous avons une route par défaut dans la sécurité, automatiquement toutes les
+routes après seront ignorées.
+La meilleur façon de résoudre cela serait plutôt de faire ceci
+export const routes: Routes = [
+{
+path: '',
+redirectTo: 'account',
+pathMatch: 'full'
+},
+{
+path: 'account',
+loadChildren: () => import('../security/security.routes').then(r => r.securityRoutes)
+},
+{
+path: 'dashboard',
+canActivate: [DashboardGuard()],
+loadChildren: () => import('../dashboard/dashboard.routes').then(r => r.dashboardRoutes)
+},
+{
+path: '**',
+loadComponent: () => import('../shared/routes/global-fall-back-page/global-fall-back-page.component').then(r =>
+r.GlobalFallBackPageComponent)
+}
+]
+Ainsi plus de soucis de priorité des routes et toutes les routes seront de nouveaux
+accessibles !
+Comment récupérer les paramètres.
+Configuration d’abord le main.ts
+import {ApplicationConfig} from '@angular/core';
+import {routes} from './app.routes';
+import {provideRouter, withComponentInputBinding} from '@angular/router';
+export const appConfig: ApplicationConfig = {
+providers: [provideRouter(routes
+, withComponentInputBinding())]
+};
+Nous ajoutons ici le withComponentInputBinding.
+Cela va nous permettre d’avoir du code propre, eviter des injections initules pour écrire du
+code qui finalement peut être règlé avec un import de dépendance dans la config
+PARTIE 4 ANGULAR 37
+Ensuite rendez-vous dans le MemberDetailPage et ajoutez cette ligne
+export class MemberDetailPageComponent{
+@Input() id!:string;
+}
+Finalement, modifions notre template.html pour ceci
+Mon ID : {{id}}
+Et regardons ce qu’il se passe par exemple
+http://localhost:4200/dashboard/member/detail/mon-detail-id
+Et voilà le résultat !
+7.8. LES ROUTES DANS LES ROUTES : LES POUPÉES RUSSES
+Il nous reste un dernier point sur le routing à voir. Je vais vous proposez trois wireframe
+Ces trois pages doivent impérativement emprunter le router-outlet du app.template.ts
+Pour le SigninPage et DashboardHomePage pas de soucis, le design est complétement
+différent, possiblement nous réutiliserons des composants similaire .
+Mais regardez DashboardHomePage et DashboardDetailPage , ils ont une interface
+commune – la partie dynamique pourrait très bien être un router-outlet ….
+Voyons pas à pas comment faire cela.
+Étape 1 : Créons une base commune AKA le routeur
+ng g component dashboard/router/DashboardRouter
+Ensuite modifions notre route d’entrée du dashboard
+PARTIE 4 ANGULAR 38
+{
+path: '',
+loadComponent: () => import('./router/dashboard-router/dashboard-router.component').then(c =>
+c.DashboardRouterComponent)
+},
+Testons: http://localhost:4200/dashboard
+Faisons un peu de mise en page rapide!
+Si vous cliquez maintenant sur ID 15, vous irez sur le page de détail d’un membre.
+Bon nous ce qu’on veut c’est que cette page apparaisse en dessous et que notre menu
+reste !
+Pour ce faire il nous reste deux étapes.
+Étape 2 : Le router-outlet
+Étape simple et rapide, nous ajoutons le router-outlet dans le template de notre
+DashboardRouter
+Dernière étape : Modification des routes.
+export const dashboardRoutes: Routes = [
+{
+path: '',
+loadComponent: () => import('./router/dashboard-router/dashboard-router.component')
+.then(c => c.DashboardRouterComponent),
+children: [
+{
+path: '',
+loadComponent: () => import('./home/page/dashboard-home-page/dashboard-home-page.component')
+.then(c => c.DashboardHomePageComponent),
+},
+{
+path: 'member/detail/:id',
+loadComponent: () => import('./feature/member/page/member-detail-page/member-detail-page.component')
+.then(c => c.MemberDetailPageComponent)
+}
+]
+}
+]
+Qu’avons-nous fait ?
+A la base nous avions un tableau de trois routes. Maintenant nous avons un tableau d’une
+route, qui contient un deux enfant.
+Le fait de les définir dans le « children » du DashboardRouter permet de préciser au système
+de routing que les routes doivent être chargés dans le router-outlet du DashboardRouter et
+non celui du app.component.ts !
+Et c’est un peu près tout ce qu’il y a à faire.
+PARTIE 4 ANGULAR 39
+Voyons maintenant quelques bonnes pratiques.
+PARTIE 4 ANGULAR 40
+8. LES BONNES PRATIQUES PARTIE 2
+8.1.UN FICHIER ROUTES PAR FEATURES
+Si vous constatez notre dashboard.route.ts nous avons directement un load component
+pour un élément du feature member.
+Corrigeons cela.
+Dans le dashboard.routes.ts
+{
+path: 'member',
+loadChildren: () => import('./feature/member/member.routes')
+.then(r => r.memberRoutes)
+}
+Dans le member.routes.ts
+export const memberRoutes:Routes=[
+{
+path: 'detail/:id',
+loadComponent: () => import('./page/member-detail-page/member-detail-page.component')
+.then(c => c.MemberDetailPageComponent)
+}
+]
+Cela ne change strictement rien au fonctionnement mais le code est propre et bien rangé !
+8.2. ENUM
+Un autre point qui peut être sympathique pour le coté evolutif, scallable du code. L’utilisation
+d’énumération pour les routes. J’ai du coup créé deux énumérations dans le dossier
+shared/route/enum
+node.enum.ts
+Cette enum servira pour définir les nœuds de l’application (les path dans les routes).
+J’ai établi certains standards, par exemple toute les routes qui mènent à un détail utilisera le
+AppNode.DETAIL
+PARTIE 4 ANGULAR 41
+route.enum.ts
+Ce sont les routes à proprement parler ! Donc les routes que nous allons utiliser dans nos
+liens.
+Commençons par la node et la réécriture des différentes routes
+export enum AppNode {
+AUTHENTICATED = 'dashboard',
+PUBLIC = 'account',
+REDIRECT_TO_PUBLIC = AppNode.PUBLIC,
+REDIRECT_TO_AUTHENTICATED = AppNode.AUTHENTICATED,
+MEMBER = 'member',
+DETAIL = 'detail/:id',
+SIGN_IN = 'signin',
+FALL_BACK = '**'
+}
+Vous pouvez constater que pour l’instant redirect_public , redirect_authenticated, pointe vers
+d’autre valeur.
+C’est logique dans le sens où c’est les nœuds que l’on veut atteindre. Potentiellement dans
+le futur nous voudrions peux être mettre des règles ou des landing pages plutôt de que de
+redirigé comme ceci. C’est pour cela que c’est intéressant de le faire !
+Je vous montre l’exemple de l’app.routes.ts modifié
+export const routes: Routes = [
+{
+path: '',
+redirectTo: AppNode.PUBLIC,
+pathMatch: 'full'
+},
+{
+path: AppNode.PUBLIC,
+loadChildren: () => import('../security/security.routes').then(r => r.securityRoutes)
+},
+{
+path: AppNode.AUTHENTICATED,
+canActivate: [DashboardGuard()],
+loadChildren: () => import('../dashboard/dashboard.routes').then(r => r.dashboardRoutes)
+},
+{
+path: AppNode.FALL_BACK,
+loadComponent: () => import('../shared/routes/ui/global-fall-back-page/global-fall-back-page.component').then(r =>
+r.GlobalFallBackPageComponent)
+}
+]
+C’est pour moi beaucoup plus propre !
+Vous pouvez maintenant changer les nœuds comme vous voulez toute l’application sera
+alors fonctionnelle !
+Voici mon fichier route.enum.ts
+export enum AppRoutes {
+AUTHENTICATED = `/${AppNode.AUTHENTICATED}`,
+MEMBER = `${AppRoutes.AUTHENTICATED}/${AppNode.MEMBER}`,
+PARTIE 4 ANGULAR 42
+MEMBER_DETAIL = `${AppRoutes.MEMBER}/detail/`
+}
+PARTIE 4 ANGULAR 43
+Et son utilisation dans le template, pour ce faire vous devrez créer une variable dans votre
+component
+export class DashboardRouterComponent {
+routes = AppRoutes;
+}
+Pour ensuite l’exploiter comme ceci
+<ul>
+<li><a routerLink="{{routes.AUTHENTICATED}}">Home</a></li>
+<li><a routerLink="{{routes.MEMBER_DETAIL }}15">ID 15</a></li>
+</ul>
+Encore une fois en configuration simplement les deux fichiers vous pouvez transformer
+toutes vos routes sans devoir passer partout !
+8.3. CONCLUSION
+Voici deux petits points qui n’apporteront rien au fonctionnement mais qui , à mon sens,
+participent à la qualité de code.
+PARTIE 4 ANGULAR 44
+9. LES SIGNAUX VS RXJS
+9.1. RXJS
+C’est une librairie assez incontournable dans Angular( avant).
+En gros, cette librairie sert beaucoup dans le développement d’une application reactive –
+application qui fonctionne principalement autour de l’évènement.
+9.2. LES SUJETS
+Subject
+Le subject est une classe qui hérite de observable, vous pouvez setter / modifier la valeur.
+Voici comment déclaré un subject
+member$: Subject<string> = new Subject<string>();
+Pour emettre une valeur
+member$.next('new value');
+Pour écouter un changement
+this.member$.subscribe(()=> console.log('do something'));
+C’est un peu près tout ce qu’il y à savoir sur un subject. Vous aurez tendance à vouloir
+l’utiliser uniquement lorsque vous avez besoin d’un observable qui émet une valeur sans
+garder un état.
+BehaviorSubject
+BehaviorSubject est un subject mais qui possède un état. Cela signifie que à tout moment
+nous pouvons récupérer ca valeur. Pour ce faire :
+this.member$.getValue()
+PARTIE 4 ANGULAR 45
+9.3. TRANSFORMATION DES DONNÉES
+RxJS met a dispostion un pipe qui pemet d’encapsuler une série de changement, voici un
+code commenté qui vous montrera les principaux pipe que vous pourriez trouver !
+this.member$.pipe(
+// Fonction qui n'aura aucun effet dans le subscribe
+tap((member: string) => console.log('member', member)),
+//cet opérateur sert à modifier la valeur d'entrée vers une autre valeur de sortie.
+// equivalent de la fonction map de typescript
+map((member: string) => 'je change ma valeur ici!'),
+//cet opérateur permet de retourner un nouvel observable, c'est utile si par exemple
+// vous devez récupérer les params d'url puis récupérer un user via l'api
+switchMap((member: string) => of('nouvelle valeur')))
+.subscribe((result: string) => console.log('do something', result));
+Cet exemple est assez court mais finalement expliquer bien le concept !
+Remarquez le pipe(), dans celui-ci vous avez une série d’opérateur
+Tap ➔ fonction side effect – ne modifie pas la valeur
+Map ➔ fonction de transformation – transforme la valeur en entrée vers une en sortie
+SwitchMap ➔ fonction permettant de retourner un nouvel observable.
+9.4. SIGNAL
+Pour rappel, le signal est une des nouvelles primitives , elle est accessible en lecture /
+écriture
+Créons notre premier signal. Pour ce faire nous allons utiliser l’exemple détail d’un membre.
+Pour l’exemple, et vu que l’on n’a pas encore vu les services, nous allons simulés un
+chargement
+export class MemberDetailPageComponent {
+@Input() id!: string;
+member: WritableSignal<string> = signal('no body');
+}
+Si nous voulons utiliser une interpolation dans le template :
+Mon super membre {{member()}}
+Constatez que par rapport à une variable classique nous devons ajouter des parenthèses
+pour accéder à la valeur ! Simulons l’appel à l’api , nous allons faire du code avec rxJS, c’est
+juste pour la démo. Je ne rentrerais pas dans le détail ici nous avons un chapitre pour cela.
+ngOnInit(): void {
+this.getData();
+}
+getData(): void {
+of(this.member()).pipe(
+PARTIE 4 ANGULAR 46
+delay(5000),
+tap(() => this.member.set('Nicolas'))
+).subscribe();
+}
+Tester le code et attendez cinq secondes. Vous verrez alors le nom changé !
+Vous pouvez remarquer aussi comment mettre à jours un signal grâce à la méthode set()
+C’est un peu près tout ce qu’il faut savoir sur un signal.
+9.5. COMPUTED
+Pour rappel, le computed est une des nouvelles primitives , elle est accessible en lecture. Sa
+valeur est calculée grâce au signaux. Lorsqu’un signal change de valeur , celle du computed
+est automatiquement mise à jours !
+Pour créer un computed rien de plus simple !
+memberFirstNameLastname: Signal<string> = computed(() => `fake example of data extraction from object ${this.member()}`)
+Dans le template ce sera exactement la même chose, finalement computed est un signal il
+n’est juste pas Writable.
+Mon ID : {{id}}<br>
+Mon super membre {{member()}}
+<br>
+Mon computed {{memberFirstNameLastname()}}
+Attendez les cinq secondes et vous verrez que le computed est également transformé !
+PARTIE 4 ANGULAR 47
+9.6. EFFECT
+Pour rappel, effect est une fonction qui sera exécuté à chaque changement de valeur d’un
+signal. L’avantage par rapport à RxJS c’est que vous n’avez pas besoin de vous désinscrire ,
+il le fera automatiquement.
+Voici un exemple d’effect. Nous pourrions très bien imaginer que cela soit un peu plus
+« intéressant » ou « complexe » comme utilisation mais l’idée est surtout de présenter cette
+primitive.
+memberEffect = effect(() => console.log(`Mon effect sur le member : ${this.member()}`));
+memberFirstNameLastNameEffect = effect(() => console.log(`Mon effect sur le memberFirstNameLastname :
+${this.memberFirstNameLastname()}`));
+Voici le résultat
+Vous pouvez remarquer que l’effect est directement exécuté à l’initialisation du composant.
+Puis une seconde fois quand la valeur a changé !
+9.7. CONCLUSION
+Ce chapitre est assez court, je préfères expliquer les différentes possibilités avec des cas
+concret que nous rencontrerons plus tard dans le cours.
+Pour en savoir plus sur rxJS https://rxjs.dev/
+Pour en savoir plus sur les signaux https://angular.io/guide/signals
+PARTIE 4 ANGULAR 48
+10. LES SERVICES
+10.1. LE RÔLE
+Le rôle principal du service est la gestion centralisée d’une ressource. En effet, nous y
+retrouverons l’ensemble des appels Api mais également, en fonction de votre stratégie , une
+liste d’objet ou le détail de l’objet courant. Petit exemple schématisé.
+Dans cet exemple, nous faisons plusieurs utilisation du service. Par exemple le service
+DashboardService n'aura aucun appel api mais permet de gérer l'état de manière centralisée
+du DashboardRouter.
+Nous pourrions choisir aussi de faire cela en interne du composant DashboardRouter mais
+alors nous serions limité, dans le sens où le MemberService ne pourrait pas injecter des
+valeur directement (par lui-même) dans le composant. Mais le composant devrait lui, par
+contre, écouter les changements sur le MemberService.
+Imaginez alors si nous avions cinq à dix features… il faudrait un listenner (computed) sur
+chacun des services…
+J’espère que cet exemple vous permettra de voir l’intérêt des services et sa possible
+utilisation !
+Il existe probablement d’autre façon de faire. Mais celle-ci me semble couvrir l’ensemble des
+cas.
+Évidemment pour arriver à ce résultat nous devrons mettre en place des interfaces
+générique. Nous verrons cela plus loin dans la partie 3 des bonnes pratiques.
+PARTIE 4 ANGULAR 49
+10.2. EXEMPLE DE SERVICE
+Créons notre service Member :
+ng g s dashboard/feature/member/service/Member
+voici le code généré
+import { Injectable } from '@angular/core';
+@Injectable({
+providedIn: 'root'
+})
+export class MemberService {
+constructor() { }
+}
+Tout comme NestJS , vous avez le décorateur @Injectable.
+Ici il prend en objet le provideIn qui est à root, cela signifie que le service est disponible
+depuis partout et instancié au démarrage de l’application.
+La stratégie que je vais mettre en place est la suivante :
+List$ : WritableSignal<string[]>
+Detail$ :WritableSignal<string>
+Nous verrons lors de l’implémentation des call api pour notre service membre, les différents
+dto , business et autre.
+export class MemberService {
+List$: WritableSignal<string[]> = signal(['test user', 'test user2'])
+Detail$: WritableSignal<string> = signal('');
+}
+Exploitons cela maintenant dans le MemberDetail
+export class MemberDetailPageComponent implements OnInit {
+@Input() id!: string;
+readonly memberService = inject(MemberService);
+ngOnInit(): void {
+this.getDetail();
+}
+private setDetail(): void {
+this.memberService.setDetail(this.id);
+}
+}
+Vous pouvez voir l’ajout du
+PARTIE 4 ANGULAR 50
+readonly memberService = inject(MemberService);
+Ensuite la méthode setDetail()
+private setDetail(): void {
+this.memberService.setDetail(this.id);
+}
+Donc, nous avons fait une injection de dépendance. Depuis l’apparition du standalone il est
+recommandé de le faire ainsi. Notez que si vous voulez accéder à votre injection depuis le
+template, vous devez utiliser le public, si votre injection n’est disponible que dans le
+composant alors vous pouvez utiliser le private. Par défaut cela sera public (si vous ne
+renseignez rien). Auparavant, nous le faisons plutôt comme dans NestJS, via constructeur.
+La bonne pratique, à mon sens, est d’ajouter le readonly. Étant donné que l’on injecte une
+dépendance il ne serait pas logique de pouvoir la modifier !
+La méthode setDetail() va simplement demandé au service de mettre à jours le signal du
+current détail. Voici un autre exemple qui fait exactement la même chose ! A un détail près :
+Le détail n’est pas partagée via le service mais calculé dans le composant
+detail$: Signal<string> = computed(() => this.memberService.list$().find(m => m === this.id) || 'not found');
+Bref, les possibilités sont bien là à vous d’explorer et de choisir la stratégie qui vous convient
+le mieux !
+Laissons les deux et testons les dans notre template
+Vous constaterez que l’id n’est pas trouvé dans la liste est donc nous retournons ‘not found’
+Il n’y a pas grand-chose à savoir sur la base du service !
+Passons maintenant aux choses sérieuses avec notre premier call api !
+PARTIE 4 ANGULAR 51
+11. CALL API
+11.1. LES VARIABLES D’ENVIRONNEMENT
+Tout comme NestJS nous allons utiliser les variables d’environnements, pour se faire, créer
+trois fichiers dans un dossier environment (au même niveau que app)
+environment.ts
+export const environment = {
+production: false,
+apiURL: 'http://localhost:2023/api/'
+};
+environment.dev.ts
+export const environment = {
+production: false,
+apiURL: 'http://localhost:2023/api/'
+};
+environment.prod.ts
+export const environment = {
+production: true,
+apiURL: 'http://localhost:2023/api/'
+};
+Ensuite, dans le fichier angular.json chercher la partie configuration
+Pour production faite ceci
+"fileReplacements": [
+{
+"replace": "src/environments/environment.ts",
+"with": "src/environments/environment.prod.ts"
+}],
+Et pour development
+"fileReplacements": [
+{
+"replace": "src/environments/environment.ts",
+"with": "src/environments/environment.dev.ts"
+}],
+Cela permet , lors du build, d’utiliser les bonnes variables en fonction de l’environnement.
+Ici par défaut angular en propose deux. Vous pouvez en créer d’autre !
+PARTIE 4 ANGULAR 52
+Voyons comment l’utiliser maintenant
+import { Injectable } from '@angular/core';
+import {environment} from '@env';
+@Injectable({
+providedIn: 'root'
+})
+export class ApiService {
+private readonly baseURL:string = environment.apiURL;
+constructor() { }
+}
+J’ai créé un index.ts et exporté uniquement environment.ts puis créé un path.
+Nous pourrions aussi créer un service ConfigManager comme dans le NestJS qui fera
+planter l’application si les variables n’existent pas.
+Nous allons voir comment nous allons construire notre service api.
+Pour ce faire nous devrons utiliser le client http
+Nous allons donc devoir d’abord l’importer dans le appConfig (config global de l’application)
+export const appConfig: ApplicationConfig = {
+providers: [
+provideRouter(routes, withComponentInputBinding()),
+importProvidersFrom(HttpClientModule)
+]
+};
+Voyons maintenant notre service
+PARTIE 4 ANGULAR 53
+11.2. LE SERVICE API
+Ce service aura pour but de service d’interface pour les différents call api. Il sera donc
+injecter dans chaque Service qui le nécessite.
+Je vais naturellement créer cette partie dans le shared
+ng g s shared/api/service/Api
+Systématiquement lorsque je créé cela, je génère les fichiers index qu’il faut. Pour ce cas
+particulier je vais aussi créer l’entrée dans le tsconfig (comme member, dashboard, etc)
+Voici les différents paths que vous devriez avoir
+"paths": {
+"@root": ["./app/root/index.ts"],
+"@dashboard": ["./app/dashboard/index.ts"],
+"@member-feature": ["./app/dashboard/feature/member/index.ts"],
+"@security": ["./app/security/index.ts"],
+"@shared": ["./app/shared/index.ts"],
+"@api": ["./app/shared/api/index.ts"]
+}
+@Injectable({
+providedIn: 'root'
+})
+export class ApiService {
+private readonly baseURL: string = environment.apiURL || 'http://localhost:2023/api';
+private readonly http: HttpClient = inject(HttpClient);
+get(partURL:string):Observable<any>{
+return this.http.get(`${this.baseURL}${partURL}`);
+}
+post(partURL:string, payload:any):Observable<any>{
+return this.http.post(`${this.baseURL}${partURL}`, payload);
+}
+put(partURL:string, payload:any):Observable<any>{
+return this.http.put(`${this.baseURL}${partURL}`, payload);
+}
+delete(partURL:string):Observable<any>{
+return this.http.delete(`${this.baseURL}${partURL}`);
+}
+}
+Comme vous le voyez, le service est assez basique. Nous utilisons le client http avec le bon
+verbe en fonction de la méthode souhaitée.
+Pour le post et put, nous donnons également un payload.
+Ce service fonctionnera bien.. mais … il n’est pas assez typé ! En effet, nous utilisons
+beaucoup trop de any. Dans les différents services, nous allons devoir caster l’objet etc.. bref
+du code redondant !
+Voyons comment régler cela grâce à un petit de coup de générique !
+PARTIE 4 ANGULAR 54
+11.3. GÉNÉRIQUES
+Tout d’abord, base de la base, nous allons créer (ou copier-coller) notre interface
+ApiResponse du backend
+export interface ApiResponse {
+result: boolean;
+code: ApiCodeResponse;
+data: any;
+paramError: boolean;
+}
+La différence est la propriété paramError qui nous permettra de savoir si c’est une erreur 499
+ou non.
+Implémentons la maintenant dans notre service.
+export class ApiService {
+private readonly baseURL: string = environment.apiURL;
+private readonly http: HttpClient = inject(HttpClient);
+get(partURL: string): Observable<ApiResponse> {
+return this.http.get(`${this.baseURL}${partURL}`)
+.pipe(map((response: Object) => this.mapToApiResponse(response)));
+}
+post(partURL: string, payload: any): Observable<ApiResponse> {
+return this.http.post(`${this.baseURL}${partURL}`, payload)
+.pipe(map((response: Object) => this.mapToApiResponse(response)));
+}
+put(partURL: string, payload: any): Observable<ApiResponse> {
+return this.http.put(`${this.baseURL}${partURL}`, payload)
+.pipe(map((response: Object) => this.mapToApiResponse(response)));
+}
+delete(partURL: string): Observable<ApiResponse> {
+return this.http.delete(`${this.baseURL}${partURL}`)
+.pipe(map((response: Object) => this.mapToApiResponse(response)));
+}
+private mapToApiResponse(res: Object): ApiResponse {
+console.log('res', res);
+const response: ApiResponse = res as ApiResponse;
+return response;
+}
+}
+Testons alors . Pour ce faire ajouter ce code dans l’app.component.ts. Nous l’effacerons par
+la suite.
+title = 'app';
+private readonly api: ApiService = inject(ApiService);
+ngOnInit(): void {
+this.api.get('').subscribe((data) => {
+console.log('my data', data);
+PARTIE 4 ANGULAR 55
+})
+}
+Vous constaterez que la librairie http utilise des observables. Nous devons alors souscrire à
+notre requête faite au service api. Ouvrez votre console et vous verrez alors l’objet renvoyé
+dans le body du backend.
+Maintenant modifiez votre backend pour retourner une erreur 499 (mauvais paramètre)
+Puis relancez votre test
+Nous allons devoir régler cela ! Pour se faire cela va nécessité une nouvelle modification
+export class ApiService {
+private readonly baseURL: string = environment.apiURL;
+private readonly paramIsMissingErrorCode: number = environment.PARAM_IS_MISSING;
+private readonly http: HttpClient = inject(HttpClient);
+get(partURL: string): Observable<ApiResponse> {
+return this.handle(this.http.get(`${this.baseURL}${partURL}`));
+}
+post(partURL: string, payload: any): Observable<ApiResponse> {
+return this.handle(this.http.post(`${this.baseURL}${partURL}`, payload));
+}
+put(partURL: string, payload: any): Observable<ApiResponse> {
+return this.handle(this.http.put(`${this.baseURL}${partURL}`, payload));
+}
+delete(partURL: string): Observable<ApiResponse> {
+return this.handle(this.http.delete(`${this.baseURL}${partURL}`));
+}
+private handle(obs: Observable<any>): Observable<ApiResponse> {
+return obs.pipe(
+catchError((error: HttpErrorResponse) => of(this.errorHandler(error)))
+);
+}
+private errorHandler(httpError: HttpErrorResponse): ApiResponse {
+return {...httpError.error, paramError: (httpError.status === 499)}
+}
+}
+Qu’avons nous modifié?
+o Création d’une méthode handle() permettant d’éviter le code répéter pour la
+récupération d’erreur.
+o Modification / Renommage pour finalement convertir l’erreur en quelques choses
+d’exploitable ! Nous pourrions optimiser ceci, par exemple si ce n’est pas une erreur
+« que l’on comprend » alors jeter une exception.
+Regardez maintenant votre console.
+PARTIE 4 ANGULAR 56
+Et remodifiez votre backend pour changer le statut vers l’original (200)
+Il nous manque notre propriété paramError… corrigeons cela
+private handle(obs: Observable<any>): Observable<ApiResponse> {
+return obs.pipe(
+map((response: Object) => this.successHandler(response)),
+catchError((error: HttpErrorResponse) => of(this.errorHandler(error))));
+}
+private errorHandler(httpError: HttpErrorResponse): ApiResponse {
+return {...httpError.error, paramError: (httpError.status === paramIsMissingErrorCode)}
+}
+private successHandler(response: Object): ApiResponse {
+return {...response as ApiResponse, paramError: false}
+}
+Le résultat
+Parfait ! Nous sommes presque bon !
+J’aimerai apporter une couche supplémentaire d’abstraction.
+Créons ces quelques interfaces, nous pouvons les mettre dans le dossier shared/core/model
+export type Payload = Object;
+export type Dto = Object;
+export interface Business {
+id: string;
+isEmpty: boolean;
+str: string;
+}
+PARTIE 4 ANGULAR 57
+payload et dto sont de simple type. En effet, ils ne propose aucun contrat il est donc inutile
+de faire une interface.
+Par contre business sera une interface car elle impose trois propriétés.
+Modifions alors les payloads de notre apiService. Pour le dto et business nous les utiliserons
+plus tard lorsque nous ferons le memberService.
+PARTIE 4 ANGULAR 58
+11.4. LE SERVICE TOKEN
+Comme vous le savez, nous aurons besoin de gérer le token.
+Pour ce faire nous allons devoir créer un objet token dans notre application shared/api/model
+export interface Token {
+token: string;
+refreshToken: string;
+}
+Ensuite notre service
+export class TokenService {
+token: WritableSignal <Token > = signal (this .getToken());
+private readonly tokenSaveHandler: EffectRef = effect (() => this .handleTokenChange(this .token()));
+public setToken(token: Token ): void {
+if (token.token.trim().length > 0) {
+this .token.set (token);
+} else {
+this .token.set (this .getEmpty());
+localStorage.removeItem(environment.TOKEN_KEY);
+}
+}
+private handleTokenChange(token: Token ): void {
+if (token.token.trim().length > 0) {
+localStorage.setItem(environment.TOKEN_KEY, JSON.stringify(token));
+} else {
+localStorage.removeItem(environment.TOKEN_KEY);
+}
+}
+private getToken(): Token {
+const str = localStorage.getItem(environment.TOKEN_KEY);
+return !isNil(str) ? JSON.parse(str) as Token : this .getEmpty();
+}
+private getEmpty(): Token {
+return {token: ''
+, refreshToken: ''};
+}
+}
+Nous aurions très bien pu le faire sans signal, mais bon…
+Donc qu’avons-nous ?
+Une propriété token qui est un signal de token.
+Nous avons ensuite un listenner (effect()) qui va écouter les changements sur le token.
+Lorsque celui change, alors nous vérifions si il faut le modifier ou le supprimer.
+Quelques méthodes nous permettant de généré un token vide et une autre pour récupérer le
+token du localstorage.
+Pas grand-chose à dire de plus, nous allons voir qu’est-ce que le localstorage
+PARTIE 4 ANGULAR 59
+11.5. LE LOCALSTORAGE
+Le localstorage n’est pas propre à angular, il existe depuis un moment dans le monde du
+web. Cette mécanique, liée à votre navigateur permet de stocker des valeurs dans la
+mémoire de celui-ci. Il est évident que vous n’allez pas y stocker des tonnes de données
+mais il est très utile pour le token.
+https://developer.mozilla.org/fr/docs/Web/API/Window/localStorage
+11.6. L’INTERCEPTEUR
+Cette partie est assez « complexe » à prendre en main. Nous allons y aller pas à pas
+Quelques explications
+PARTIE 4 ANGULAR 60
+Lorsque nous allons faire un call vers notre api. Nous devrons d’abord vérifier que la route
+est public. Si elle l’est, alors on laisse passer la requête.
+Si elle ne l’est pas alors on ajoute le token si il existe (si pas on redirige vers la page de
+connexion)
+Si le retour de la demande revient avec une 401, alors on va simplement tenter de rafraichir
+le token (si on a un refresh si pas on redirige vers la page de connexion) Si la demande
+de refresh est réussie alors on retente la requête d’origine si pas on redirige vers la page
+de connexion
+Voyons comment mettre cela en place !
+Créons notre service http.interceptor dans le shared/api/service
+export const HttpInterceptor: HttpInterceptorFn = (req, next) => {
+return next(req)
+.pipe(tap(() => console.log('exemple de route que l\'on intercepte')));
+}
+Dans cette étape, on va juste activer l’interceptor, qui va strictement rien faire, si ce n’est un
+petit console.log
+Ensuite pour l’activer modifier le app.config.ts
+import {ApplicationConfig} from '@angular/core';
+import {routes} from './app.routes';
+import {provideRouter, withComponentInputBinding} from '@angular/router';
+import {provideHttpClient, withInterceptors} from '@angular/common/http';
+import {HttpInterceptor} from '@api';
+export const appConfig: ApplicationConfig = {
+providers: [
+provideRouter(routes, withComponentInputBinding()),
+provideHttpClient(
+withInterceptors([HttpInterceptor])
+)
+]
+};
+Testons maintenant, notre requête via le app.component.ts
+Notre interceptor marche bien !
+Pour pour la suite nous devons tester si la route est public ou non, pour se faire, nous allons
+devoir nous baser sur les routes public de notre api.
+Vous allez devoir parcourir toutes les routes publics de votre applications, normalement il n’y
+en aura pas des masses, mais peut-être pourrions-nous améliorer notre api en les
+rassemblant quelques parts ? En attendant, voici les routes extraites
+PARTIE 4 ANGULAR 61
+const baseURL:string = environment.apiURL;
+const publicRoute: string[] = [`${baseURL}`, `${baseURL}account/signin`, `${baseURL}account/admin-signin`,
+`${baseURL}account/signup`, `${baseURL}account/refresh`];
+Maintenant que nous avons notre tableau ajoutons le test.
+const baseURL:string = environment.apiURL;
+const publicRoute: string[] = [`${baseURL}`, `${baseURL}account/signin`, `${baseURL}account/admin-signin`,
+`${baseURL}account/signup`, `${baseURL}account/refresh`];
+export const HttpInterceptor: HttpInterceptorFn = (req, next) => {
+if(publicRoute.includes(req.url)){
+return next(req)
+.pipe(tap(() => console.log(`exemple de route publique que l'on intercepte ${req.url}`)));
+}
+return next(req)
+.pipe(tap(() => console.log(`exemple de route privée que l'on intercepte ${req.url}`)));
+}
+Vous verrez alors ceci dans la console
+Pour le test, vous pouvez simplement retirer la première entrée du tableau et vous verrez
+ceci
+Notre premier contrôle fonctionne bien !!
+Bon nous devons maintenant injecter notre tokenService et récupérer la valeur du token
+export const HttpInterceptor: HttpInterceptorFn = (req, next) => {
+if (publicRoute.includes(req.url)) {
+return next(req)
+.pipe(tap(() => console.log(`exemple de route publique que l'on intercepte ${req.url}`)));
+}
+const tokenService = inject(TokenService);
+return next(req)
+.pipe(tap(() => console.log(`exemple de route privée que l'on intercepte ${req.url}`)));
+}
+PARTIE 4 ANGULAR 62
+Remarquez l’intérêt d’injecter comme ceci plutôt que par constructeur. Dans ce cas-ci, si on
+est une route public, on injecte pas le tokenService. Optimisation.
+Modifions un peu notre token.ts pour éviter de faire des tests redondants !
+Avant cela, nous devons modifier notre type/index.ts
+export type Payload = Object;
+export type Dto = Object;
+export interface IsEmpty{
+isEmpty:boolean;
+}
+export interface Business extends IsEmpty{
+id: string;
+str: string;
+}
+Puis notre token.ts
+export interface Token extends IsEmpty{
+token: string;
+refreshToken: string;
+}
+Ensuite dans notre service token.service, changez la méthode getEmpty()
+private getEmpty(): Token {
+return {token: '', refreshToken: '', isEmpty: true};
+}
+Profitons pour améliorer le handleTokenChange()
+if (!token.isEmpty) {
+localStorage.setItem(environment.TOKEN_KEY, JSON.stringify(token));
+} else {
+localStorage.removeItem(environment.TOKEN_KEY);
+}
+}
+Maintenant dans notre interceptor
+const tokenService = inject(TokenService);
+if (!tokenService.token().isEmpty) {
+req = req.clone({
+headers: req.headers.set('Authorization', `Bearer ${tokenService.token().token}`)
+});
+return next(req)
+.pipe(tap(() => console.log(`exemple de route privée que l'on intercepte ${req.url}`)));
+}
+const router: Router = inject(Router);
+router.navigate([AppNode.REDIRECT_TO_PUBLIC]).then();
+return next(req);
+PARTIE 4 ANGULAR 63
+Nous ne pouvons pas le tester en l’état, sinon nous allons avoir une redirection infini.
+Je vous proposes de déplacer le code de l’app.component.ts vers DashboardRouter.
+Ensuite de retirer la première entrée du tableau publicRoute et de vous rendre à la page
+http://localhost:4200/dashboard
+Vous serez alors redirigé vers le SigninPage.
+OK maintenant gérons le cas le plus complexe, le retour 401.
+Dans un premier temps je vais vous donner les petites fonctions annexes , mais avant cela
+créons des types pour plus de clareté dans le code , pour ce faire j’ai créé un fichier
+shared/api/type/index.ts
+import {HttpErrorResponse, HttpHandlerFn, HttpRequest} from '@angular/common/http';
+import {Observable} from 'rxjs';
+export type AddTokenHeaderFn = (req: HttpRequest<any>, token: string,) => HttpRequest<any>;
+export type HttpInterceptorHandlerFn = (error: HttpErrorResponse,req: HttpRequest<any>, next: HttpHandlerFn) =>
+Observable<any>;
+Ces deux types sont en fait des signatures de fonction. A première vue c’est un peu barbare
+mais si vous prenez le temps de décortiqué c’est assez simple.
+Une fois ceci fait, créons notre shared/api/enum/index.ts ceci sera l’enum qui contiendra
+l’ensemble des URI disponible sur l’api.
+export enum ApiURI{
+SIGN_IN='account/admin-signin',
+ME='account/me',
+REFRESH_TOKEN = 'account/refresh'
+}
+Maintenant les fonctions annexes, tout dans le même fichier http.interceptor.ts}
+Cette function sera appelée deux fois dans le flow, elle permet de redirigé vers la partie
+public et de retourner un Empty, je vous met le lien de la documentation sur le Empty
+https://rxjs.dev/api/index/const/EMPTY
+// function for navigate to public part ... this is called many time in the flow
+const redirectToPublic: () => Observable<any> = () => {
+const router: Router = inject(Router);
+router.navigate([AppNode.REDIRECT_TO_PUBLIC]).then();
+return EMPTY;
+}
+Cette fonction permet de mettre le token dans le header avant l’envoi de la requète
+// function for set Token in header... we call it twice in the http interceptor flow
+const setTokenInHeader: AddTokenHeaderFn = (req: HttpRequest<any>, token: string): HttpRequest<any> => {
+return req.clone({
+headers: req.headers.set('Authorization', `Bearer ${token}`)
+});
+Ensuite, j’ai prépare le travail, pour la gestion des erreurs en dehors de la 401
+PARTIE 4 ANGULAR 64
+const handleCommonError: HttpInterceptorHandlerFn = (err: HttpErrorResponse, req: HttpRequest<any>, next: HttpHandlerFn):
+Observable<any> => {
+throw(err);
+}
+Pour l’instant elle ne fait que le throw(err), mais comme dit juste avant, c’est juste une
+préparation pour la suite.
+Finalement le gros du sujet !
+// Function handle the 401 error
+const handleError: HttpInterceptorHandlerFn = (err: HttpErrorResponse, req: HttpRequest<any>, next: HttpHandlerFn):
+Observable<any> => {
+//ok at this stage, we send a request to api with token, but it's seems expired... so we try to refresh it!
+if (err.status === 401 || err.status === 403) {
+const tokenService = inject(TokenService);
+const router: Router = inject(Router);
+const api: ApiService = inject(ApiService);
+//but before refresh it , we must try to see if refresh token exit.. in theory yes because we can be here if token.isEmpty
+if (!tokenService.token().isEmpty) {
+return api.post(ApiURI.REFRESH_TOKEN, {refresh: tokenService.token().refreshToken})
+.pipe(
+switchMap((result: ApiResponse) => {
+if (result.result) {
+//Finally if we get new token, we retry
+return next(setTokenInHeader(req, result.data.token)).pipe(
+catchError((err: HttpErrorResponse) => handleCommonError(err, req, next)),
+// if we pass here, that's mean we don't have error otherwise we go to catchError
+tap(() => tokenService.setToken({...result.data as Token, isEmpty: false}))
+);
+}
+// Redirect because the refresh token is expired too
+return redirectToPublic();
+}))
+}
+// Redirect because the refresh token is not exist
+return redirectToPublic();
+}
+// Here we can show something to client? Maybe a toaster or ....
+return handleCommonError(err, req, next);
+}
+Tout d’abord on check si nous sommes bien dans une erreur 401,
+si pas ➔ handleCommonError()
+Ensuite , même si nous ne sommes pas censé tomber dans ce cas de figure, on teste si on a
+bien un refreshToken , si pas ➔ redirectToPublic()
+On continue avec la tentative de refreshToken,
+Si celle-ci échoue ➔ redirectToPublic()
+Si pas, alors on envoi la requête original en mettant le nouveau header avec le nouveau
+token.
+Finalement on fait un test, si la nouvelle requête nous envoie une erreur ➔
+handleCommonError(),
+Si pas on sauvegarde le token.
+Voilà comment nous gérons nos problèmes et utilisons le refreshToken pour une expérience
+utilisateur sympathique
+export const HttpInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: HttpHandlerFn) => {
+console.log('req', req);
+PARTIE 4 ANGULAR 65
+//if route is public
+if (publicRoute.includes(req.url)) {
+return next(req);
+}
+//if route is not public
+const tokenService = inject(TokenService);
+if (!tokenService.token().isEmpty) {
+return next(setTokenInHeader(req, tokenService.token().token))
+.pipe(catchError((err: HttpErrorResponse) => handleError(err, req, next)));
+}
+// We need to redirect because don't have access (no token)
+return redirectToPublic();
+}
+Finalement, voici l’intercepteur complet
+const baseURL: string = environment.apiURL;
+const publicRoute: string[] = [`${baseURL}`, `${baseURL}account/signin`, `${baseURL}account/admin-signin`,
+`${baseURL}account/signup`, `${baseURL}account/refresh`];
+// Main function of httpInterceptor
+export const HttpInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: HttpHandlerFn) => {
+//if route is public
+if (!req.url.startsWith(baseURL) || publicRoute.includes(req.url)) {
+return next(req);
+}
+//if route is not public
+const tokenService = inject(TokenService);
+const router: Router = inject(Router);
+if (!tokenService.token$().isEmpty) {
+const api: ApiService = inject(ApiService);
+return next(setTokenInHeader(req, tokenService.token$().token))
+.pipe(catchError((err: HttpErrorResponse) => handleError(err, req, next, tokenService,router,api)));
+}
+// We need to redirect because don't have access (no token)
+return redirectToPublic(router);
+}
+// function for navigate to public part ... this is called many time in the flow
+const redirectToPublic: (router:Router) => Observable<any> = (router:Router) => {
+router.navigate([AppNode.REDIRECT_TO_PUBLIC]).then();
+return EMPTY;
+}
+// function for set Token in header... we call it twice in the http interceptor flow
+const setTokenInHeader: AddTokenHeaderFn = (req: HttpRequest<any>, token: string): HttpRequest<any> => {
+return req.clone({
+headers: req.headers.set('Authorization', `Bearer ${token}`)
+});
+}
+// Function handle the 401 error
+const handleError: HttpInterceptorHandlerFn = (err: HttpErrorResponse, req: HttpRequest<any>, next: HttpHandlerFn,
+tokenService:TokenService,router:Router,api: ApiService): Observable<any> => {
+//ok at this stage, we send a request to api with token, but it's seems expired... so we try to refresh it!
+if (err.status === 401 || err.status === 403) {
+//but before refresh it , we must try to see if refresh token exit.. in theory yes because we can be here if token.isEmpty
+if (!tokenService.token$().isEmpty) {
+return api.post(ApiURI.REFRESH_TOKEN, {refresh: tokenService.token$().refreshToken})
+.pipe(
+switchMap((result: ApiResponse) => {
+if (result.result) {
+//Finally if we get new token, we retry
+return next(setTokenInHeader(req, result.data.token)).pipe(
+catchError((err: HttpErrorResponse) => handleCommonError(err)),
+// if we pass here, that's mean we don't have error otherwise we go to catchError
+tap(() => tokenService.setToken({...result.data as Token, isEmpty: false}))
+PARTIE 4 ANGULAR 66
+);
+}
+// Redirect because the refresh token is expired too
+return redirectToPublic(router);
+}))
+}
+// Redirect because the refresh token is not exist
+return redirectToPublic(router);
+}
+// Here we can show something to client? Maybe a toaster or ....
+return handleCommonError(err);
+}
+const handleCommonError: HttpInterceptorCommonErrorHandlerFn = (err: HttpErrorResponse): Observable<any> => {
+throw (err);
+}
+et mon fichier shared/type/index.ts
+import {HttpErrorResponse, HttpHandlerFn, HttpRequest} from '@angular/common/http';
+import {Observable} from 'rxjs';
+import {ApiService, TokenService} from '@api';
+import {Router} from '@angular/router';
+export type AddTokenHeaderFn = (req: HttpRequest<any>, token: string,) => HttpRequest<any>;
+export type HttpInterceptorHandlerFn = (error: HttpErrorResponse,req: HttpRequest<any>, next: HttpHandlerFn,
+tokenService:TokenService, router:Router,api: ApiService) => Observable<any>;
+export type HttpInterceptorCommonErrorHandlerFn = (error: HttpErrorResponse)=> Observable<any>
+PARTIE 4 ANGULAR 67
+12. LES FORMULAIRES
+Nous allons voir la création d’un formulaire au travers la mise en place de la connexion.
+Pour cela, nous allons devoir créer quelques interfaces. Vous pouvez ranger votre dossier
+comme vous voulez mais nous allons mettre le tout dans un dossier
+security/data/payload/signin.payload.ts
+export interface SignInPayload extends Payload{
+username: string;
+password: string;
+googleHash: string;
+facebookHash: string;
+socialLogin: boolean;
+}
+Ensuite nous créons l’interface pour la formulaire security/data/form
+import {FormControl} from '@angular/forms';
+export interface SignInForm {
+username: FormControl<string>;
+password: FormControl<string>;
+}
+Premier constat, les interfaces ne contiennent pas les mêmes propriétés. C’est logique. Pour
+notre formulaire, à l’instant T nous pouvons que nous connecter avec un identifiant et mot de
+passe
+Comme le payload doit être l’exact équivalence du backend, nous avons plusieurs propriétés
+qui nous seront inutile. Cependant par respect pour les bonnes pratiques nous les mettons
+dans le payload.
+Une fois ceci fait, retournons sur notre SigninPage
+Nous pouvons supprimer le contenu du template et du component
+@Component({
+selector: 'app-sign-in-page',
+standalone: true,
+imports: [CommonModule],
+templateUrl: './sign-in-page.component.html',
+styleUrls: ['./sign-in-page.component.scss']
+})
+export class SignInPageComponent {
+}
+A partir d’ici je vais faire de la mise en forme de mon code (css), je passe volontairement
+cette partie car celle-ci n’est pas le sujet du cours.
+Juste pour information j’utilises le principe des variables css , voici un exemple ceci se situe
+dans le style.scss
+body {
+--theme-primary: #3996d2;
+--theme-primary-middle: #63b3e2;
+--theme-blue-dark: #344E5C;
+--theme-black: #2A2A2E;
+--var-header-height: 60px;
+PARTIE 4 ANGULAR 68
+--var-side-menu-full-open: 250px;
+--transition-smooth: all ease .3s;
+}
+5.1. FORMGROUP
+Les formGroup font partie du module ReactiveForm. Nous verrons à la fin de la partie
+formulaire les formulaire allégé ou TemplateDrivenForm.
+L’avantage des ReactiveForm par rapport au TDF est assez simple :
+Pour de gros formulaire contenant plusieurs validations, il est conseillé d’utiliser les RF, si
+c’est simplement pour récupérer une valeur sans trop de contrôle de validation alors un TDF
+suffit.
+Pour ma part, j’adore utiliser les FormGroup, ils sont efficaces, facile à mettre en place et
+surtout permettent avec peu de code de valider un formulaire.
+Donc qu’est-ce que le FormGroup ?
+Concrètement c’est l’objet qui va contenir l’ensemble des champs du formulaire à valider. Il
+va également contenir l’état du formulaire (valide , non valide) et permettre la gestion des
+erreurs en temps réels. Le tout sans effort.
+Un formGroup contient en paramètre d’entrée un objet. Celui-ci sera globalement l’objet que
+vous allez devoir transmettre à l’api. Cette affirmation n’est pas absolue, typiquement mon
+formulaire de connexion ne contient pas tous les champs du SigninPayload.
+Si nous regardons de plus près le SigninForm vous pouvez constater que c’est une interface
+contenant les propriétés identique à celle qu’elle doit remplir dans le SigninPayload, à savoir
+username et password.
+Cependant plutôt que de contenir les primitives (string) , les propriétés du SigninForm
+doivent être de type FormControl<la primitive de votre objet>
+5.2. FORMCONTROL
+Le FormControl sera chargé de controller et de garder l’état d’un élément de votre
+formulaire.
+Il sera également écouté par le FormGroup.
+Voici le FormGroup pour notre SigninForm
+this.formGroup = new FormGroup<SignInForm>(<SignInForm>{
+username: new FormControl<string>('', [Validators.required]),
+password: new FormControl<string>('', [Validators.required])
+})
+Comme vous pouvez le voir, nous avons type notre FormGroup, ceci n’est pas obligatoire,
+nous pourrions très bien faire ceci :
+this.formGroup = new FormGroup({
+username: new FormControl<string>('', [Validators.required]),
+PARTIE 4 ANGULAR 69
+password: new FormControl<string>('', [Validators.required])
+})
+Personnellement, je trouves cela beaucoup plus propre de typer. De plus , nous verrons plus
+tard la classe Helper qui va permettre de gérer toute la partie logique / métier des différents
+type, interface, model de notre module.
+5.3. LA VALIDATION
+Décortiquons le FormControl du username :
+new FormControl<string>('', [Validators.required])
+Nous avons donc notre objet FormControl, qui est instancié avec deux paramètres, le
+premier c’est la valeur qui doit avoir au démarrage.
+Nous verrons plus tard lorsque nous ferons la mise à jours du Membre que nous pouvons
+directement lui donner une valeur ici.
+Le second paramètres sont les conditions de validation , nous lui avons simplement
+demandé ici que le champs soit remplis.
+En accord avec notre modèle de l’api, nous devons ajouter deux validations, une taille
+minimum ainsi qu’une taille maximum.
+@IsNotEmpty({message:ApiCodeResponse.SIGN_IN_PAYLOAD_USERNAME_MISSING})
+@Length(1,10,{message:ApiCodeResponse.SIGN_IN_PAYLOAD_USERNAME_LENGTH_ERROR})
+username: string;
+Voici ce que cela donne alors pour le FormControl
+new FormControl<string>('', [Validators.required, Validators.minLength(1), Validators.maxLength(10)]),
+5.4. UTILISATION DANS LE TEMPLATE
+Faisons d’abord un peu de html, pour cela ,nous allons créer un composant
+shared/ui/form/component/FloatingLabelInput
+Ensuite utilisons le dans notre SigninForm
+FloatingLabelInputTemplate
+<div class="input" [formGroup]="formGroup">
+<input class="floating-input" type="text" placeholder=" " (focus)="inputFocus=true"
+(blur)="inputFocus=false" [formControl]="control" autocomplete="new-password">
+<label class="floating-label"
+[class.fixed-label]="inputFocus || control.value.length >0">{{label}}</label>
+</div>
+PARTIE 4 ANGULAR 70
+FloatingLabelInputComponent
+export class FloatingLabelInputComponent {
+@Input({required: true}) label!: string;
+@Input({required: true}) control!: FormControl<any>;
+inputFocus: boolean = false;
+}
+Comme vous pouvez le voir, nous avons deux propriétés à fournir à notre input.
+La première est le label, c’est la chaine de caractère qui sera affiché au-dessus de l’input
+La seconde est le control. Cela représente le FormControl.
+Nous devons fournir ce paramètre afin de spécifier à l’input qu’il doit enregistré sa valeur
+dans le FormControl qu’on lui associe.
+De cette manière les différents tests de validation pourront être effectués et nous pourrons
+(dans le prochain chapitre) afficher les erreurs pour aider l’utilisateur.
+SI vous analysez le code du template, vous verrez que dans l’input nous avons simplement
+mis la propriété [formControl].
+Pour le coté design sympa, j’ai ajouté des EventBinding sur les focus et blur (quand on est
+sur le champ ou qu’on le quitte). Cela aura pour effet de mettre à jours un boolean qui va
+jouer sur le style des labels.
+Quelques screens pour le résultat
+Ce que vous devez réellement retenir :
+o Nous devons créer un FormGroup contenant des propriétés de type FormControl
+o Pour lier un FormControl à un input vous devez ajouter la propriété
+[formControl]=’moncontrol’
+PARTIE 4 ANGULAR 71
+5.5. VALUESCHANGES
+Il y a quelques pages, je vous ai expliqué que le FormGroup permet de garder l’état de
+l’objet souhaité (username, password). Grâce à cela et à la librairie ReactiveForm, vous
+pouvez ecouter tous les changements sur un formulaire, pour se faire, nous allons dans
+notre SigninPage
+get(key:string):FormControl<any>{
+return this.formGroup.get(key)! as FormControl<any>;
+}
+private initFormGroup(): void {
+this.formGroup = new FormGroup({
+username: new FormControl<string>('', [Validators.required, Validators.minLength(1), Validators.maxLength(10)]),
+password: new FormControl<string>('', [Validators.required])
+})
+this.formGroup.valueChanges.subscribe(() => console.log('formGroupValue', this.formGroup.value));
+}
+Maintenant testez votre formulaire, et ouvrez la console
+C’est assez reactif ! Cela peut servir en fonction de votre stratégie ou logique.
+Pour ma part, je vais m’en servir pour générer le tableau d’erreur.
+Il existe une autre façon de gérer les erreurs. Mais ma contrainte m’impose de faire
+autrement.
+Voici un lien pour expliquer une façon de faire
+https://www.pluralsight.com/guides/how-to-display-validation-messages-using-angular
+Voyons cela !
+PARTIE 4 ANGULAR 72
+5.6. GESTION DES ERREURS
+Encore une fois, un peu de préparation, comme d’habitude nous allons écrire du code à un
+endroit pour qu’il soit ensuite accessible par tous !
+Créons les nouveaux types et contrat que nous avons besoin dans
+shared/ui/form/type/index.ts
+import {FormGroup} from '@angular/forms';
+import {WritableSignal} from '@angular/core';
+export interface FormError {
+control: string;
+value: any;
+error: string;
+}
+export type HandleValueChangeFn = (form:FormGroup, signal:WritableSignal<FormError[]>)=> void;
+export type GetAllFormErrorsFn = (form: FormGroup) => FormError[];
+Nous créons une interface pour modéliser les erreurs.
+Deux types pour les différentes fonctions que l’on va créer
+import {FormGroup, ValidationErrors} from '@angular/forms';
+import {FormError, GetAllFormErrorsFn, HandleValueChangeFn} from '../type';
+import {takeUntilDestroyed} from '@angular/core/rxjs-interop';
+import {WritableSignal} from '@angular/core';
+import {map, tap} from 'rxjs';
+// !!!!!! YOU NEED TO CALL THIS IN CONSTRUCTOR COMPONENT !!!!!!!!! BECAUSE OF TAKEUNTILDESTROYED
+// https://indepth.dev/posts/1518/takeuntildestroy-in-angular-v16
+export const handleFormError: HandleValueChangeFn = (form: FormGroup, signal: WritableSignal<FormError[]>): void => {
+form.valueChanges
+.pipe(
+// that's mean kill this observer when component is destroyed
+takeUntilDestroyed(),
+// transform the value to FormError array
+map(() => getFormValidationErrors(form)),
+// send signal with new errors
+tap((errors: FormError[]) => signal.set(errors)))
+.subscribe();
+}
+Cette méthode va simplement permettre de catcher les changement et ensuite d’appeler la
+prochaine méthode. L’avantage de la mettre ici est assez simple, nous allons faire cela un
+peu près partout dans notre application ! Write once Use EveryWhere
+PARTIE 4 ANGULAR 73
+Cette méthode va simplement extraire les erreurs des différents controls.
+// Adaptations of this code :
+// https://gist.github.com/JohannesHoppe/e8d07d63fc345a5fdfdf4fc4989ef2e4
+export const getFormValidationErrors: GetAllFormErrorsFn = (form: FormGroup): FormError[] => {
+const result: FormError[] = [];
+Object.keys(form.controls).forEach(key => {
+const controlErrors: ValidationErrors | null = form.get(key)!.errors;
+if (controlErrors) {
+Object.keys(controlErrors).forEach(keyError => {
+result.push({
+control: key,
+error: keyError,
+value: controlErrors[keyError]
+});
+});
+}
+});
+return result;
+}
+Le flow
+Il est relativement simple, si vous avez compris les concepts vu tout du long :
+o On crée un formulaire réactif grâce au FormGroup
+o On associe les différents FormControl à un input html.
+o On accroche un EventListener ➔ handleFormError(monForm)
+o Cet EventListener va écouter les changements de valeur en directe et émettre un
+signal avec la nouvelle liste d’erreur
+o Ce signal est fourni par le composant.
+o Ce signal est utilisé dans le template html comme ceci, par exemple.
+<div class="error-area" *ngIf="errors().length >0">
+<p>Vous avez {{errors().length}} erreur(s)</p>
+<p *ngFor="let error of errors()">{{error.control}} {{error.error}}</p>
+</div>
+Ceci clôture le chapitre sur les formulaires. Nous allons voir comment améliorer tout cela
+grâce à la traduction.
+PARTIE 4 ANGULAR 74
+13. LA TRADUCTION
+13.1. LA LIBRAIRIE
+Tout d’abord nous allons devoir installé des librairies, cela se fait comme dans NestJS
+npm i @ngx-translate/core @ngx-translate/http-loader --save
+Le translate/core est la librairie principale tandis que le http loader permet de charger les
+fichiers.
+13.2. IMPORT DE LA TRADUCTION
+Créons d’abord la méthode pour récupérer les fichiers de traduction
+export function createTranslateLoader(http: HttpClient) {
+return new TranslateHttpLoader(http, './assets/i18n/', '.json');
+}
+Nous spécifions ici que les fichiers seront dans un sous dossier de l’asset, i18n
+Ensuite nous ajoutons le provider (un provider est en gros un service qu’on injecte au
+démarage de l’application)
+importProvidersFrom(TranslateModule.forRoot({
+loader: {
+provide: TranslateLoader,
+useFactory: createTranslateLoader,
+deps: [HttpClient]
+}
+}))
+Remarquez l’utilisation de votre méthode createTranslateLoader dans le factory de la
+méthode.
+13.3. LES FICHIER DE TRADUCTION
+Notre premier fichier de traduction assets/i18n/fr.json ressemblera à ceci :
+{
+"feature": {
+"security": {
+"page": {
+"sign-in": {
+"label": {
+"username": "Identifiant",
+"password": "Mot de passe"
+},
+"error": {
+"username-required": "Le nom d'utilisateur est requis",
+"password-required": "Le mot de passe est requis"
+}
+PARTIE 4 ANGULAR 75
+}
+}
+}
+}
+}
+Donc notre fichier sera un gros objet json, contenant des propriétés qui elles même peuvent
+contenir des objets. Vous pouvez aussi écrire cela ainsi.
+"feature.security.page.sign-in.label.username": "Identifiant",
+"feature.security.page.sign-in.label.password": "Mot de passe",
+"feature.security.page.sign-in.error.username-required": "L'identifiant' est requis",
+"feature.security.page.sign-in.error.password-required": "Le Mot de passe est requis"
+Concrètement, vous pouvez en gros l’écrire comme vous voulez ! Tant que vous avez une
+clé / valeur
+Voici finalement ma version :
+{
+"security-feature.sign-in-page.label.username": "Identifiant",
+"security-feature.sign-in-page.label.password": "Mot de passe",
+"security-feature.sign-in-page.error.username-required": "L'identifiant' est requis",
+"security-feature.sign-in-page.error.password-required": "Le Mot de passe est requis"
+}
+13.4. INITIALISATION DE LA TRADUCTION
+Il nous reste une dernière étape : initialiser notre traduction. Encore une fois , il existe
+plusieurs solution. Personnellement j’utilise celle-ci
+export class AppComponent implements OnInit {
+title = 'app';
+translate = inject(TranslateService);
+ngOnInit(): void {
+this.translate.setDefaultLang(Language.FR);
+this.translate.use(Language.FR);
+}
+}
+Dans le composant root (AppComponent) j’initialise la langue par défaut à « fr » celle-ci
+provient d’une énumération que j’ai créée dans le shared/core
+13.5. UTILISATION BASIQUE
+Retournons dans notre SigninPage et ajoutons le module de traduction dans les imports
+imports: [CommonModule, FloatingLabelInputComponent, ReactiveFormsModule,TranslateModule],
+PARTIE 4 ANGULAR 76
+Testez ensuite ceci dans votre fichier template. Vous remarquez alors que vous pouvez avoir
+une application multi langue ! Il vous suffira de créer plusieurs fichier et de faire un petit
+composant de changement de langue.
+<p> {{'security-feature.sign-in-page.error.username-required' | translate}}</p>
+Ceci est un usage assez basique. Nous allons voir maintenant comment passer des
+paramètres !
+13.6. LES PARAMÈTRES
+Retournons dans notre fichier de traduction et ajoutons la ligne suivante :
+"security-feature.sign-in-page.error.description": "Vous avez {{count}} erreur(s)"
+Nous allons simplement faire de l’interpolation.
+Ensuite dans notre SigninPageTemplate, remplacez ceci
+<p>Vous avez {{errors().length}} erreur(s)</p>
+Par ceci
+<p>{{'security-feature.sign-in-page.error.description' | translate: {count: errors().length} }}</p>
+C’est relativement simple ! Bon ce serait pas mal d’avoir simplement 1 erreur et 2 erreurs.
+Voyons comment faire !
+13.8. PLURIEL / SINGULIER
+Premièrement, installons cette dépendance, elle va permettre ensuite de modifier notre
+fichier de traduction
+npm install ngx-translate-messageformat-compiler messageformat
+Son but principal étant de fournir une amélioration de la transformation des messages de
+traduction
+Pour cela, elle nous offre de nouvelles règles d’écriture.
+PARTIE 4 ANGULAR 77
+Nous devons maintenant signaler à notre TranslateModule qui doit utiliser cette nouvelle
+libraire, pour cela rendez-vous dans l’app.config.ts et modifions l’import
+importProvidersFrom(TranslateModule.forRoot({
+loader: {
+provide: TranslateLoader,
+useFactory: createTranslateLoader,
+deps: [HttpClient]
+}, compiler: {
+provide: TranslateCompiler,
+useClass: TranslateMessageFormatCompiler
+}
+}))
+Maintenant modifions notre fichier de traduction
+"security-feature.sign-in-page.error.description": "{count, plural, =0{Vous n'avez pas d'erreur} one{Vous avez une erreur}
+other{Vous avez {count} erreurs}}."
+Relativement facile !, décomposons :
+Nous avons {count, plural, ….} Ca permet de signifier que nous voulons à partir de count
+faire de la traduction pour le pluriel
+Ensuite vous avez = 0{} ➔ dans les {} vous spécifiez la chaine de caractère que vous voulez
+pour la valeur 0.
+Ensuite vous avez one{} ➔ vous spécifiez la chaine de caractère que vous voulez pour la
+valeur 1.
+Je penses, je n’ai pas vraiment testé, que vous pouvez ainsi enchaîner.
+Mais en tout cas vous pouvez choisir un fallback other{}
+Testons
+Ca marche nickel ! Maintenant voyons comment améliorer tout cela !
+PARTIE 4 ANGULAR 78
+13.7. LABELWITHPARAM
+L’idée serait d’éviter d’importer le translatemodule dans chaque composant,non pas pour
+une question d’optimisation, vu que l’on va devoir importer un composant. Mais plutôt se dire
+que si dans le futur, nous changeons de librairie pour la traduction, cela n’impactera que un
+composant et non pas l’ensemble. Il toujours garder à l’esprit que l’application va évoluer
+dans le temps, les librairies aussi.
+Donc nous allons créer un nouveau composant, dans le shared/ui/text/component/ que l’on
+va appeller LabelWithParam
+Le contenu sera plutôt simple
+export class LabelWithParamComponent {
+@Input({required: true}) label!: string;
+@Input() params?: any;
+}
+et le template
+{{label |translate:params}}
+Appliquons le à notre composant
+<p>
+<app-label-with-param [label]="'security-feature.sign-in-page.error.description'"
+[params]="{count: errors().length}"></app-label-with-param>
+</p>
+<p *ngFor="let error of errors()">
+<app-label-with-param
+[label]="'security-feature.sign-in-page.error.'+error.control+'-'+error.error"></app-label-with-param>
+</p>
+Cela peut paraitre “moins propre” ou “moins lisible » mais rappellez vous que c’est le
+concept d’Angular (et d’autre framework) : une vue est composée d’un ensemble de
+composant.
+Nous allons voir la seconde façon de faire, via une directive
+PARTIE 4 ANGULAR 79
+14. LES DIRECTIVES
+Pour rappel, un composant angular est finalement une directive enrobée de quelques
+mécaniques supplémentaires (notamment l’assurance d’avoir un rendu html).
+Cela signifie que en théorie vous êtes capable de créer des composants en pure directive.
+L’intérêt est null car nous avons la mécanique déjà présente.
+Cela dit, nous pourrions éviter d’écrire ceci
+<p>
+<app-label-with-param></app-label-with-param>
+</p>
+Pour simplement transformer un texte d’entrée en un autre texte en sortie.
+Voyons comment
+13.1. NOTRE DIRECTIVE CUSTOM
+Nous allons simplement l’appeler de la même manière que le composant
+ng g directive shared/ui/text/directive/LabelWithParam
+Voici le contenu de base
+@Directive({
+selector: '[appLabelWithParam]',
+standalone: true
+})
+export class LabelWithParamDirective {
+constructor() {
+}
+}
+Comme vous pouvez le constater, nous sommes sur un code identique à un composant, il
+n’y a que le décorateur qui change et les paramètres de celui-ci.
+Une directive permet de faire pas mal de chose, il est donc difficile de vous montrer
+« comment » faire une directive de manière universelle. Je vais donc vous présenter une
+directive qui va prendre en entrée les mêmes paramètres que le composant
+LabelWithParam.
+Et qui, lors de sa construction va injecter dans le html la valeur transformée.
+@Directive({
+selector: '[labelWithParam]',
+standalone: true
+})
+export class LabelWithParamDirective implements OnInit {
+@Input({required: true}) label!: string;
+@Input() params?: any;
+readonly translate: TranslateService = inject(TranslateService);
+el: ElementRef = inject(ElementRef);
+ngOnInit(): void {
+PARTIE 4 ANGULAR 80
+this.el.nativeElement.innerHTML = this.translate.instant(this.label, this.params);
+}
+}
+Utilisons le maintenant.
+<p labelWithParam [label]="'security-feature.sign-in-page.error.description'" [params]="{count: errors().length}"></p>
+Ceci fera exactement la même chose que le composant
+13.2. UN PIPE
+Troisième façon de faire, utilisation d’un pipe.
+ng g pipe shared/ui/text/pipe/LabelWithParam
+Voici le code généré
+import { Pipe, PipeTransform } from '@angular/core';
+@Pipe({
+name: 'labelWithParam',
+standalone: true
+})
+export class LabelWithParamPipe implements PipeTransform {
+transform(value: unknown, ...args: unknown[]): unknown {
+return null;
+}
+}
+et voici notre implémentation
+export class LabelWithParamPipe implements PipeTransform {
+readonly translate: TranslateService = inject(TranslateService);
+transform(label: string, params: Object): string {
+return this.translate.instant(label, params);
+}
+}
+Finalement l’utilisation
+<p> {{'security-feature.sign-in-page.error.description' | labelWithParam:{count: errors().length} }}</p>
+Ceci clôture la partie sur les directives. A vous d’imaginer leurs utilisations et de trouver
+comment réaliser ce que vous voulez !
+PARTIE 4 ANGULAR 81

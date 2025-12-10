@@ -83,6 +83,20 @@
       flex-direction: column;
       gap: var(--spacing-md);
       margin-bottom: var(--spacing-lg);
+
+      .input-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+
+        .input-hint {
+          font-size: 0.75rem;
+          color: var(--color-text-light);
+          margin: 0;
+          padding-left: 0.5rem;
+          font-style: italic;
+        }
+      }
     }
 
     .button-area {

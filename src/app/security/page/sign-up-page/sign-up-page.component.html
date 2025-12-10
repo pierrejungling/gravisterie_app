@@ -9,7 +9,12 @@
   
   <div class="error-area" *ngIf="errors().length > 0">
     <p>{{'security-feature.sign-up-page.error.description' | translate: {count: errors().length} }}</p>
-    <p *ngFor="let error of errors()">{{error.control}} {{error.error}}</p>
+    <p *ngFor="let error of errors()">
+      <span *ngIf="error.control !== 'signup' && error.control !== 'credentials'">
+        <strong>{{error.control === 'username' ? 'Nom d\'utilisateur' : error.control === 'email' ? 'Email' : error.control === 'password' ? 'Mot de passe' : error.control}} :</strong> 
+      </span>
+      {{error.error}}
+    </p>
     <p *ngIf="get('confirmPassword')?.hasError('passwordMismatch') && get('confirmPassword')?.touched">
       Les mots de passe ne correspondent pas
     </p>
@@ -18,32 +23,44 @@
   <form [formGroup]="formGroup">
 
     <section id="content">
+      <div class="input-wrapper">
       <app-floating-label-input
         [label]="'Nom d\'utilisateur'"
         [control]="get('username')"
         [formGroup]="formGroup">
       </app-floating-label-input>
+        <p class="input-hint">Entre 1 et 20 caractères</p>
+      </div>
       
+      <div class="input-wrapper">
       <app-floating-label-input
         [label]="'Email'"
         [control]="get('email')"
         [formGroup]="formGroup"
         type="email">
       </app-floating-label-input>
+        <p class="input-hint">Format email valide requis</p>
+      </div>
       
+      <div class="input-wrapper">
       <app-floating-label-input
         [label]="'Mot de passe'"
         [control]="get('password')"
         [formGroup]="formGroup"
         type="password">
       </app-floating-label-input>
+        <p class="input-hint">Entre 1 et 20 caractères</p>
+      </div>
       
+      <div class="input-wrapper">
       <app-floating-label-input
         [label]="'Confirmer le mot de passe'"
         [control]="get('confirmPassword')"
         [formGroup]="formGroup"
         type="password">
       </app-floating-label-input>
+        <p class="input-hint">Doit correspondre au mot de passe</p>
+      </div>
     </section>
 
     <div class="button-area">

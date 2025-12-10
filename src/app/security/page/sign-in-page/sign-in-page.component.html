@@ -25,18 +25,24 @@
   <form [formGroup]="formGroup">
 
     <section id="content">
+      <div class="input-wrapper">
       <app-floating-label-input
         [label]="'Nom d\'utilisateur'"
         [control]="get('username')"
         [formGroup]="formGroup">
       </app-floating-label-input>
+        <p class="input-hint">Entre 1 et 20 caractères</p>
+      </div>
       
+      <div class="input-wrapper">
       <app-floating-label-input
         [label]="'Mot de passe'"
         [control]="get('password')"
         [formGroup]="formGroup"
         type="password">
       </app-floating-label-input>
+        <p class="input-hint">Entre 1 et 20 caractères</p>
+      </div>
     </section>
 
     <div class="button-area">

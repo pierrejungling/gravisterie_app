@@ -1,4 +1,4 @@
-import { Component, signal, WritableSignal } from '@angular/core';
+import { Component, signal, WritableSignal, inject } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -7,6 +7,8 @@ import { FloatingLabelInputComponent, HeaderComponent } from '@shared';
 import { SignInForm } from '../../data/form';
 import { handleFormError, getFormValidationErrors, FormError } from '@shared';
 import { AppRoutes } from '@shared';
+import { ApiService, TokenService } from '@api';
+import { ApiURI } from '@api';
 
 @Component({
   selector: 'app-sign-in-page',
@@ -24,6 +26,8 @@ export class SignInPageComponent {
 
   formGroup!: FormGroup<SignInForm>;
   errors: WritableSignal<FormError[]> = signal([]);
+  private readonly apiService: ApiService = inject(ApiService);
+  private readonly tokenService: TokenService = inject(TokenService);
 
   constructor(private router: Router) {
     this.initFormGroup();
@@ -37,8 +41,8 @@ export class SignInPageComponent {
 
   private initFormGroup(): void {
     this.formGroup = new FormGroup<SignInForm>(<SignInForm>{
-      username: new FormControl<string>('', [Validators.required, Validators.minLength(3), Validators.maxLength(20)]),
-      password: new FormControl<string>('', [Validators.required])
+      username: new FormControl<string>('', [Validators.required, Validators.minLength(1), Validators.maxLength(20)]),
+      password: new FormControl<string>('', [Validators.required, Validators.minLength(1), Validators.maxLength(20)])
     });
     // Subscribe to valueChanges to log form values (for testing)
     this.formGroup.valueChanges.subscribe(() => 
@@ -52,25 +56,28 @@ export class SignInPageComponent {
       const username = formValue.username || '';
       const password = formValue.password || '';
       
-      // Récupérer les identifiants encodés depuis localStorage
-      const storedData = localStorage.getItem('userCredentials');
-      
-      if (storedData) {
-        try {
-          const userData = JSON.parse(storedData);
-          
-          // Décoder les identifiants stockés
-          const decodedUsername = atob(userData.username);
-          const decodedPassword = atob(userData.password);
-          
-          // Vérifier si les identifiants correspondent
-          if (username === decodedUsername && password === decodedPassword) {
-            this.successMessage = 'Connexion réussie ! Redirection...';
-            console.log('Connexion réussie pour:', decodedUsername);
+      // Appel à l'API NestJS
+      this.apiService.post(ApiURI.SIGN_IN, {
+        username: username,
+        password: password,
+        socialLogin: false,
+        googleHash: '',
+        facebookHash: ''
+      }).subscribe({
+        next: (response) => {
+          if (response.result && response.data) {
+            // Stocker le token via le TokenService
+            this.tokenService.setToken({
+              token: response.data.token,
+              refreshToken: response.data.refreshToken,
+              isEmpty: false
+            });
             
-            // Stocker l'état de connexion
-            localStorage.setItem('isAuthenticated', 'true');
-            localStorage.setItem('currentUser', decodedUsername);
+            // Stocker le nom d'utilisateur dans localStorage pour l'affichage
+            localStorage.setItem('currentUser', username);
+            
+            this.successMessage = 'Connexion réussie ! Redirection...';
+            console.log('Connexion réussie pour:', username);
             
             // Rediriger vers le dashboard après un court délai
             setTimeout(() => {
@@ -83,21 +90,16 @@ export class SignInPageComponent {
               error: 'Nom d\'utilisateur ou mot de passe incorrect'
             }]);
           }
-        } catch (error) {
-          console.error('Erreur lors du décodage des identifiants:', error);
+        },
+        error: (error) => {
+          console.error('Erreur lors de la connexion:', error);
           this.errors.set([{
             control: 'credentials',
             value: '',
-            error: 'Erreur lors de la vérification des identifiants. Les données peuvent être corrompues.'
+            error: 'Erreur lors de la connexion. Veuillez réessayer.'
           }]);
         }
-      } else {
-        this.errors.set([{
-          control: 'credentials',
-          value: '',
-          error: 'Aucun compte trouvé. Veuillez vous inscrire d\'abord.'
-        }]);
-      }
+      });
     } else {
       // Trigger validation errors display
       this.formGroup.markAllAsTouched();

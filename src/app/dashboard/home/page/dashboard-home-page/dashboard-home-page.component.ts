@@ -1,7 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { HeaderComponent } from '@shared';
+import { ApiService } from '@api';
+import { ApiURI } from '@api';
+import { ApiResponse } from '@api';
 
 export interface DashboardCard {
   title: string;
@@ -21,7 +24,8 @@ export interface DashboardCard {
 export class DashboardHomePageComponent implements OnInit {
   logoPath = '';
   logoError = false;
-  currentUser: string = '';
+  currentUser: string = 'Utilisateur';
+  private readonly apiService: ApiService = inject(ApiService);
   
   dashboardCards: DashboardCard[] = [
     {
@@ -56,12 +60,30 @@ export class DashboardHomePageComponent implements OnInit {
   ];
 
   ngOnInit(): void {
-    // Récupérer le nom d'utilisateur
-    const user = localStorage.getItem('currentUser');
-    this.currentUser = user || 'Utilisateur';
-    
     // Définir le chemin du logo
     this.logoPath = this.getLogoPath();
+    
+    // Récupérer le nom d'utilisateur depuis localStorage (fallback)
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      this.currentUser = storedUser;
+    }
+    
+    // Récupérer les informations de l'utilisateur depuis l'API
+    this.apiService.get(ApiURI.ME).subscribe({
+      next: (response: ApiResponse) => {
+        if (response.result && response.data && response.data.username) {
+          this.currentUser = response.data.username;
+          // Mettre à jour localStorage avec le username de l'API
+          localStorage.setItem('currentUser', response.data.username);
+        }
+      },
+      error: (error: any) => {
+        console.error('Erreur lors de la récupération des informations utilisateur:', error);
+        // En cas d'erreur, utiliser le nom stocké dans localStorage ou "Utilisateur"
+        this.currentUser = storedUser || 'Utilisateur';
+      }
+    });
   }
 
   getLogoPath(): string {

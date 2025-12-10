@@ -1,7 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, inject, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { AppRoutes } from '@shared';
+import { TokenService } from '@api';
 
 @Component({
   selector: 'app-header',
@@ -14,6 +15,7 @@ export class HeaderComponent {
   logoLoaded = false;
   logoError = false;
   currentLogoPath = '';
+  private readonly tokenService: TokenService = inject(TokenService);
   
   // Liste des fichiers logo possibles à essayer (ordre de priorité)
   private readonly possibleLogos = [
@@ -28,20 +30,21 @@ export class HeaderComponent {
     'assets/images/Logo/La Gravisterie blanc sans fond copie.svg'
   ];
   
+  // Signal computed pour l'authentification (réactif)
+  isAuthenticated = computed(() => {
+    const token = this.tokenService.token();
+    return !token.isEmpty && token.token.trim().length > 0;
+  });
+  
   constructor(private router: Router) {
     // Initialiser avec le logo principal
     this.currentLogoPath = this.possibleLogos[0];
   }
   
-  isAuthenticated(): boolean {
-    return localStorage.getItem('isAuthenticated') === 'true';
-  }
-  
   logout(): void {
-    // Nettoyer uniquement la session (pas les identifiants enregistrés)
-    localStorage.removeItem('isAuthenticated');
+    // Nettoyer le token via le TokenService
+    this.tokenService.setToken({ token: '', refreshToken: '', isEmpty: true });
     localStorage.removeItem('currentUser');
-    // On garde 'userCredentials' pour permettre une reconnexion facile
     
     // Rediriger vers la page de connexion
     this.router.navigate([AppRoutes.SIGN_IN]);

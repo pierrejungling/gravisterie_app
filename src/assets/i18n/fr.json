@@ -10,6 +10,11 @@
         "password-required": "Le mot de passe est requis",
         "description": "Vous avez {{count}} erreur(s)"
       }
+    },
+    "sign-up-page": {
+      "error": {
+        "description": "Vous avez {{count}} erreur(s)"
+      }
     }
   }
 }

@@ -1,0 +1,146 @@
+.commandes-terminees-wrapper {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  padding: 2rem;
+  padding-top: 90px; // Espace pour le header fixe
+}
+
+.commandes-terminees-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-title {
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 0 0 2rem 0;
+  color: #333;
+}
+
+.loading-area {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.empty-message {
+  font-size: 1.125rem;
+  color: #666;
+  margin: 0;
+}
+
+.commandes-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.commande-card {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.commande-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  border-color: #4CAF50;
+}
+
+.commande-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.commande-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: #333;
+  flex: 1;
+}
+
+.commande-status-badge {
+  background: #4CAF50;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.commande-status-badge.badge-annulee {
+  background: #dc3545;
+}
+
+.commande-card.commande-annulee {
+  border-color: #dc3545;
+  background: #fff5f5;
+}
+
+.commande-card.commande-annulee:hover {
+  border-color: #c82333;
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.2);
+}
+
+.commande-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.commande-info p {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+.commande-info strong {
+  color: #333;
+  font-weight: 600;
+}
+
+.commande-client,
+.commande-date,
+.commande-deadline,
+.commande-prix {
+  display: flex;
+  align-items: center;
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .commandes-terminees-wrapper {
+    padding: 1rem;
+  }
+
+  .commandes-list {
+    grid-template-columns: 1fr;
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+  }
+}

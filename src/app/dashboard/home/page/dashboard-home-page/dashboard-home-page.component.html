@@ -25,7 +25,15 @@
         <h3 class="dashboard-card__title">{{ card.title }}</h3>
         <p class="dashboard-card__description">{{ card.description }}</p>
         <div class="dashboard-card__footer">
-          <span class="dashboard-card__count" *ngIf="card.count !== undefined">
+          <div class="dashboard-card__counts" *ngIf="card.countTerminees !== undefined || card.countAnnulees !== undefined">
+            <span class="dashboard-card__count" *ngIf="card.countTerminees !== undefined">
+              {{ card.countTerminees }} terminée{{ card.countTerminees > 1 ? 's' : '' }}
+            </span>
+            <span class="dashboard-card__count" *ngIf="card.countAnnulees !== undefined">
+              {{ card.countAnnulees }} annulée{{ card.countAnnulees > 1 ? 's' : '' }}
+            </span>
+          </div>
+          <span class="dashboard-card__count" *ngIf="card.count !== undefined && card.countTerminees === undefined && card.countAnnulees === undefined">
             {{ card.count }} commande{{ card.count > 1 ? 's' : '' }}
           </span>
           <span class="dashboard-card__arrow">→</span>

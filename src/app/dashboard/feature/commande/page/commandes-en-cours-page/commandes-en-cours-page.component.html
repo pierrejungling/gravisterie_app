@@ -23,9 +23,12 @@
               <td *ngFor="let statut of statuts" class="statut-column">
                 <div class="commande-cards">
                   <div 
-                    *ngFor="let commande of getCommandesByStatut(statut)" 
+                    *ngFor="let commande of getCommandesByStatut(statut); trackBy: trackByCommandeId" 
                     class="commande-card"
-                    [title]="commande.produit || 'Commande #' + commande.id_commande">
+                    [class.deadline-warning]="getDeadlineStatus(commande) === 'warning'"
+                    [class.deadline-danger]="getDeadlineStatus(commande) === 'danger'"
+                    [title]="commande.produit || 'Commande #' + commande.id_commande"
+                    (click)="onCommandeClick(commande)">
                     <div class="commande-header">
                       <h3 class="commande-title">
                         {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
@@ -33,14 +36,44 @@
                     </div>
                     <div class="commande-info">
                       <p class="commande-client">
-                        <strong>Client:</strong> {{ getClientName(commande.client) }}
+                        <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
                       </p>
                       <p class="commande-date">
-                        <strong>Date:</strong> {{ formatDate(commande.date_commande) }}
+                        <strong>Date :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
                       </p>
-                      <p class="commande-deadline" *ngIf="commande.deadline">
-                        <strong>Deadline:</strong> {{ formatDate(commande.deadline) }}
+                      <p 
+                        class="commande-deadline" 
+                        [class.deadline-highlight-warning]="getDeadlineStatus(commande) === 'warning'"
+                        [class.deadline-highlight-danger]="getDeadlineStatus(commande) === 'danger'"
+                        *ngIf="commande.deadline">
+                        <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
                       </p>
+                    </div>
+                    <div class="commande-actions">
+                      <!-- Afficher les étapes précédentes cochées -->
+                      <div class="etapes-precedentes" *ngIf="getEtapesPrecedentes(commande, statut).length > 0" (click)="$event.stopPropagation()">
+                        <label 
+                          *ngFor="let etapePrecedente of getEtapesPrecedentes(commande, statut)" 
+                          class="checkbox-label checkbox-completed">
+                          <input 
+                            type="checkbox" 
+                            [checked]="true"
+                            (change)="onEtapePrecedenteChange($event, commande, etapePrecedente)"
+                            (click)="$event.stopPropagation()"
+                            class="commande-checkbox checkbox-completed-input">
+                          <span class="checkbox-text">{{ getStatutLabel(etapePrecedente) }}</span>
+                        </label>
+                      </div>
+                      <!-- Checkbox pour l'étape actuelle -->
+                      <label class="checkbox-label" (click)="$event.stopPropagation()">
+                        <input 
+                          type="checkbox" 
+                          [checked]="isCheckboxChecked(commande, statut)"
+                          (change)="onCheckboxChange(commande, statut)"
+                          (click)="$event.stopPropagation()"
+                          class="commande-checkbox">
+                        <span class="checkbox-text">Terminé</span>
+                      </label>
                     </div>
                   </div>
                   <div *ngIf="getCommandesByStatut(statut).length === 0" class="empty-column">

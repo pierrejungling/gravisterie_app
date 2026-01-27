@@ -23,4 +23,5 @@ export interface NouvelleCommandeForm {
   police_ecriture: FormControl<string>;
   texte_personnalisation: FormControl<string>;
   fichiers_joints: FormControl<File[]>;
+  quantité: FormControl<number>;
 }

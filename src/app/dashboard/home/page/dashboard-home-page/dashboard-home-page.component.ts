@@ -5,6 +5,7 @@ import { HeaderComponent } from '@shared';
 import { ApiService } from '@api';
 import { ApiURI } from '@api';
 import { ApiResponse } from '@api';
+import { Commande, StatutCommande } from '../../../feature/commande/model/commande.interface';
 
 export interface DashboardCard {
   title: string;
@@ -12,6 +13,8 @@ export interface DashboardCard {
   route: string;
   icon: string;
   count?: number;
+  countTerminees?: number;
+  countAnnulees?: number;
 }
 
 @Component({
@@ -35,13 +38,6 @@ export class DashboardHomePageComponent implements OnInit {
       icon: '➕',
     },
     {
-      title: 'En attente d\'infos',
-      description: 'Commandes nécessitant des informations complémentaires',
-      route: '/dashboard/commandes/en-attente',
-      icon: '⏳',
-      count: 0
-    },
-    {
       title: 'Commandes en cours',
       description: 'Suivez l\'état de vos commandes en cours de traitement',
       route: '/dashboard/commandes/en-cours',
@@ -49,14 +45,13 @@ export class DashboardHomePageComponent implements OnInit {
       count: 0
     },
     {
-      title: 'Commandes terminées',
+      title: 'Commandes terminées ou annulées',
       description: 'Consultez vos commandes finalisées',
       route: '/dashboard/commandes/terminees',
       icon: '✅',
-      count: 0
+      countTerminees: 0,
+      countAnnulees: 0
     },
-    
-    
   ];
 
   ngOnInit(): void {
@@ -82,6 +77,49 @@ export class DashboardHomePageComponent implements OnInit {
         console.error('Erreur lors de la récupération des informations utilisateur:', error);
         // En cas d'erreur, utiliser le nom stocké dans localStorage ou "Utilisateur"
         this.currentUser = storedUser || 'Utilisateur';
+      }
+    });
+
+    // Charger les commandes pour mettre à jour les compteurs
+    this.loadCommandesCount();
+  }
+
+  loadCommandesCount(): void {
+    this.apiService.get(ApiURI.LISTE_COMMANDES).subscribe({
+      next: (response: ApiResponse) => {
+        if (response.result && response.data) {
+          const commandes = response.data as Commande[];
+          
+          // Compter les commandes non terminées (excluant aussi les annulées)
+          const commandesEnCours = commandes.filter(cmd => 
+            cmd.statut_commande !== StatutCommande.TERMINE && cmd.statut_commande !== StatutCommande.ANNULEE
+          ).length;
+
+          // Compter séparément les commandes terminées et annulées
+          const commandesTerminees = commandes.filter(cmd => 
+            cmd.statut_commande === StatutCommande.TERMINE
+          ).length;
+
+          const commandesAnnulees = commandes.filter(cmd => 
+            cmd.statut_commande === StatutCommande.ANNULEE
+          ).length;
+
+          // Mettre à jour le compteur de la carte "Commandes en cours"
+          const commandesEnCoursCard = this.dashboardCards.find(card => card.title === 'Commandes en cours');
+          if (commandesEnCoursCard) {
+            commandesEnCoursCard.count = commandesEnCours;
+          }
+
+          // Mettre à jour les compteurs de la carte "Commandes terminées ou annulées"
+          const commandesTermineesCard = this.dashboardCards.find(card => card.title === 'Commandes terminées ou annulées');
+          if (commandesTermineesCard) {
+            commandesTermineesCard.countTerminees = commandesTerminees;
+            commandesTermineesCard.countAnnulees = commandesAnnulees;
+          }
+        }
+      },
+      error: (error: any) => {
+        console.error('Erreur lors de la récupération des commandes:', error);
       }
     });
   }

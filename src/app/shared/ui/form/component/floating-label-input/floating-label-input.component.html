@@ -6,7 +6,9 @@
     (focus)="inputFocus=true"
     (blur)="inputFocus=false" 
     [formControl]="control" 
-    [autocomplete]="getAutocomplete()">
+    [autocomplete]="getAutocomplete()"
+    [readonly]="readonly"
+    [disabled]="readonly">
   <label 
     class="floating-label"
     [class.fixed-label]="inputFocus || (control.value && control.value.length > 0)">{{label}}</label>

@@ -169,6 +169,15 @@
         </div>
 
         <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'Quantité'"
+            [control]="get('quantité')"
+            [formGroup]="formGroup"
+            type="number">
+          </app-floating-label-input>
+        </div>
+
+        <div class="input-wrapper">
           <div class="support-input-wrapper">
             <input
               class="support-input"
@@ -227,7 +236,12 @@
       <section class="form-section">
         <h2 class="section-title">Fichiers joints</h2>
         
-        <div class="file-upload-area">
+        <div 
+          class="file-upload-area"
+          [class.drag-over]="isDragOver"
+          (dragover)="onDragOver($event)"
+          (dragleave)="onDragLeave($event)"
+          (drop)="onDrop($event)">
           <input
             type="file"
             id="file-input"
@@ -236,7 +250,7 @@
             (change)="onFileSelected($event)"
             style="display: none;">
           <label for="file-input" class="file-upload-label">
-            <span>📎 Cliquez pour ajouter des fichiers</span>
+            <span>📎 Cliquez ou glissez-déposez des fichiers ici</span>
             <small>Formats acceptés: Images, PDF, DOC, DOCX</small>
           </label>
         </div>

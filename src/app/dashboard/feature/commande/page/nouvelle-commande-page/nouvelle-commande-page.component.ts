@@ -22,6 +22,7 @@ export class NouvelleCommandePageComponent implements OnInit {
   showSuccessPopup: WritableSignal<boolean> = signal(false);
   uploadedFiles: File[] = [];
   supportInputFocus: boolean = false;
+  isDragOver: boolean = false;
   
   private readonly apiService: ApiService = inject(ApiService);
   
@@ -82,7 +83,8 @@ export class NouvelleCommandePageComponent implements OnInit {
       support: new FormControl<string>('', []),
       police_ecriture: new FormControl<string>(''),
       texte_personnalisation: new FormControl<string>(''),
-      fichiers_joints: new FormControl<File[]>([], [])
+      fichiers_joints: new FormControl<File[]>([], []),
+      quantité: new FormControl<number>(1, [Validators.min(1)])
     });
   }
 
@@ -98,6 +100,43 @@ export class NouvelleCommandePageComponent implements OnInit {
   removeFile(index: number): void {
     this.uploadedFiles.splice(index, 1);
     this.formGroup.get('fichiers_joints')?.setValue(this.uploadedFiles);
+  }
+
+  onDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver = true;
+  }
+
+  onDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver = false;
+  }
+
+  onDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDragOver = false;
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const fileArray = Array.from(files);
+      // Filtrer les fichiers selon les types acceptés
+      const acceptedFiles = fileArray.filter(file => {
+        const fileType = file.type.toLowerCase();
+        const fileName = file.name.toLowerCase();
+        return fileType.startsWith('image/') ||
+               fileName.endsWith('.pdf') ||
+               fileName.endsWith('.doc') ||
+               fileName.endsWith('.docx');
+      });
+      
+      if (acceptedFiles.length > 0) {
+        this.uploadedFiles = [...this.uploadedFiles, ...acceptedFiles];
+        this.formGroup.get('fichiers_joints')?.setValue(this.uploadedFiles);
+      }
+    }
   }
 
   toggleCouleur(couleur: Couleur): void {
@@ -187,6 +226,7 @@ export class NouvelleCommandePageComponent implements OnInit {
         support: (formValue.support?.trim() || this.supportParDefaut),
         police_ecriture: formValue.police_ecriture,
         texte_personnalisation: formValue.texte_personnalisation,
+        quantité: formValue.quantité || 1,
         fichiers_joints: [] // Pour l'instant, on envoie un tableau vide. L'upload de fichiers sera géré séparément
       };
 

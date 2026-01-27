@@ -1,8 +1,8 @@
 .nouvelle-commande-wrapper {
-  padding-top: 80px;
   min-height: 100vh;
   background: var(--color-background);
   padding: 2rem;
+  padding-top: 90px; // Espace pour le header fixe
 }
 
 .nouvelle-commande-container {
@@ -483,10 +483,19 @@
   cursor: pointer;
   transition: var(--transition);
   margin-bottom: var(--spacing-md);
+  position: relative;
 
   &:hover {
     border-color: var(--color-primary);
     background: var(--color-background);
+  }
+
+  &.drag-over {
+    border-color: var(--color-primary);
+    background: rgba(0, 0, 0, 0.05);
+    border-style: solid;
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 }
 

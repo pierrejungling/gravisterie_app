@@ -10,6 +10,8 @@ export enum AppNode {
   COMMANDES = 'commandes',
   NOUVELLE_COMMANDE = 'nouvelle',
   COMMANDES_EN_COURS = 'en-cours',
+  COMMANDES_TERMINEES = 'terminees',
+  DETAIL_COMMANDE = 'detail/:id',
   FALL_BACK = '**',
 }
 

@@ -1,0 +1,305 @@
+<app-header></app-header>
+
+<div class="detail-commande-wrapper">
+  <div 
+    class="detail-commande-container" 
+    [class.deadline-warning]="getDeadlineStatus() === 'warning'"
+    [class.deadline-danger]="getDeadlineStatus() === 'danger'"
+    *ngIf="!isLoading() && commande()">
+    <div class="detail-header">
+      <div class="header-title-section">
+        <h1 class="page-title">Détail de la commande</h1>
+        <h2 class="commande-title-main" *ngIf="!isEditMode()">
+          {{ commande()?.produit || 'Commande #' + (commande()?.id_commande?.substring(0, 8) || '') }}
+        </h2>
+        <div class="commande-title-edit" *ngIf="isEditMode()">
+          <app-floating-label-input
+            [label]="'Nom / Intitulé de la commande'"
+            [control]="get('nom_commande')"
+            [formGroup]="formGroup"
+            [readonly]="false">
+          </app-floating-label-input>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button 
+          type="button" 
+          class="btn-toggle-prix"
+          (click)="togglePrixFields()"
+          [title]="showPrixFields() ? 'Masquer les prix' : 'Afficher les prix'">
+          {{ showPrixFields() ? '💰 Masquer prix' : '💰 Afficher prix' }}
+        </button>
+        <button 
+          type="button" 
+          class="btn-edit"
+          (click)="toggleEditMode()"
+          [title]="isEditMode() ? 'Annuler' : 'Modifier'">
+          {{ isEditMode() ? '✕ Annuler' : '✏️ Modifier' }}
+        </button>
+        <button 
+          type="button" 
+          class="btn-delete"
+          (click)="openDeleteConfirm()"
+          title="Supprimer la commande">
+          🗑️ Supprimer
+        </button>
+        <button type="button" class="btn-back" (click)="goBack()">← Retour</button>
+      </div>
+    </div>
+
+    <form [formGroup]="formGroup" *ngIf="formGroup" (ngSubmit)="onSave()">
+      
+      <!-- Informations de la commande -->
+      <section class="form-section">
+        <h2 class="section-title">Informations de la commande</h2>
+        
+        <!-- Le champ nom_commande est maintenant dans le header, on ne l'affiche plus ici -->
+
+        <div 
+          class="input-wrapper"
+          [class.deadline-highlight-warning]="getDeadlineStatus() === 'warning'"
+          [class.deadline-highlight-danger]="getDeadlineStatus() === 'danger'">
+          <app-floating-label-input
+            [label]="'Deadline'"
+            [control]="get('deadline')!"
+            [formGroup]="formGroup"
+            type="date"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'Description du projet'"
+            [control]="get('description')!"
+            [formGroup]="formGroup"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'Dimensions souhaitées'"
+            [control]="get('dimensions')!"
+            [formGroup]="formGroup"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'Quantité'"
+            [control]="get('quantité')!"
+            [formGroup]="formGroup"
+            type="number"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'Support'"
+            [control]="get('support')!"
+            [formGroup]="formGroup"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'Police d\'écriture'"
+            [control]="get('police_ecriture')!"
+            [formGroup]="formGroup"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'Texte de personnalisation'"
+            [control]="get('texte_personnalisation')"
+            [formGroup]="formGroup"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <!-- Prix final toujours visible -->
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'Prix final'"
+            [control]="get('prix_final')"
+            [formGroup]="formGroup"
+            type="number"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <!-- Champs de prix (masqués par défaut) -->
+        <div class="prix-fields" *ngIf="showPrixFields()">
+          <div class="input-wrapper">
+            <app-floating-label-input
+              [label]="'Prix du support'"
+              [control]="get('prix_support')"
+              [formGroup]="formGroup"
+              type="number"
+              [readonly]="!isEditMode()">
+            </app-floating-label-input>
+          </div>
+
+          <div class="input-wrapper">
+            <app-floating-label-input
+              [label]="'URL du support'"
+              [control]="get('url_support')"
+              [formGroup]="formGroup"
+              [readonly]="!isEditMode()">
+            </app-floating-label-input>
+          </div>
+        </div>
+      </section>
+
+      <!-- Coordonnées de contact -->
+      <section class="form-section">
+        <h2 class="section-title">Coordonnées de contact</h2>
+        
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'Nom'"
+            [control]="get('nom')!"
+            [formGroup]="formGroup"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'Prénom'"
+            [control]="get('prenom')!"
+            [formGroup]="formGroup"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'Téléphone'"
+            [control]="get('telephone')!"
+            [formGroup]="formGroup"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'Email'"
+            [control]="get('mail')!"
+            [formGroup]="formGroup"
+            type="email"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <!-- Adresse décomposée -->
+        <div class="address-section">
+          <label class="section-subtitle">Adresse</label>
+          
+          <div class="input-wrapper">
+            <app-floating-label-input
+              [label]="'Rue et numéro'"
+              [control]="get('rue')!"
+              [formGroup]="formGroup"
+              [readonly]="!isEditMode()">
+            </app-floating-label-input>
+          </div>
+
+          <div class="form-row">
+            <div class="input-wrapper">
+              <app-floating-label-input
+                [label]="'Code postal'"
+                [control]="get('code_postal')!"
+                [formGroup]="formGroup"
+                [readonly]="!isEditMode()">
+              </app-floating-label-input>
+            </div>
+            
+            <div class="input-wrapper">
+              <app-floating-label-input
+                [label]="'Ville'"
+                [control]="get('ville')!"
+                [formGroup]="formGroup"
+                [readonly]="!isEditMode()">
+              </app-floating-label-input>
+            </div>
+          </div>
+
+          <div class="input-wrapper">
+            <app-floating-label-input
+              [label]="'Pays'"
+              [control]="get('pays')!"
+              [formGroup]="formGroup"
+              [readonly]="!isEditMode()">
+            </app-floating-label-input>
+          </div>
+        </div>
+
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'TVA'"
+            [control]="get('tva')!"
+            [formGroup]="formGroup"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+      </section>
+
+      <!-- Boutons d'action en mode édition -->
+      <div class="form-actions" *ngIf="isEditMode()">
+        <button type="button" class="btn-cancel" (click)="onCancel()">Annuler</button>
+        <button type="submit" class="btn-save" [disabled]="!formGroup.valid">Enregistrer</button>
+      </div>
+    </form>
+
+    <!-- Statuts de la commande -->
+    <section class="statuts-section">
+      <h2 class="section-title">Statuts de la commande</h2>
+      
+      <div class="statuts-list">
+        <label 
+          *ngFor="let statut of allStatuts" 
+          class="statut-checkbox-label"
+          [class.active]="(isStatutActuel(statut) || isStatutActif(statut)) && !isStatutChecked(statut)"
+          [class.completed]="isStatutChecked(statut)"
+          [class.cancelled]="statut === StatutCommande.ANNULEE && isStatutChecked(statut)"
+          [class.disabled]="isStatutDisabled(statut)">
+          <input 
+            type="checkbox" 
+            [checked]="isStatutChecked(statut)"
+            [disabled]="isStatutDisabled(statut)"
+            (change)="onStatutChange(statut, $event)"
+            class="statut-checkbox">
+          <span class="statut-label">{{ statutLabels[statut] }}</span>
+        </label>
+      </div>
+    </section>
+  </div>
+
+  <div class="loading-area" *ngIf="isLoading()">
+    <p>Chargement de la commande...</p>
+  </div>
+</div>
+
+<!-- Popup de confirmation de suppression -->
+<div class="delete-confirm-overlay" *ngIf="showDeleteConfirm()" (click)="closeDeleteConfirm()">
+  <div class="delete-confirm-popup" (click)="$event.stopPropagation()">
+    <div class="delete-confirm-header">
+      <h3>Confirmer la suppression</h3>
+    </div>
+    <div class="delete-confirm-body">
+      <p>Êtes-vous sûr de vouloir supprimer cette commande ?</p>
+      <p class="delete-warning">Cette action est irréversible et supprimera définitivement la commande de la base de données.</p>
+    </div>
+    <div class="delete-confirm-actions">
+      <button type="button" class="btn-cancel-delete" (click)="closeDeleteConfirm()">Annuler</button>
+      <button type="button" class="btn-confirm-delete" (click)="confirmDelete()">Supprimer</button>
+    </div>
+  </div>
+</div>

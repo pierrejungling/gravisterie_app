@@ -13,6 +13,7 @@ export class FloatingLabelInputComponent {
   @Input({ required: true }) control!: FormControl<any>;
   @Input({ required: true }) formGroup!: FormGroup;
   @Input() type: string = 'text';
+  @Input() readonly: boolean = false;
   inputFocus: boolean = false;
 
   getAutocomplete(): string {

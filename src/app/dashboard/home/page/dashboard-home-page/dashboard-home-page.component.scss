@@ -126,10 +126,17 @@
     border-top: 1px solid var(--color-border);
   }
 
+  &__counts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
   &__count {
     font-size: 0.875rem;
     color: var(--color-text-light);
     font-weight: 500;
+    display: block;
   }
 
   &__arrow {

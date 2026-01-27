@@ -19,6 +19,8 @@ export interface AjouterCommandePayload {
   texte_personnalisation?: string;
   fichiers_joints?: string[];
   quantité?: number;
+  payé?: boolean;
+  commentaire_paye?: string;
 }
 
 export enum Couleur {
@@ -65,6 +67,8 @@ export interface Commande {
   statuts_actifs?: StatutCommande[];
   prix_final?: number;
   quantité?: number;
+  payé?: boolean;
+  commentaire_paye?: string;
   client: Client;
   support?: {
     nom_support?: string;

@@ -2,7 +2,12 @@
 
 <div class="commandes-terminees-wrapper">
   <div class="commandes-terminees-container">
-    <h1 class="page-title">Commandes terminées</h1>
+    <div class="page-header">
+      <h1 class="page-title">Commandes terminées</h1>
+      <button class="btn-navigation" (click)="navigateToEnCours()">
+        Voir les commandes en cours
+      </button>
+    </div>
 
     <div class="loading-area" *ngIf="isLoading()">
       <p>Chargement des commandes...</p>

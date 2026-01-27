@@ -2,7 +2,17 @@
 
 <div class="commandes-en-cours-wrapper">
   <div class="commandes-en-cours-container">
-    <h1 class="page-title">Commandes en cours</h1>
+    <div class="page-header">
+      <h1 class="page-title">Commandes en cours</h1>
+      <div class="header-actions">
+        <button class="btn-add-commande" (click)="navigateToNouvelleCommande()" title="Créer une nouvelle commande">
+          +
+        </button>
+        <button class="btn-navigation" (click)="navigateToTerminees()">
+          Voir les commandes terminées / annulées
+        </button>
+      </div>
+    </div>
 
     <div class="loading-area" *ngIf="isLoading()">
       <p>Chargement des commandes...</p>

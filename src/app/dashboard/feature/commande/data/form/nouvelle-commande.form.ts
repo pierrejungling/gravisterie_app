@@ -24,4 +24,6 @@ export interface NouvelleCommandeForm {
   texte_personnalisation: FormControl<string>;
   fichiers_joints: FormControl<File[]>;
   quantité: FormControl<number>;
+  payé: FormControl<boolean>;
+  commentaire_paye: FormControl<string>;
 }

@@ -141,6 +141,7 @@
 
 .input-wrapper {
   transition: all 0.3s ease;
+  margin-bottom: 1.5rem;
 
   &.deadline-highlight-warning {
     background: rgba(255, 152, 0, 0.1);
@@ -179,7 +180,91 @@
       }
     }
   }
-  margin-bottom: 1.5rem;
+
+  .paye-status-block {
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    border: 2px solid;
+    transition: all 0.3s ease;
+    background: rgba(244, 67, 54, 0.1);
+    border-color: #f44336;
+
+    &.paye-oui {
+      background: rgba(76, 175, 80, 0.15);
+      border-color: #4caf50;
+
+      .paye-label-text {
+        color: #2e7d32;
+      }
+    }
+
+    &.paye-non {
+      background: rgba(244, 67, 54, 0.1);
+      border-color: #f44336;
+
+      .paye-label-text {
+        color: #c62828;
+      }
+    }
+  }
+
+  .checkbox-label-paye {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+    margin: 0 0 1rem 0;
+
+    input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      accent-color: #4caf50;
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+    }
+
+    .paye-label-text {
+      font-size: 1.25rem;
+      font-weight: 600;
+      transition: color 0.3s ease;
+    }
+  }
+
+  .paye-commentaire-wrapper {
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+
+  .paye-commentaire-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-family: inherit;
+    resize: vertical;
+    background: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+
+    &:focus {
+      outline: none;
+      border-color: rgba(0, 0, 0, 0.4);
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+    }
+
+    &::placeholder {
+      color: rgba(0, 0, 0, 0.5);
+    }
+
+    &[readonly] {
+      background: rgba(0, 0, 0, 0.05);
+      cursor: not-allowed;
+    }
+  }
 }
 
 .address-section {

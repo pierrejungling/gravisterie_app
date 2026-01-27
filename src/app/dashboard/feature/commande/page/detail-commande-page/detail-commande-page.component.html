@@ -97,6 +97,27 @@
         </div>
 
         <div class="input-wrapper">
+          <div class="paye-status-block" [class.paye-oui]="get('payé').value" [class.paye-non]="!get('payé').value">
+            <label class="checkbox-label-paye">
+              <input
+                type="checkbox"
+                formControlName="payé"
+                [disabled]="!isEditMode()">
+              <span class="paye-label-text">{{ get('payé').value ? 'Payé' : 'Non payé' }}</span>
+            </label>
+            <div class="paye-commentaire-wrapper">
+              <textarea
+                class="paye-commentaire-input"
+                formControlName="commentaire_paye"
+                placeholder="Commentaire..."
+                rows="3"
+                [readonly]="!isEditMode()">
+              </textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-wrapper">
           <app-floating-label-input
             [label]="'Support'"
             [control]="get('support')!"

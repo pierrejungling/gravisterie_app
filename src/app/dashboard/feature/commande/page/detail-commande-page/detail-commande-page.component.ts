@@ -141,6 +141,8 @@ export class DetailCommandePageComponent implements OnInit {
       police_ecriture: new FormControl(cmd.personnalisation?.police || ''),
       texte_personnalisation: new FormControl(cmd.personnalisation?.texte || ''),
       quantité: new FormControl(cmd.quantité || 1),
+      payé: new FormControl(cmd.payé || false),
+      commentaire_paye: new FormControl(cmd.commentaire_paye || ''),
       prix_support: new FormControl(cmd.support?.prix_support || ''),
       url_support: new FormControl(cmd.support?.url_support || ''),
       prix_final: new FormControl(cmd.prix_final || ''),
@@ -190,6 +192,8 @@ export class DetailCommandePageComponent implements OnInit {
       deadline: formValue.deadline || null,
       description: formValue.description,
       quantité: formValue.quantité ? parseInt(formValue.quantité, 10) : null,
+      payé: formValue.payé || false,
+      commentaire_paye: formValue.commentaire_paye || null,
       prix_final: formValue.prix_final ? parseFloat(formValue.prix_final) : null,
       coordonnees_contact: {
         nom: formValue.nom,

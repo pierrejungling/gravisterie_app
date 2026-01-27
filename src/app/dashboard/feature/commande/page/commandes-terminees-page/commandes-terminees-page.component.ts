@@ -66,6 +66,10 @@ export class CommandesTermineesPageComponent implements OnInit {
     });
   }
 
+  navigateToEnCours(): void {
+    this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'en-cours']);
+  }
+
   getClientName(client: Commande['client']): string {
     if (!client) return 'Client inconnu';
     if (client.nom && client.prénom) {

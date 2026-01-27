@@ -251,4 +251,12 @@ export class CommandesEnCoursPageComponent implements OnInit {
       queryParams: { from: 'en-cours' }
     });
   }
+
+  navigateToTerminees(): void {
+    this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'terminees']);
+  }
+
+  navigateToNouvelleCommande(): void {
+    this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'nouvelle']);
+  }
 }

@@ -178,6 +178,25 @@
         </div>
 
         <div class="input-wrapper">
+          <div class="paye-status-block" [class.paye-oui]="formGroup.get('payé')?.value" [class.paye-non]="!formGroup.get('payé')?.value">
+            <label class="checkbox-label-paye">
+              <input
+                type="checkbox"
+                formControlName="payé">
+              <span class="paye-label-text">{{ formGroup.get('payé')?.value ? 'Payé' : 'Non payé' }}</span>
+            </label>
+            <div class="paye-commentaire-wrapper">
+              <textarea
+                class="paye-commentaire-input"
+                formControlName="commentaire_paye"
+                placeholder="Commentaire..."
+                rows="3">
+              </textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="input-wrapper">
           <div class="support-input-wrapper">
             <input
               class="support-input"

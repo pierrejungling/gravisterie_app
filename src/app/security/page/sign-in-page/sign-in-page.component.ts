@@ -107,9 +107,6 @@ export class SignInPageComponent {
     }
   }
 
-  goToSignUp(): void {
-    this.router.navigate([AppRoutes.SIGN_UP]);
-  }
 
   onLogoLoad(): void {
     this.logoError = false;

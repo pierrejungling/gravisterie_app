@@ -84,7 +84,9 @@ export class NouvelleCommandePageComponent implements OnInit {
       police_ecriture: new FormControl<string>(''),
       texte_personnalisation: new FormControl<string>(''),
       fichiers_joints: new FormControl<File[]>([], []),
-      quantité: new FormControl<number>(1, [Validators.min(1)])
+      quantité: new FormControl<number>(1, [Validators.min(1)]),
+      payé: new FormControl<boolean>(false),
+      commentaire_paye: new FormControl<string>('')
     });
   }
 
@@ -227,6 +229,8 @@ export class NouvelleCommandePageComponent implements OnInit {
         police_ecriture: formValue.police_ecriture,
         texte_personnalisation: formValue.texte_personnalisation,
         quantité: formValue.quantité || 1,
+        payé: formValue.payé || false,
+        commentaire_paye: formValue.commentaire_paye || '',
         fichiers_joints: [] // Pour l'instant, on envoie un tableau vide. L'upload de fichiers sera géré séparément
       };
 

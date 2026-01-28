@@ -251,6 +251,22 @@
         </div>
       </section>
 
+      <!-- Statut initial -->
+      <section class="form-section">
+        <h2 class="section-title">Statut initial (optionnel)</h2>
+        <p class="section-hint">Si aucun statut n'est sélectionné, la commande sera créée avec le statut "En Attente de + d'infos" par défaut.</p>
+        
+        <div class="statuts-checkboxes">
+          <label *ngFor="let statut of statuts" class="statut-checkbox-label">
+            <input
+              type="checkbox"
+              [checked]="isStatutSelected(statut)"
+              (change)="toggleStatut(statut)">
+            <span>{{ statutLabels[statut] }}</span>
+          </label>
+        </div>
+      </section>
+
       <!-- Fichiers joints -->
       <section class="form-section">
         <h2 class="section-title">Fichiers joints</h2>

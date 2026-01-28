@@ -442,6 +442,45 @@
   display: block;
 }
 
+.section-hint {
+  font-size: 0.875rem;
+  color: #666;
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.statuts-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.statut-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  cursor: pointer;
+  padding: var(--spacing-xs);
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+
+  &:hover {
+    background: var(--color-background);
+  }
+
+  input[type="checkbox"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+  }
+
+  span {
+    font-size: 0.875rem;
+    color: var(--color-text);
+  }
+}
+
 .couleur-checkboxes {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

@@ -26,4 +26,5 @@ export interface NouvelleCommandeForm {
   quantité: FormControl<number>;
   payé: FormControl<boolean>;
   commentaire_paye: FormControl<string>;
+  statuts_initiaux: FormControl<string[]>;
 }

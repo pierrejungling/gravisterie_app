@@ -6,7 +6,7 @@ import { HeaderComponent, FloatingLabelInputComponent, handleFormError, getFormV
 import { ApiService } from '@api';
 import { ApiURI } from '@api';
 import { NouvelleCommandeForm, CoordonneesContactForm } from '../../data/form/nouvelle-commande.form';
-import { Couleur } from '../../model/commande.interface';
+import { Couleur, StatutCommande } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 
 @Component({
@@ -38,6 +38,33 @@ export class NouvelleCommandePageComponent implements OnInit {
   ];
   
   supportParDefaut: string = 'CP 3,6mm Méranti';
+
+  // Statuts disponibles pour sélection initiale
+  readonly statuts: StatutCommande[] = [
+    StatutCommande.EN_ATTENTE_INFORMATION,
+    StatutCommande.A_MODELLISER_PREPARER,
+    StatutCommande.A_GRAVER,
+    StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE,
+    StatutCommande.A_PRENDRE_EN_PHOTO,
+    StatutCommande.A_LIVRER,
+    StatutCommande.A_METTRE_EN_LIGNE,
+    StatutCommande.A_FACTURER,
+    StatutCommande.DEMANDE_AVIS,
+  ];
+
+  readonly statutLabels: Record<StatutCommande, string> = {
+    [StatutCommande.EN_ATTENTE_INFORMATION]: 'En Attente de + d\'infos',
+    [StatutCommande.A_MODELLISER_PREPARER]: 'À Modéliser / Préparer',
+    [StatutCommande.A_GRAVER]: 'À Graver',
+    [StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE]: 'À Finir / Laver / Assembler / Peindre',
+    [StatutCommande.A_PRENDRE_EN_PHOTO]: 'À Prendre en photo',
+    [StatutCommande.A_LIVRER]: 'À Livrer',
+    [StatutCommande.A_METTRE_EN_LIGNE]: 'À Mettre en ligne',
+    [StatutCommande.A_FACTURER]: 'À Facturer',
+    [StatutCommande.DEMANDE_AVIS]: 'Demande d\'avis',
+    [StatutCommande.TERMINE]: 'Terminé',
+    [StatutCommande.ANNULEE]: 'Annulée',
+  };
 
   constructor(private router: Router) {
     this.initFormGroup();
@@ -86,7 +113,8 @@ export class NouvelleCommandePageComponent implements OnInit {
       fichiers_joints: new FormControl<File[]>([], []),
       quantité: new FormControl<number>(1, [Validators.min(1)]),
       payé: new FormControl<boolean>(false),
-      commentaire_paye: new FormControl<string>('')
+      commentaire_paye: new FormControl<string>(''),
+      statuts_initiaux: new FormControl<string[]>([], [])
     });
   }
 
@@ -160,6 +188,26 @@ export class NouvelleCommandePageComponent implements OnInit {
     return currentValue.includes(couleur);
   }
 
+  toggleStatut(statut: StatutCommande): void {
+    const statutsControl = this.formGroup.get('statuts_initiaux');
+    const currentValue: string[] = statutsControl?.value || [];
+    const index = currentValue.indexOf(statut);
+    
+    if (index > -1) {
+      currentValue.splice(index, 1);
+    } else {
+      currentValue.push(statut);
+    }
+    
+    statutsControl?.setValue([...currentValue]);
+  }
+
+  isStatutSelected(statut: StatutCommande): boolean {
+    const statutsControl = this.formGroup.get('statuts_initiaux');
+    const currentValue: string[] = statutsControl?.value || [];
+    return currentValue.includes(statut);
+  }
+
   isFormValid(): boolean {
     const nomCommande = this.formGroup.get('nom_commande')?.value?.trim();
     const mail = this.formGroup.get('coordonnees_contact.mail')?.value?.trim();
@@ -231,6 +279,7 @@ export class NouvelleCommandePageComponent implements OnInit {
         quantité: formValue.quantité || 1,
         payé: formValue.payé || false,
         commentaire_paye: formValue.commentaire_paye || '',
+        statuts_initiaux: formValue.statuts_initiaux || [],
         fichiers_joints: [] // Pour l'instant, on envoie un tableau vide. L'upload de fichiers sera géré séparément
       };
 

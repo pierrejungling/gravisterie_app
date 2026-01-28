@@ -344,8 +344,17 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const indexActuel = ordreEtapes.indexOf(cmd.statut_commande);
     
     // Si le statut demandé est une étape précédente, elle est complétée (cochée)
+    // Mais aussi si on est dans les colonnes finales, toutes les étapes précédentes sont complétées
     if (indexStatut !== -1 && indexActuel !== -1 && indexStatut < indexActuel) {
       return true;
+    }
+    
+    // Si on est dans les colonnes finales (statuts_actifs existe), toutes les étapes précédentes sont complétées
+    if (statutsFinaux.some(s => cmd.statuts_actifs?.includes(s))) {
+      const indexStatutInOrdre = ordreEtapes.indexOf(statut);
+      if (indexStatutInOrdre !== -1 && indexStatutInOrdre < ordreEtapes.indexOf(StatutCommande.A_PRENDRE_EN_PHOTO)) {
+        return true;
+      }
     }
     
     // "À Prendre en photo" est complétée si les statuts finaux sont créés (statuts_actifs existe)
@@ -450,6 +459,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       StatutCommande.EN_ATTENTE_INFORMATION,
       StatutCommande.A_MODELLISER_PREPARER,
       StatutCommande.A_GRAVER,
+      StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE,
       StatutCommande.A_PRENDRE_EN_PHOTO,
     ];
     
@@ -461,9 +471,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       return false; // Toutes les étapes sont activables
     }
     
-    // Les étapes précédentes sont activables (pour décochage)
+    // Les étapes précédentes sont activables (pour décochage) - elles doivent être modifiables en vert
     if (indexStatut !== -1 && indexActuel !== -1 && indexStatut < indexActuel) {
-      return false;
+      return false; // Les statuts précédents sont modifiables
     }
     
     // Le statut actuel est activable

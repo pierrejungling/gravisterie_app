@@ -377,11 +377,23 @@
 }
 
 .statut-checkbox-label.completed {
-  opacity: 0.8;
+  opacity: 1;
   background: #f0f8f0;
+  cursor: pointer;
 }
 
 .statut-checkbox-label.completed .statut-label {
+  color: #4CAF50;
+  font-weight: 600;
+}
+
+.statut-checkbox-label.completed.disabled {
+  opacity: 1;
+  background: #f0f8f0;
+  cursor: pointer;
+}
+
+.statut-checkbox-label.completed.disabled .statut-label {
   color: #4CAF50;
   font-weight: 600;
 }

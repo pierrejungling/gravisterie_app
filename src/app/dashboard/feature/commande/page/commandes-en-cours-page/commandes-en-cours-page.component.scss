@@ -1,22 +1,30 @@
 .commandes-en-cours-wrapper {
-  min-height: 100vh;
+  height: 100vh;
   background-color: #f5f5f5;
-  padding: 2rem;
-  padding-top: 90px; // Espace pour le header fixe
+  padding: 0.25rem 2rem;
+  padding-top: 58px; // Espace strict minimum pour le header fixe
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .commandes-en-cours-container {
   max-width: 100%;
   margin: 0 auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   flex-wrap: wrap;
   gap: 1rem;
+  flex-shrink: 0;
 }
 
 .page-title {
@@ -89,16 +97,23 @@
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .table-scroll {
   overflow-x: auto;
-  overflow-y: visible;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .commandes-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   min-width: 1400px;
 }
 
@@ -106,7 +121,7 @@
   background-color: #f8f9fa;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 100;
 }
 
 .commandes-table th {
@@ -119,7 +134,9 @@
   min-width: 180px;
   vertical-align: top;
   background: #495057;
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 
   &:not(:last-child)::after {
     content: '';
@@ -129,6 +146,7 @@
     bottom: 0;
     width: 2px;
     background: #212529;
+    z-index: 101;
   }
 }
 

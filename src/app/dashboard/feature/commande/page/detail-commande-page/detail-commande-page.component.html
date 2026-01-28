@@ -290,11 +290,11 @@
           [class.active]="(isStatutActuel(statut) || isStatutActif(statut)) && !isStatutChecked(statut)"
           [class.completed]="isStatutChecked(statut)"
           [class.cancelled]="statut === StatutCommande.ANNULEE && isStatutChecked(statut)"
-          [class.disabled]="isStatutDisabled(statut)">
+          [class.disabled]="isStatutDisabled(statut) && !isStatutChecked(statut)">
           <input 
             type="checkbox" 
             [checked]="isStatutChecked(statut)"
-            [disabled]="isStatutDisabled(statut)"
+            [disabled]="isStatutDisabled(statut) && !isStatutChecked(statut)"
             (change)="onStatutChange(statut, $event)"
             class="statut-checkbox">
           <span class="statut-label">{{ statutLabels[statut] }}</span>

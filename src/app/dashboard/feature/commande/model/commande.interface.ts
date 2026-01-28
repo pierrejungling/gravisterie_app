@@ -21,7 +21,7 @@ export interface AjouterCommandePayload {
   quantité?: number;
   payé?: boolean;
   commentaire_paye?: string;
-  statuts_initiaux?: string[];
+  statut_initial?: string;
 }
 
 export enum Couleur {

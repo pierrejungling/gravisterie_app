@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, WritableSignal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -15,13 +15,15 @@ import { AppRoutes } from '@shared';
   templateUrl: './detail-commande-page.component.html',
   styleUrl: './detail-commande-page.component.scss'
 })
-export class DetailCommandePageComponent implements OnInit {
+export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterViewChecked {
   commande: WritableSignal<Commande | null> = signal(null);
   isLoading: WritableSignal<boolean> = signal(false);
   isEditMode: WritableSignal<boolean> = signal(false);
   showPrixFields: WritableSignal<boolean> = signal(false);
   showDeleteConfirm: WritableSignal<boolean> = signal(false);
   returnPage: string = 'en-cours'; // Page par défaut pour le retour
+  private scrollRestored: boolean = false;
+  private isInitialLoad: boolean = true; // Flag pour distinguer le chargement initial
   
   // Exposer StatutCommande pour l'utiliser dans le template
   readonly StatutCommande = StatutCommande;
@@ -29,6 +31,7 @@ export class DetailCommandePageComponent implements OnInit {
   private readonly apiService: ApiService = inject(ApiService);
   private readonly router: Router = inject(Router);
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  private scrollKey: string = '';
 
   formGroup!: FormGroup;
 
@@ -107,8 +110,75 @@ export class DetailCommandePageComponent implements OnInit {
       this.returnPage = 'en-cours';
     }
     
+    // Créer une clé unique pour cette commande
+    this.scrollKey = `detail-commande-${id}-scroll`;
+    
+    // Sauvegarder la position de scroll avant le rechargement
+    window.addEventListener('beforeunload', this.saveScrollPosition);
+    
     if (id) {
       this.loadCommande(id);
+    }
+  }
+
+  ngAfterViewChecked(): void {
+    // Restaurer la position de scroll uniquement lors du chargement initial
+    if (this.isInitialLoad && !this.isLoading() && this.commande() && !this.scrollRestored) {
+      const savedScroll = sessionStorage.getItem(this.scrollKey);
+      if (savedScroll) {
+        this.restoreScrollPosition(parseInt(savedScroll, 10));
+      } else {
+        // Si pas de scroll sauvegardé, marquer quand même que le chargement initial est terminé
+        this.isInitialLoad = false;
+      }
+    }
+  }
+
+  private restoreScrollPosition(scrollPosition: number): void {
+    // Méthode robuste compatible Safari avec plusieurs tentatives
+    const attemptScroll = (attempts: number = 0) => {
+      if (attempts > 10) {
+        // Arrêter après 10 tentatives
+        this.scrollRestored = true;
+        this.isInitialLoad = false;
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        // Vérifier que le document est prêt
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+          // Essayer différentes méthodes de scroll pour compatibilité Safari
+          window.scrollTo(0, scrollPosition);
+          document.documentElement.scrollTop = scrollPosition;
+          document.body.scrollTop = scrollPosition;
+
+          // Vérifier si le scroll a fonctionné (avec une marge d'erreur de 5px)
+          const currentScroll = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+          if (Math.abs(currentScroll - scrollPosition) <= 5) {
+            this.scrollRestored = true;
+            this.isInitialLoad = false;
+          } else {
+            // Réessayer après un court délai
+            setTimeout(() => attemptScroll(attempts + 1), 50);
+          }
+        } else {
+          // Attendre que le document soit prêt
+          setTimeout(() => attemptScroll(attempts + 1), 50);
+        }
+      });
+    };
+
+    // Commencer la restauration après un court délai initial
+    setTimeout(() => attemptScroll(), 100);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('beforeunload', this.saveScrollPosition);
+  }
+
+  private saveScrollPosition = (): void => {
+    if (this.scrollKey) {
+      sessionStorage.setItem(this.scrollKey, window.scrollY.toString());
     }
   }
 
@@ -121,6 +191,7 @@ export class DetailCommandePageComponent implements OnInit {
           this.initForm();
         }
         this.isLoading.set(false);
+        // Ne pas réinitialiser scrollRestored ici pour éviter la restauration lors des rechargements après actions utilisateur
       },
       error: (error) => {
         console.error('Erreur lors du chargement de la commande:', error);

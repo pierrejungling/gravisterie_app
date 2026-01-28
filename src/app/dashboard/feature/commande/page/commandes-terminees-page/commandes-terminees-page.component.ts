@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, WritableSignal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { HeaderComponent } from '@shared';
@@ -14,12 +14,14 @@ import { AppRoutes } from '@shared';
   templateUrl: './commandes-terminees-page.component.html',
   styleUrl: './commandes-terminees-page.component.scss'
 })
-export class CommandesTermineesPageComponent implements OnInit {
+export class CommandesTermineesPageComponent implements OnInit, OnDestroy, AfterViewChecked {
   commandes: WritableSignal<Commande[]> = signal([]);
   isLoading: WritableSignal<boolean> = signal(false);
+  private scrollRestored: boolean = false;
   
   private readonly apiService: ApiService = inject(ApiService);
   private readonly router: Router = inject(Router);
+  private readonly scrollKey = 'commandes-terminees-scroll';
 
   // Commandes terminées et annulées triées par date (plus récentes en premier)
   commandesTermineesTriees = computed(() => {
@@ -41,7 +43,63 @@ export class CommandesTermineesPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Sauvegarder la position de scroll avant le rechargement
+    window.addEventListener('beforeunload', this.saveScrollPosition);
     this.loadCommandes();
+  }
+
+  ngAfterViewChecked(): void {
+    // Restaurer la position de scroll après le chargement des données
+    if (!this.isLoading() && !this.scrollRestored) {
+      const savedScroll = sessionStorage.getItem(this.scrollKey);
+      if (savedScroll) {
+        this.restoreScrollPosition(parseInt(savedScroll, 10));
+      }
+    }
+  }
+
+  private restoreScrollPosition(scrollPosition: number): void {
+    // Méthode robuste compatible Safari avec plusieurs tentatives
+    const attemptScroll = (attempts: number = 0) => {
+      if (attempts > 10) {
+        // Arrêter après 10 tentatives
+        this.scrollRestored = true;
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        // Vérifier que le document est prêt
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+          // Essayer différentes méthodes de scroll pour compatibilité Safari
+          window.scrollTo(0, scrollPosition);
+          document.documentElement.scrollTop = scrollPosition;
+          document.body.scrollTop = scrollPosition;
+
+          // Vérifier si le scroll a fonctionné (avec une marge d'erreur de 5px)
+          const currentScroll = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+          if (Math.abs(currentScroll - scrollPosition) <= 5) {
+            this.scrollRestored = true;
+          } else {
+            // Réessayer après un court délai
+            setTimeout(() => attemptScroll(attempts + 1), 50);
+          }
+        } else {
+          // Attendre que le document soit prêt
+          setTimeout(() => attemptScroll(attempts + 1), 50);
+        }
+      });
+    };
+
+    // Commencer la restauration après un court délai initial
+    setTimeout(() => attemptScroll(), 100);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('beforeunload', this.saveScrollPosition);
+  }
+
+  private saveScrollPosition = (): void => {
+    sessionStorage.setItem(this.scrollKey, window.scrollY.toString());
   }
 
   loadCommandes(): void {
@@ -52,10 +110,13 @@ export class CommandesTermineesPageComponent implements OnInit {
           this.commandes.set(response.data);
         }
         this.isLoading.set(false);
+        // Réinitialiser le flag pour permettre la restauration après le chargement
+        this.scrollRestored = false;
       },
       error: (error) => {
         console.error('Erreur lors du chargement des commandes:', error);
         this.isLoading.set(false);
+        this.scrollRestored = false;
       }
     });
   }

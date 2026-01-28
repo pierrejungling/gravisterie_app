@@ -254,14 +254,16 @@
       <!-- Statut initial -->
       <section class="form-section">
         <h2 class="section-title">Statut initial (optionnel)</h2>
-        <p class="section-hint">Si aucun statut n'est sélectionné, la commande sera créée avec le statut "En Attente de + d'infos" par défaut.</p>
+        <p class="section-hint">Si aucun statut n'est sélectionné, la commande sera créée avec le statut "En Attente de + d'infos" par défaut. Les statuts précédents seront automatiquement validés.</p>
         
-        <div class="statuts-checkboxes">
-          <label *ngFor="let statut of statuts" class="statut-checkbox-label">
+        <div class="statuts-radio-group">
+          <label *ngFor="let statut of statuts" class="statut-radio-label">
             <input
-              type="checkbox"
+              type="radio"
+              name="statut_initial"
+              [value]="statut"
               [checked]="isStatutSelected(statut)"
-              (change)="toggleStatut(statut)">
+              (change)="onStatutChange(statut)">
             <span>{{ statutLabels[statut] }}</span>
           </label>
         </div>

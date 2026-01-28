@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, WritableSignal } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -16,15 +16,17 @@ import { AppRoutes } from '@shared';
   templateUrl: './nouvelle-commande-page.component.html',
   styleUrl: './nouvelle-commande-page.component.scss'
 })
-export class NouvelleCommandePageComponent implements OnInit {
+export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterViewChecked {
   formGroup!: FormGroup<NouvelleCommandeForm>;
   errors: WritableSignal<FormError[]> = signal([]);
   showSuccessPopup: WritableSignal<boolean> = signal(false);
   uploadedFiles: File[] = [];
   supportInputFocus: boolean = false;
   isDragOver: boolean = false;
+  private scrollRestored: boolean = false;
   
   private readonly apiService: ApiService = inject(ApiService);
+  private readonly scrollKey = 'nouvelle-commande-scroll';
   
   // Options disponibles
   couleursDisponibles: Couleur[] = [
@@ -72,8 +74,64 @@ export class NouvelleCommandePageComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    // Sauvegarder la position de scroll avant le rechargement
+    window.addEventListener('beforeunload', this.saveScrollPosition);
     // Initialiser le pays par défaut
     this.formGroup.get('coordonnees_contact.pays')?.setValue('Belgique');
+  }
+
+  ngAfterViewChecked(): void {
+    // Restaurer la position de scroll après le chargement
+    if (!this.scrollRestored) {
+      const savedScroll = sessionStorage.getItem(this.scrollKey);
+      if (savedScroll) {
+        this.restoreScrollPosition(parseInt(savedScroll, 10));
+      }
+    }
+  }
+
+  private restoreScrollPosition(scrollPosition: number): void {
+    // Méthode robuste compatible Safari avec plusieurs tentatives
+    const attemptScroll = (attempts: number = 0) => {
+      if (attempts > 10) {
+        // Arrêter après 10 tentatives
+        this.scrollRestored = true;
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        // Vérifier que le document est prêt
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+          // Essayer différentes méthodes de scroll pour compatibilité Safari
+          window.scrollTo(0, scrollPosition);
+          document.documentElement.scrollTop = scrollPosition;
+          document.body.scrollTop = scrollPosition;
+
+          // Vérifier si le scroll a fonctionné (avec une marge d'erreur de 5px)
+          const currentScroll = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+          if (Math.abs(currentScroll - scrollPosition) <= 5) {
+            this.scrollRestored = true;
+          } else {
+            // Réessayer après un court délai
+            setTimeout(() => attemptScroll(attempts + 1), 50);
+          }
+        } else {
+          // Attendre que le document soit prêt
+          setTimeout(() => attemptScroll(attempts + 1), 50);
+        }
+      });
+    };
+
+    // Commencer la restauration après un court délai initial
+    setTimeout(() => attemptScroll(), 100);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('beforeunload', this.saveScrollPosition);
+  }
+
+  private saveScrollPosition = (): void => {
+    sessionStorage.setItem(this.scrollKey, window.scrollY.toString());
   }
 
   get(key: string): FormControl<any> {
@@ -114,7 +172,7 @@ export class NouvelleCommandePageComponent implements OnInit {
       quantité: new FormControl<number>(1, [Validators.min(1)]),
       payé: new FormControl<boolean>(false),
       commentaire_paye: new FormControl<string>(''),
-      statuts_initiaux: new FormControl<string[]>([], [])
+      statut_initial: new FormControl<string>('')
     });
   }
 
@@ -188,24 +246,21 @@ export class NouvelleCommandePageComponent implements OnInit {
     return currentValue.includes(couleur);
   }
 
-  toggleStatut(statut: StatutCommande): void {
-    const statutsControl = this.formGroup.get('statuts_initiaux');
-    const currentValue: string[] = statutsControl?.value || [];
-    const index = currentValue.indexOf(statut);
+  onStatutChange(statut: StatutCommande): void {
+    const statutControl = this.formGroup.get('statut_initial');
+    const currentValue = statutControl?.value;
     
-    if (index > -1) {
-      currentValue.splice(index, 1);
+    // Si le même statut est cliqué, le désélectionner (retour à vide = défaut)
+    if (currentValue === statut) {
+      statutControl?.setValue('');
     } else {
-      currentValue.push(statut);
+      statutControl?.setValue(statut);
     }
-    
-    statutsControl?.setValue([...currentValue]);
   }
 
   isStatutSelected(statut: StatutCommande): boolean {
-    const statutsControl = this.formGroup.get('statuts_initiaux');
-    const currentValue: string[] = statutsControl?.value || [];
-    return currentValue.includes(statut);
+    const statutControl = this.formGroup.get('statut_initial');
+    return statutControl?.value === statut;
   }
 
   isFormValid(): boolean {
@@ -279,7 +334,7 @@ export class NouvelleCommandePageComponent implements OnInit {
         quantité: formValue.quantité || 1,
         payé: formValue.payé || false,
         commentaire_paye: formValue.commentaire_paye || '',
-        statuts_initiaux: formValue.statuts_initiaux || [],
+        statut_initial: formValue.statut_initial || '',
         fichiers_joints: [] // Pour l'instant, on envoie un tableau vide. L'upload de fichiers sera géré séparément
       };
 

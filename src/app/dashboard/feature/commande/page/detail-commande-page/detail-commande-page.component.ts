@@ -308,6 +308,32 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.isEditMode.set(false);
   }
 
+  onPayeChange(): void {
+    if (!this.commande()) return;
+
+    const id = this.commande()!.id_commande;
+    const payeValue = this.formGroup.get('payé')?.value || false;
+    const commentairePaye = this.formGroup.get('commentaire_paye')?.value || null;
+
+    // Envoyer uniquement les champs payé et commentaire_paye
+    const payload: any = {
+      payé: payeValue,
+      commentaire_paye: commentairePaye?.trim() || null,
+    };
+
+    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${id}`, payload).subscribe({
+      next: () => {
+        // Recharger la commande pour avoir les données à jour
+        this.loadCommande(id);
+      },
+      error: (error) => {
+        console.error('Erreur lors de la mise à jour du statut payé:', error);
+        // Revert la valeur en cas d'erreur
+        this.formGroup.get('payé')?.setValue(!payeValue, { emitEvent: false });
+      }
+    });
+  }
+
   isStatutChecked(statut: StatutCommande): boolean {
     const cmd = this.commande();
     if (!cmd) return false;

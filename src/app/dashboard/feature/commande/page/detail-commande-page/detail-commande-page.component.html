@@ -108,7 +108,7 @@
               <input
                 type="checkbox"
                 formControlName="payé"
-                [disabled]="!isEditMode()">
+                (change)="onPayeChange()">
               <span class="paye-label-text">{{ get('payé').value ? 'Payé' : 'Non payé' }}</span>
             </label>
             <div class="paye-commentaire-wrapper">

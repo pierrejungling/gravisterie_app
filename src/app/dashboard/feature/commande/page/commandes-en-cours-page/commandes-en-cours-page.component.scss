@@ -215,6 +215,7 @@
   gap: 0.75rem;
   animation: slideInFade 0.4s ease-out;
   opacity: 1;
+  position: relative;
 
   &.deadline-warning {
     background: rgba(255, 152, 0, 0.15); // Fond orange léger
@@ -254,6 +255,15 @@
   color: #333;
   margin: 0;
   word-break: break-word;
+}
+
+.payment-indicator {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 500;
 }
 
 .commande-info {

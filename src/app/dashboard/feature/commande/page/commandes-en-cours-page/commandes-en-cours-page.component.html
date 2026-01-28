@@ -42,6 +42,7 @@
                     [class.deadline-danger]="getDeadlineStatus(commande) === 'danger'"
                     [title]="commande.produit || 'Commande #' + commande.id_commande"
                     (click)="onCommandeClick(commande)">
+                    <span class="payment-indicator" *ngIf="commande['payé']">✓ payé</span>
                     <div class="commande-header">
                       <h3 class="commande-title">
                         {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}

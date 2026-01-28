@@ -46,6 +46,7 @@ export class DetailCommandePageComponent implements OnInit {
     StatutCommande.A_LIVRER,
     StatutCommande.A_METTRE_EN_LIGNE,
     StatutCommande.A_FACTURER,
+    StatutCommande.DEMANDE_AVIS,
   ];
 
   // Tous les statuts incluant ANNULEE pour l'affichage dans le détail
@@ -63,6 +64,7 @@ export class DetailCommandePageComponent implements OnInit {
     [StatutCommande.A_LIVRER]: 'À Livrer',
     [StatutCommande.A_METTRE_EN_LIGNE]: 'À Mettre en ligne',
     [StatutCommande.A_FACTURER]: 'À Facturer',
+    [StatutCommande.DEMANDE_AVIS]: 'Demande d\'avis',
     [StatutCommande.TERMINE]: 'Terminé',
     [StatutCommande.ANNULEE]: 'Annulée',
   };
@@ -249,9 +251,9 @@ export class DetailCommandePageComponent implements OnInit {
       return statut !== StatutCommande.ANNULEE;
     }
     
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER];
+    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
     
-    // Pour les 3 dernières colonnes : ils sont cochés seulement quand ils sont complétés
+    // Pour les 4 dernières colonnes : ils sont cochés seulement quand ils sont complétés
     // Si un statut final est dans statuts_actifs, c'est qu'il est actif mais pas encore complété (donc pas coché)
     if (statutsFinaux.includes(statut)) {
       // Un statut final est coché seulement s'il n'est PAS dans statuts_actifs (il a été complété)
@@ -307,7 +309,7 @@ export class DetailCommandePageComponent implements OnInit {
       return false;
     }
     
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER];
+    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
     
     // Si la commande est annulée, aucun autre statut n'est actuel
     if (cmd.statut_commande === StatutCommande.ANNULEE) {
@@ -328,9 +330,9 @@ export class DetailCommandePageComponent implements OnInit {
     const cmd = this.commande();
     if (!cmd) return false;
     
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER];
+    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
     
-    // Pour les 3 statuts finaux, ils sont actifs (bordure bleue) seulement s'ils sont dans statuts_actifs ET pas encore cochés
+    // Pour les 4 statuts finaux, ils sont actifs (bordure bleue) seulement s'ils sont dans statuts_actifs ET pas encore cochés
     // Si un statut final est coché (pas dans statuts_actifs), il n'est plus actif, il est complété (vert)
     if (statutsFinaux.includes(statut)) {
       // Actif seulement s'il est dans statuts_actifs (pas encore complété)
@@ -344,7 +346,7 @@ export class DetailCommandePageComponent implements OnInit {
     const cmd = this.commande();
     if (!cmd) return true;
     
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER];
+    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
     
     // Le statut ANNULEE est toujours modifiable, peu importe l'état de la commande
     if (statut === StatutCommande.ANNULEE) {
@@ -414,7 +416,7 @@ export class DetailCommandePageComponent implements OnInit {
       StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE,
       StatutCommande.A_PRENDRE_EN_PHOTO,
     ];
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER];
+    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
 
     // Gestion du statut ANNULEE
     if (statut === StatutCommande.ANNULEE) {
@@ -456,7 +458,7 @@ export class DetailCommandePageComponent implements OnInit {
       return;
     }
 
-    // Si on décoche "À Prendre en photo", décocher automatiquement tous les statuts finaux
+    // Si on décoche "À Prendre en photo", décocher automatiquement tous les 4 statuts finaux
     if (!target.checked && statut === StatutCommande.A_PRENDRE_EN_PHOTO) {
       // Décocher "À Prendre en photo" (retour à "À Prendre en photo")
       this.apiService.put(ApiURI.UPDATE_STATUT_COMMANDE, {
@@ -479,7 +481,7 @@ export class DetailCommandePageComponent implements OnInit {
     const indexActuel = ordreEtapes.indexOf(cmd.statut_commande);
     const isEtapePrecedente = indexStatut !== -1 && indexActuel !== -1 && indexStatut < indexActuel;
     
-    // Si on décoche un statut final complété
+    // Si on décoche un des 4 statuts finaux complétés
     if (!target.checked && statutsFinaux.includes(statut)) {
       // Quand on décoche un statut final complété, on le remet dans statuts_actifs
       // Pour cela, on doit recréer les statuts_actifs avec ce statut

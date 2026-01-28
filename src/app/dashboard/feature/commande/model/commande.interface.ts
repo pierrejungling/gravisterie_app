@@ -42,6 +42,7 @@ export enum StatutCommande {
   A_LIVRER = 'a_livrer',
   A_METTRE_EN_LIGNE = 'a_mettre_en_ligne',
   A_FACTURER = 'a_facturer',
+  DEMANDE_AVIS = 'demande_avis',
   TERMINE = 'termine',
   ANNULEE = 'annulee',
 }

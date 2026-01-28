@@ -32,6 +32,7 @@ export class CommandesEnCoursPageComponent implements OnInit {
     StatutCommande.A_LIVRER,
     StatutCommande.A_METTRE_EN_LIGNE,
     StatutCommande.A_FACTURER,
+    StatutCommande.DEMANDE_AVIS,
   ];
 
   // Labels pour chaque statut
@@ -44,8 +45,24 @@ export class CommandesEnCoursPageComponent implements OnInit {
     [StatutCommande.A_LIVRER]: 'À Livrer',
     [StatutCommande.A_METTRE_EN_LIGNE]: 'À Mettre en ligne',
     [StatutCommande.A_FACTURER]: 'À Facturer',
+    [StatutCommande.DEMANDE_AVIS]: 'Demande d\'avis',
     [StatutCommande.TERMINE]: 'Terminé',
     [StatutCommande.ANNULEE]: 'Annulée',
+  };
+
+  // Emojis pour chaque statut
+  readonly statutEmojis: Record<StatutCommande, string> = {
+    [StatutCommande.EN_ATTENTE_INFORMATION]: '⏳',
+    [StatutCommande.A_MODELLISER_PREPARER]: '💻',
+    [StatutCommande.A_GRAVER]: '⚒️',
+    [StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE]: '🎨',
+    [StatutCommande.A_PRENDRE_EN_PHOTO]: '📸',
+    [StatutCommande.A_LIVRER]: '🚚',
+    [StatutCommande.A_METTRE_EN_LIGNE]: '🌐',
+    [StatutCommande.A_FACTURER]: '💰',
+    [StatutCommande.DEMANDE_AVIS]: '💬',
+    [StatutCommande.TERMINE]: '✅',
+    [StatutCommande.ANNULEE]: '❌',
   };
 
   ngOnInit(): void {
@@ -74,8 +91,8 @@ export class CommandesEnCoursPageComponent implements OnInit {
       c.statut_commande !== StatutCommande.TERMINE && c.statut_commande !== StatutCommande.ANNULEE
     );
     
-    // Pour les 3 dernières colonnes, vérifier aussi statuts_actifs
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER];
+    // Pour les 4 dernières colonnes, vérifier aussi statuts_actifs
+    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
     
     if (statutsFinaux.includes(statut)) {
       // Afficher les commandes qui ont ce statut dans statuts_actifs
@@ -85,7 +102,7 @@ export class CommandesEnCoursPageComponent implements OnInit {
     }
     
     // Pour "À Prendre en photo", exclure les commandes qui ont déjà des statuts_actifs
-    // (car elles sont passées aux 3 dernières colonnes)
+    // (car elles sont passées aux 4 dernières colonnes)
     if (statut === StatutCommande.A_PRENDRE_EN_PHOTO) {
       return commandesNonTerminees.filter(c => 
         c.statut_commande === statut && (!c.statuts_actifs || c.statuts_actifs.length === 0)
@@ -137,7 +154,7 @@ export class CommandesEnCoursPageComponent implements OnInit {
   }
 
   isCommandeInStatut(commande: Commande, statut: StatutCommande): boolean {
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER];
+    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
     
     if (statutsFinaux.includes(statut)) {
       // Pour les 3 dernières colonnes, vérifier si le statut est dans statuts_actifs
@@ -165,9 +182,9 @@ export class CommandesEnCoursPageComponent implements OnInit {
       StatutCommande.A_PRENDRE_EN_PHOTO,
     ];
 
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER];
+    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
     
-    // Pour les 3 dernières colonnes, toutes les étapes précédentes sont complétées
+    // Pour les 4 dernières colonnes, toutes les étapes précédentes sont complétées
     if (statutsFinaux.includes(statutActuel)) {
       return ordreEtapes; // Toutes les étapes sont complétées, incluant "À Prendre en photo"
     }
@@ -186,7 +203,7 @@ export class CommandesEnCoursPageComponent implements OnInit {
 
   isEtapePrecedente(commande: Commande, etapePrecedente: StatutCommande, statutActuel: StatutCommande): boolean {
     // Vérifier si cette étape précédente peut être décochée pour revenir en arrière
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER];
+    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
     
     // Si on est dans les colonnes finales et qu'on décoche "À Prendre en photo", c'est spécial
     if (statutsFinaux.includes(statutActuel) && etapePrecedente === StatutCommande.A_PRENDRE_EN_PHOTO) {

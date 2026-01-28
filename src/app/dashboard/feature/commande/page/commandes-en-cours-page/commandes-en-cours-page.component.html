@@ -24,7 +24,10 @@
           <thead>
             <tr>
               <th *ngFor="let statut of statuts" class="statut-column">
-                {{ getStatutLabel(statut) }}
+                <div class="statut-header-content">
+                  <span class="statut-emoji">{{ statutEmojis[statut] }}</span>
+                  <span class="statut-label">{{ getStatutLabel(statut) }}</span>
+                </div>
               </th>
             </tr>
           </thead>

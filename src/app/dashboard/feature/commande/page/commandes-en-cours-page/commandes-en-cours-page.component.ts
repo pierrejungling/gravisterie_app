@@ -37,17 +37,17 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     StatutCommande.DEMANDE_AVIS,
   ];
 
-  // Labels pour chaque statut
+  // Labels pour chaque statut (version courte pour l'affichage dans la liste)
   readonly statutLabels: Record<StatutCommande, string> = {
-    [StatutCommande.EN_ATTENTE_INFORMATION]: 'En Attente de + d\'infos',
-    [StatutCommande.A_MODELLISER_PREPARER]: 'À Modéliser / Préparer',
-    [StatutCommande.A_GRAVER]: 'À Graver',
-    [StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE]: 'À Finir / Laver / Assembler / Peindre',
-    [StatutCommande.A_PRENDRE_EN_PHOTO]: 'À Prendre en photo',
-    [StatutCommande.A_LIVRER]: 'À Livrer',
-    [StatutCommande.A_METTRE_EN_LIGNE]: 'À Mettre en ligne',
-    [StatutCommande.A_FACTURER]: 'À Facturer',
-    [StatutCommande.DEMANDE_AVIS]: 'Demande d\'avis',
+    [StatutCommande.EN_ATTENTE_INFORMATION]: 'Attente',
+    [StatutCommande.A_MODELLISER_PREPARER]: 'Modélisation',
+    [StatutCommande.A_GRAVER]: 'Gravure',
+    [StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE]: 'Finition',
+    [StatutCommande.A_PRENDRE_EN_PHOTO]: 'Photo',
+    [StatutCommande.A_LIVRER]: 'Livraison',
+    [StatutCommande.A_METTRE_EN_LIGNE]: 'WEB',
+    [StatutCommande.A_FACTURER]: 'Facturation',
+    [StatutCommande.DEMANDE_AVIS]: 'Avis',
     [StatutCommande.TERMINE]: 'Terminé',
     [StatutCommande.ANNULEE]: 'Annulée',
   };

@@ -69,12 +69,18 @@
         </div>
 
         <div class="input-wrapper">
-          <app-floating-label-input
-            [label]="'Description du projet'"
-            [control]="get('description')!"
-            [formGroup]="formGroup"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
+          <div class="textarea-container">
+            <textarea
+              class="description-textarea"
+              formControlName="description"
+              [readonly]="!isEditMode()"
+              [disabled]="!isEditMode()"
+              rows="4"
+              placeholder=" "></textarea>
+            <label class="textarea-label" [class.fixed-label]="get('description').value && get('description').value.length > 0">
+              Description du projet
+            </label>
+          </div>
         </div>
 
         <div class="input-wrapper">

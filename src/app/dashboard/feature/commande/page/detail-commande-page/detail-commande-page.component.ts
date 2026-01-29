@@ -5,7 +5,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { HeaderComponent, FloatingLabelInputComponent } from '@shared';
 import { ApiService } from '@api';
 import { ApiURI } from '@api';
-import { Commande, StatutCommande } from '../../model/commande.interface';
+import { Commande, StatutCommande, ModeContact } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 
 @Component({
@@ -25,8 +25,16 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private scrollRestored: boolean = false;
   private isInitialLoad: boolean = true; // Flag pour distinguer le chargement initial
   
-  // Exposer StatutCommande pour l'utiliser dans le template
+  // Exposer StatutCommande et ModeContact pour l'utiliser dans le template
   readonly StatutCommande = StatutCommande;
+  readonly ModeContact = ModeContact;
+  
+  // Modes de contact disponibles
+  readonly modesContact = [
+    { value: ModeContact.MAIL, label: 'Mail', emoji: '📧' },
+    { value: ModeContact.TEL, label: 'Téléphone', emoji: '📞' },
+    { value: ModeContact.META, label: 'Meta', emoji: '💬' }
+  ];
   
   private readonly apiService: ApiService = inject(ApiService);
   private readonly router: Router = inject(Router);
@@ -36,6 +44,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   formGroup!: FormGroup;
 
   get(controlName: string): FormControl {
+    if (!this.formGroup) {
+      // Retourner un FormControl vide si le formulaire n'est pas encore initialisé
+      return new FormControl('');
+    }
     return this.formGroup.get(controlName) as FormControl;
   }
   
@@ -204,32 +216,36 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const cmd = this.commande();
     if (!cmd) return;
 
+    const isEdit = this.isEditMode();
+    
     this.formGroup = new FormGroup({
-      nom_commande: new FormControl(cmd.produit || '', [Validators.required]),
-      deadline: new FormControl(cmd.deadline ? cmd.deadline.split('T')[0] : ''),
-      description: new FormControl(cmd.description || ''),
-      dimensions: new FormControl(cmd.gravure?.dimensions || ''),
-      couleur: new FormControl(Array.isArray(cmd.personnalisation?.couleur) ? cmd.personnalisation.couleur.join(', ') : ''),
-      support: new FormControl(cmd.support?.nom_support || ''),
-      police_ecriture: new FormControl(cmd.personnalisation?.police || ''),
-      texte_personnalisation: new FormControl(cmd.personnalisation?.texte || ''),
-      quantité: new FormControl(cmd.quantité || 1),
-      payé: new FormControl(cmd.payé || false),
-      commentaire_paye: new FormControl(cmd.commentaire_paye || ''),
-      prix_support: new FormControl(cmd.support?.prix_support || ''),
-      url_support: new FormControl(cmd.support?.url_support || ''),
-      prix_final: new FormControl(cmd.prix_final || ''),
+      nom_commande: new FormControl({ value: cmd.produit || '', disabled: !isEdit }, [Validators.required]),
+      deadline: new FormControl({ value: cmd.deadline ? cmd.deadline.split('T')[0] : '', disabled: !isEdit }),
+      description: new FormControl({ value: cmd.description || '', disabled: !isEdit }),
+      dimensions: new FormControl({ value: cmd.gravure?.dimensions || '', disabled: !isEdit }),
+      couleur: new FormControl({ value: Array.isArray(cmd.personnalisation?.couleur) ? cmd.personnalisation.couleur.join(', ') : '', disabled: !isEdit }),
+      support: new FormControl({ value: cmd.support?.nom_support || '', disabled: !isEdit }),
+      police_ecriture: new FormControl({ value: cmd.personnalisation?.police || '', disabled: !isEdit }),
+      texte_personnalisation: new FormControl({ value: cmd.personnalisation?.texte || '', disabled: !isEdit }),
+      quantité: new FormControl({ value: cmd.quantité || 1, disabled: !isEdit }),
+      payé: new FormControl(cmd.payé || false), // Toujours modifiable
+      commentaire_paye: new FormControl({ value: cmd.commentaire_paye || '', disabled: !isEdit }),
+      attente_reponse: new FormControl(cmd.attente_reponse ?? false), // Toujours modifiable
+      prix_support: new FormControl({ value: cmd.support?.prix_support || '', disabled: !isEdit }),
+      url_support: new FormControl({ value: cmd.support?.url_support || '', disabled: !isEdit }),
+      prix_final: new FormControl({ value: cmd.prix_final || '', disabled: !isEdit }),
       // Coordonnées contact
-      nom: new FormControl(cmd.client.nom || ''),
-      prenom: new FormControl(cmd.client.prénom || ''),
-      telephone: new FormControl(cmd.client.téléphone || ''),
-      mail: new FormControl(cmd.client.mail || '', [Validators.email]),
+      nom: new FormControl({ value: cmd.client.nom || '', disabled: !isEdit }),
+      prenom: new FormControl({ value: cmd.client.prénom || '', disabled: !isEdit }),
+      telephone: new FormControl({ value: cmd.client.téléphone || '', disabled: !isEdit }),
+      mail: new FormControl({ value: cmd.client.mail || '', disabled: !isEdit }, [Validators.email]),
       // Adresse décomposée
-      rue: new FormControl(this.extractAdressePart(cmd.client.adresse, 0) || ''),
-      code_postal: new FormControl(this.extractAdressePart(cmd.client.adresse, 1) || ''),
-      ville: new FormControl(this.extractAdressePart(cmd.client.adresse, 2) || ''),
-      pays: new FormControl(this.extractAdressePart(cmd.client.adresse, 3) || 'Belgique'),
-      tva: new FormControl(cmd.client.tva || ''),
+      rue: new FormControl({ value: this.extractAdressePart(cmd.client.adresse, 0) || '', disabled: !isEdit }),
+      code_postal: new FormControl({ value: this.extractAdressePart(cmd.client.adresse, 1) || '', disabled: !isEdit }),
+      ville: new FormControl({ value: this.extractAdressePart(cmd.client.adresse, 2) || '', disabled: !isEdit }),
+      pays: new FormControl({ value: this.extractAdressePart(cmd.client.adresse, 3) || 'Belgique', disabled: !isEdit }),
+      tva: new FormControl({ value: cmd.client.tva || '', disabled: !isEdit }),
+      mode_contact: new FormControl({ value: cmd.mode_contact || '', disabled: !isEdit }),
     });
   }
 
@@ -249,7 +265,29 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   toggleEditMode(): void {
-    this.isEditMode.set(!this.isEditMode());
+    const newEditMode = !this.isEditMode();
+    this.isEditMode.set(newEditMode);
+    
+    // Désactiver/activer tous les FormControls selon le mode édition
+    if (this.formGroup) {
+      const controlsToDisable = [
+        'nom_commande', 'deadline', 'description', 'dimensions', 'quantité', 'commentaire_paye',
+        'support', 'police_ecriture', 'texte_personnalisation', 'prix_final',
+        'prix_support', 'url_support', 'nom', 'prenom', 'telephone', 'mail',
+        'rue', 'code_postal', 'ville', 'pays', 'tva', 'mode_contact'
+      ];
+      
+      controlsToDisable.forEach(controlName => {
+        const control = this.formGroup.get(controlName);
+        if (control) {
+          if (newEditMode) {
+            control.enable();
+          } else {
+            control.disable();
+          }
+        }
+      });
+    }
   }
 
   togglePrixFields(): void {
@@ -267,6 +305,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       quantité: formValue.quantité ? parseInt(formValue.quantité, 10) : null,
       payé: formValue.payé || false,
       commentaire_paye: formValue.commentaire_paye || null,
+      attente_reponse: formValue.attente_reponse ?? false,
+      mode_contact: formValue.mode_contact || null,
       prix_final: formValue.prix_final ? parseFloat(formValue.prix_final) : null,
       coordonnees_contact: {
         nom: formValue.nom,
@@ -330,6 +370,30 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         console.error('Erreur lors de la mise à jour du statut payé:', error);
         // Revert la valeur en cas d'erreur
         this.formGroup.get('payé')?.setValue(!payeValue, { emitEvent: false });
+      }
+    });
+  }
+
+  onAttenteReponseChange(): void {
+    if (!this.commande()) return;
+
+    const id = this.commande()!.id_commande;
+    const attenteReponseValue = this.formGroup.get('attente_reponse')?.value ?? false;
+
+    // Envoyer uniquement le champ attente_reponse
+    const payload: any = {
+      attente_reponse: attenteReponseValue,
+    };
+
+    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${id}`, payload).subscribe({
+      next: () => {
+        // Recharger la commande pour avoir les données à jour
+        this.loadCommande(id);
+      },
+      error: (error) => {
+        console.error('Erreur lors de la mise à jour de l\'attente réponse:', error);
+        // Revert la valeur en cas d'erreur
+        this.formGroup.get('attente_reponse')?.setValue(!attenteReponseValue, { emitEvent: false });
       }
     });
   }

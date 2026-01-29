@@ -1,6 +1,6 @@
 <header class="header">
   <div class="header__container">
-    <div class="header__logo">
+    <div class="header__logo" (click)="goToDashboard()" [style.cursor]="isAuthenticated() ? 'pointer' : 'default'">
       <img 
         [src]="getLogoPath()" 
         alt="LA GRAVISTERIE" 
@@ -16,7 +16,7 @@
         *ngIf="showBackButton()"
         (click)="goBack()"
         type="button"
-        title="Retour au dashboard">
+        title="Retour à la page précédente">
         ← Retour
       </button>
     </div>

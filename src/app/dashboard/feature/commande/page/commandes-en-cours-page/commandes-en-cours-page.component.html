@@ -51,6 +51,7 @@
                     <div class="commande-info">
                       <p class="commande-client">
                         <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
+                        <span class="mode-contact-emoji" *ngIf="commande.mode_contact">{{ getModeContactEmoji(commande.mode_contact) }}</span>
                       </p>
                       <p class="commande-date">
                         <strong>Date :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
@@ -87,6 +88,18 @@
                           (click)="$event.stopPropagation()"
                           class="commande-checkbox">
                         <span class="checkbox-text">Terminé</span>
+                      </label>
+                    </div>
+                    <!-- Toggle attente réponse - en bas à gauche -->
+                    <div class="attente-reponse-toggle-bottom-left" (click)="$event.stopPropagation()">
+                      <label class="toggle-switch-small" [class.toggle-vert]="commande['attente_reponse']" [class.toggle-rouge]="!commande['attente_reponse']">
+                        <input 
+                          type="checkbox" 
+                          [checked]="commande['attente_reponse']"
+                          (change)="onAttenteReponseChange(commande, $event)"
+                          class="toggle-input">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label-small">{{ commande['attente_reponse'] ? 'Rien à faire' : 'Client attend' }}</span>
                       </label>
                     </div>
                   </div>

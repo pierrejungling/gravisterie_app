@@ -21,6 +21,8 @@ export interface AjouterCommandePayload {
   quantité?: number;
   payé?: boolean;
   commentaire_paye?: string;
+  attente_reponse?: boolean; // false = client attend réponse, true = moi qui attends réponse
+  mode_contact?: string; // 'mail', 'tel', ou 'meta'
   statut_initial?: string;
 }
 
@@ -48,6 +50,12 @@ export enum StatutCommande {
   ANNULEE = 'annulee',
 }
 
+export enum ModeContact {
+  MAIL = 'mail',
+  TEL = 'tel',
+  META = 'meta'
+}
+
 export interface Client {
   id_client: string;
   nom?: string;
@@ -71,6 +79,8 @@ export interface Commande {
   quantité?: number;
   payé?: boolean;
   commentaire_paye?: string;
+  attente_reponse?: boolean; // false = client attend réponse, true = moi qui attends réponse
+  mode_contact?: string; // 'mail', 'tel', ou 'meta'
   client: Client;
   support?: {
     nom_support?: string;

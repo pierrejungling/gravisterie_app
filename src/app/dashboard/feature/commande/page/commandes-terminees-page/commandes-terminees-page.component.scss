@@ -99,9 +99,34 @@
 }
 
 .commandes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.commandes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  .section-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    padding-bottom: 0.75rem;
+    border-bottom: 2px solid #e9ecef;
+  }
+}
+
+.commandes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 1.5rem;
+
+  .empty-state {
+    grid-column: 1 / -1;
+  }
 }
 
 .commande-card {

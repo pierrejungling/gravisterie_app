@@ -14,40 +14,87 @@
     </div>
 
     <div class="commandes-list" *ngIf="!isLoading()">
-      <div 
-        *ngIf="commandesTermineesTriees().length === 0" 
-        class="empty-state">
-        <p class="empty-message">Aucune commande terminée</p>
+      <!-- Bloc Commandes terminées -->
+      <div class="commandes-section">
+        <h2 class="section-title">Commandes terminées</h2>
+        <div class="commandes-grid">
+          <div 
+            *ngIf="commandesTerminees().length === 0" 
+            class="empty-state">
+            <p class="empty-message">Aucune commande terminée</p>
+          </div>
+
+          <div 
+            *ngFor="let commande of commandesTerminees(); trackBy: trackByCommandeId" 
+            class="commande-card"
+            [title]="commande.produit || 'Commande #' + commande.id_commande"
+            (click)="onCommandeClick(commande)">
+            <span class="payment-indicator" *ngIf="commande['payé']">✓ payé</span>
+            <div class="commande-header">
+              <h3 class="commande-title">
+                {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
+              </h3>
+              <span class="commande-status-badge">
+                Terminée
+              </span>
+            </div>
+            <div class="commande-info">
+              <p class="commande-client">
+                <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
+              </p>
+              <p class="commande-date">
+                <strong>Date de commande :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
+              </p>
+              <p class="commande-deadline" *ngIf="commande.deadline">
+                <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
+              </p>
+              <p class="commande-prix" *ngIf="commande.prix_final">
+                <strong>Prix final :</strong>&nbsp;{{ commande.prix_final }} €
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div 
-        *ngFor="let commande of commandesTermineesTriees(); trackBy: trackByCommandeId" 
-        class="commande-card"
-        [class.commande-annulee]="isCommandeAnnulee(commande)"
-        [title]="commande.produit || 'Commande #' + commande.id_commande"
-        (click)="onCommandeClick(commande)">
-        <span class="payment-indicator" *ngIf="commande['payé']">✓ payé</span>
-        <div class="commande-header">
-          <h3 class="commande-title">
-            {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
-          </h3>
-          <span class="commande-status-badge" [class.badge-annulee]="isCommandeAnnulee(commande)">
-            {{ isCommandeAnnulee(commande) ? 'Annulée' : 'Terminée' }}
-          </span>
-        </div>
-        <div class="commande-info">
-          <p class="commande-client">
-            <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
-          </p>
-          <p class="commande-date">
-            <strong>Date de commande :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
-          </p>
-          <p class="commande-deadline" *ngIf="commande.deadline">
-            <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
-          </p>
-          <p class="commande-prix" *ngIf="commande.prix_final">
-            <strong>Prix final :</strong>&nbsp;{{ commande.prix_final }} €
-          </p>
+      <!-- Bloc Commandes annulées -->
+      <div class="commandes-section">
+        <h2 class="section-title">Commandes annulées</h2>
+        <div class="commandes-grid">
+          <div 
+            *ngIf="commandesAnnulees().length === 0" 
+            class="empty-state">
+            <p class="empty-message">Aucune commande annulée</p>
+          </div>
+
+          <div 
+            *ngFor="let commande of commandesAnnulees(); trackBy: trackByCommandeId" 
+            class="commande-card commande-annulee"
+            [title]="commande.produit || 'Commande #' + commande.id_commande"
+            (click)="onCommandeClick(commande)">
+            <span class="payment-indicator" *ngIf="commande['payé']">✓ payé</span>
+            <div class="commande-header">
+              <h3 class="commande-title">
+                {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
+              </h3>
+              <span class="commande-status-badge badge-annulee">
+                Annulée
+              </span>
+            </div>
+            <div class="commande-info">
+              <p class="commande-client">
+                <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
+              </p>
+              <p class="commande-date">
+                <strong>Date de commande :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
+              </p>
+              <p class="commande-deadline" *ngIf="commande.deadline">
+                <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
+              </p>
+              <p class="commande-prix" *ngIf="commande.prix_final">
+                <strong>Prix final :</strong>&nbsp;{{ commande.prix_final }} €
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

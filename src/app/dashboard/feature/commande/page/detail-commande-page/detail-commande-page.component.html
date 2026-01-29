@@ -43,7 +43,18 @@
           title="Supprimer la commande">
           🗑️ Supprimer
         </button>
-        <button type="button" class="btn-back" (click)="goBack()">← Retour</button>
+      </div>
+      <!-- Toggle attente réponse - en haut à droite -->
+      <div class="attente-reponse-toggle-top-right" *ngIf="formGroup">
+        <label class="toggle-switch-small" [class.toggle-vert]="get('attente_reponse').value" [class.toggle-rouge]="!get('attente_reponse').value">
+          <input 
+            type="checkbox" 
+            [formControl]="get('attente_reponse')"
+            (change)="onAttenteReponseChange()"
+            class="toggle-input">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label-small">{{ get('attente_reponse').value ? 'Rien à faire' : 'Client attend' }}</span>
+        </label>
       </div>
     </div>
 
@@ -61,7 +72,7 @@
           [class.deadline-highlight-danger]="getDeadlineStatus() === 'danger'">
           <app-floating-label-input
             [label]="'Deadline'"
-            [control]="get('deadline')!"
+            [control]="get('deadline')"
             [formGroup]="formGroup"
             type="date"
             [readonly]="!isEditMode()">
@@ -117,7 +128,8 @@
                 formControlName="commentaire_paye"
                 placeholder="Commentaire..."
                 rows="3"
-                [readonly]="!isEditMode()">
+                [readonly]="!isEditMode()"
+                [disabled]="!isEditMode()">
               </textarea>
             </div>
           </div>
@@ -275,6 +287,21 @@
             [formGroup]="formGroup"
             [readonly]="!isEditMode()">
           </app-floating-label-input>
+        </div>
+
+        <div class="input-wrapper">
+          <label class="label">Mode de contact préféré</label>
+          <div class="mode-contact-radio-group" [class.disabled]="!isEditMode()">
+            <label *ngFor="let mode of modesContact" class="mode-contact-radio-label" [class.disabled]="!isEditMode()">
+              <input
+                type="radio"
+                name="mode_contact"
+                [value]="mode.value"
+                [formControl]="get('mode_contact')">
+              <span class="mode-contact-emoji">{{ mode.emoji }}</span>
+              <span>{{ mode.label }}</span>
+            </label>
+          </div>
         </div>
       </section>
 

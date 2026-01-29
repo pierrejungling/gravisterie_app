@@ -1,4 +1,4 @@
-<div class="input" [formGroup]="formGroup">
+<div class="input" [formGroup]="formGroup" [class.disabled]="readonly || control.disabled">
   <input 
     class="floating-input" 
     [type]="type"
@@ -8,7 +8,7 @@
     [formControl]="control" 
     [autocomplete]="getAutocomplete()"
     [readonly]="readonly"
-    [disabled]="readonly">
+    [disabled]="readonly || control.disabled">
   <label 
     class="floating-label"
     [class.fixed-label]="inputFocus || (control.value && control.value.length > 0)">{{label}}</label>

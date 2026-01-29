@@ -10,6 +10,7 @@ export interface CoordonneesContactForm {
   ville: FormControl<string>;
   pays: FormControl<string>;
   tva: FormControl<string>;
+  mode_contact: FormControl<string>;
 }
 
 export interface NouvelleCommandeForm {
@@ -26,5 +27,7 @@ export interface NouvelleCommandeForm {
   quantité: FormControl<number>;
   payé: FormControl<boolean>;
   commentaire_paye: FormControl<string>;
+  attente_reponse: FormControl<boolean>;
+  mode_contact: FormControl<string>;
   statut_initial: FormControl<string>;
 }

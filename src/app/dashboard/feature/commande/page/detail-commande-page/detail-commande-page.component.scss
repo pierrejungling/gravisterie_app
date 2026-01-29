@@ -33,6 +33,8 @@
   margin-bottom: 2rem;
   flex-wrap: wrap;
   gap: 1rem;
+  position: relative;
+  padding-bottom: 2.5rem; // Espace pour le toggle en dessous
 }
 
 .header-title-section {
@@ -74,6 +76,93 @@
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+  align-items: center;
+}
+
+// Toggle attente réponse - version discrète et petite
+.attente-reponse-toggle-top-right {
+  position: absolute;
+  top: calc(100% + 0.5rem); // Positionner en dessous des boutons d'action
+  right: 0;
+  z-index: 10;
+}
+
+.toggle-switch-small {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.toggle-input {
+  display: none;
+}
+
+.toggle-switch-small .toggle-slider {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  background-color: #f44336; // Rouge par défaut (client attend)
+  border-radius: 9px;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: white;
+    top: 2px;
+    left: 2px;
+    transition: all 0.3s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+}
+
+.toggle-switch-small.toggle-vert {
+  .toggle-slider {
+    background-color: #4CAF50; // Vert (rien à faire)
+  }
+
+  .toggle-slider::before {
+    transform: translateX(14px);
+  }
+}
+
+.toggle-switch-small.toggle-rouge {
+  .toggle-slider {
+    background-color: #f44336; // Rouge (client attend)
+  }
+
+  .toggle-slider::before {
+    transform: translateX(0);
+  }
+}
+
+.toggle-label-small {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #666;
+  transition: color 0.3s ease;
+}
+
+.toggle-switch-small.toggle-vert .toggle-label-small {
+  color: #4CAF50;
+}
+
+.toggle-switch-small.toggle-rouge .toggle-label-small {
+  color: #f44336;
 }
 
 .btn-edit,
@@ -143,6 +232,29 @@
   transition: all 0.3s ease;
   margin-bottom: 1.5rem;
 
+  // Griser tous les champs désactivés
+  ::ng-deep app-floating-label-input {
+    &.disabled,
+    .input.disabled {
+      .floating-input {
+        background: #f5f5f5 !important;
+        color: #666 !important;
+        cursor: not-allowed !important;
+        opacity: 0.7;
+        border-color: #dee2e6;
+      }
+    }
+
+    .floating-input:disabled,
+    .floating-input[readonly] {
+      background: #f5f5f5 !important;
+      color: #666 !important;
+      cursor: not-allowed !important;
+      opacity: 0.7;
+      border-color: #dee2e6;
+    }
+  }
+
   .textarea-container {
     position: relative;
     width: 100%;
@@ -199,9 +311,10 @@
 
       &:disabled,
       &[readonly] {
-        background: #f5f5f5;
-        cursor: not-allowed;
-        color: #666;
+        background: #f5f5f5 !important;
+        cursor: not-allowed !important;
+        color: #666 !important;
+        opacity: 0.7;
       }
     }
   }
@@ -241,6 +354,67 @@
       label {
         color: #c62828;
       }
+    }
+  }
+
+  // Toggle attente réponse - version discrète et petite en haut à droite
+  .attente-reponse-toggle-top-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 10;
+    margin-top: 0.5rem;
+  }
+
+  .mode-contact-radio-group {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+
+    &.disabled {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+  }
+
+  .mode-contact-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+
+    &:hover:not(.disabled) {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    &.disabled {
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    input[type="radio"] {
+      margin: 0;
+      cursor: pointer;
+      accent-color: #007bff;
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+    }
+
+    input[type="radio"]:checked ~ span {
+      font-weight: 600;
+    }
+
+    .mode-contact-emoji {
+      font-size: 1.2rem;
     }
   }
 
@@ -323,9 +497,12 @@
       color: rgba(0, 0, 0, 0.5);
     }
 
+    &:disabled,
     &[readonly] {
-      background: rgba(0, 0, 0, 0.05);
-      cursor: not-allowed;
+      background: #f5f5f5 !important;
+      color: #666 !important;
+      cursor: not-allowed !important;
+      opacity: 0.7;
     }
   }
 }

@@ -28,6 +28,36 @@
     &::placeholder {
       color: transparent;
     }
+
+    &:disabled {
+      background: #f5f5f5 !important;
+      color: #666 !important;
+      cursor: not-allowed !important;
+      opacity: 0.7;
+      border-color: #dee2e6;
+    }
+
+    &[readonly] {
+      background: #f5f5f5 !important;
+      color: #666 !important;
+      cursor: not-allowed !important;
+      opacity: 0.7;
+    }
+  }
+
+  &.disabled {
+    .floating-input {
+      background: #f5f5f5 !important;
+      color: #666 !important;
+      cursor: not-allowed !important;
+      opacity: 0.7;
+      border-color: #dee2e6;
+    }
+
+    .floating-label {
+      color: #999 !important;
+      opacity: 0.7;
+    }
   }
 
   .floating-label {

@@ -6,7 +6,7 @@ import { HeaderComponent, FloatingLabelInputComponent, handleFormError, getFormV
 import { ApiService } from '@api';
 import { ApiURI } from '@api';
 import { NouvelleCommandeForm, CoordonneesContactForm } from '../../data/form/nouvelle-commande.form';
-import { Couleur, StatutCommande } from '../../model/commande.interface';
+import { Couleur, StatutCommande, ModeContact } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 
 @Component({
@@ -40,6 +40,13 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   ];
   
   supportParDefaut: string = 'CP 3,6mm Méranti';
+
+  // Modes de contact disponibles
+  readonly modesContact = [
+    { value: ModeContact.MAIL, label: 'Mail', emoji: '📧' },
+    { value: ModeContact.TEL, label: 'Téléphone', emoji: '📞' },
+    { value: ModeContact.META, label: 'Meta', emoji: '💬' }
+  ];
 
   // Statuts disponibles pour sélection initiale
   readonly statuts: StatutCommande[] = [
@@ -160,7 +167,8 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
         code_postal: new FormControl<string>('', [Validators.maxLength(10)]),
         ville: new FormControl<string>('', [Validators.maxLength(50)]),
         pays: new FormControl<string>('Belgique', [Validators.maxLength(50)]),
-        tva: new FormControl<string>('', [Validators.maxLength(20)])
+        tva: new FormControl<string>('', [Validators.maxLength(20)]),
+        mode_contact: new FormControl<string>('')
       }),
       description_projet: new FormControl<string>(''),
       dimensions_souhaitees: new FormControl<string>(''),
@@ -172,6 +180,8 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       quantité: new FormControl<number>(1, [Validators.min(1)]),
       payé: new FormControl<boolean>(false),
       commentaire_paye: new FormControl<string>(''),
+      attente_reponse: new FormControl<boolean>(false), // Par défaut false = client attend réponse (rouge)
+      mode_contact: new FormControl<string>(''),
       statut_initial: new FormControl<string>('')
     });
   }
@@ -334,6 +344,8 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
         quantité: formValue.quantité || 1,
         payé: formValue.payé || false,
         commentaire_paye: formValue.commentaire_paye || '',
+        attente_reponse: formValue.attente_reponse ?? false,
+        mode_contact: formValue.coordonnees_contact?.mode_contact || formValue.mode_contact || '',
         statut_initial: formValue.statut_initial || '',
         fichiers_joints: [] // Pour l'instant, on envoie un tableau vide. L'upload de fichiers sera géré séparément
       };

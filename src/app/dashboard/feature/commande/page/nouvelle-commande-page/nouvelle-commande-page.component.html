@@ -140,6 +140,21 @@
             [formGroup]="coordonneesContact">
           </app-floating-label-input>
         </div>
+
+        <div class="input-wrapper">
+          <label class="label">Mode de contact préféré</label>
+          <div class="mode-contact-radio-group">
+            <label *ngFor="let mode of modesContact" class="mode-contact-radio-label">
+              <input
+                type="radio"
+                name="mode_contact"
+                [value]="mode.value"
+                [formControl]="getCoordonneeControl('mode_contact')">
+              <span class="mode-contact-emoji">{{ mode.emoji }}</span>
+              <span>{{ mode.label }}</span>
+            </label>
+          </div>
+        </div>
       </section>
 
       <!-- Description du projet -->
@@ -266,6 +281,19 @@
               (change)="onStatutChange(statut)">
             <span>{{ statutLabels[statut] }}</span>
           </label>
+        </div>
+
+        <div class="input-wrapper" style="margin-top: 1rem;">
+          <div class="attente-reponse-toggle">
+            <label class="toggle-switch" [class.toggle-vert]="formGroup.get('attente_reponse')?.value" [class.toggle-rouge]="!formGroup.get('attente_reponse')?.value">
+              <input 
+                type="checkbox" 
+                formControlName="attente_reponse"
+                class="toggle-input">
+              <span class="toggle-slider"></span>
+              <span class="toggle-label">{{ formGroup.get('attente_reponse')?.value ? 'Rien à faire' : 'Client attend' }}</span>
+            </label>
+          </div>
         </div>
       </section>
 

@@ -75,6 +75,11 @@ export class HeaderComponent {
   }
 
   goBack(): void {
+    // Utiliser l'historique du navigateur pour revenir à la page précédente
+    window.history.back();
+  }
+
+  goToDashboard(): void {
     this.router.navigate([AppRoutes.AUTHENTICATED]);
   }
   

@@ -23,15 +23,28 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
   private readonly router: Router = inject(Router);
   private readonly scrollKey = 'commandes-terminees-scroll';
 
-  // Commandes terminées et annulées triées par date (plus récentes en premier)
-  commandesTermineesTriees = computed(() => {
+  // Commandes terminées triées par date (plus récentes en premier)
+  commandesTerminees = computed(() => {
     const commandesTerminees = this.commandes().filter(cmd => 
-      cmd.statut_commande === StatutCommande.TERMINE || cmd.statut_commande === StatutCommande.ANNULEE
+      cmd.statut_commande === StatutCommande.TERMINE
     );
     
     // Trier par date de commande (plus récentes en premier)
-    // Note: idéalement, il faudrait un champ date_fin dans l'entité Commande
     return [...commandesTerminees].sort((a, b) => {
+      const dateA = new Date(a.date_commande).getTime();
+      const dateB = new Date(b.date_commande).getTime();
+      return dateB - dateA; // Tri décroissant (plus récentes en premier)
+    });
+  });
+
+  // Commandes annulées triées par date (plus récentes en premier)
+  commandesAnnulees = computed(() => {
+    const commandesAnnulees = this.commandes().filter(cmd => 
+      cmd.statut_commande === StatutCommande.ANNULEE
+    );
+    
+    // Trier par date de commande (plus récentes en premier)
+    return [...commandesAnnulees].sort((a, b) => {
       const dateA = new Date(a.date_commande).getTime();
       const dateB = new Date(b.date_commande).getTime();
       return dateB - dateA; // Tri décroissant (plus récentes en premier)

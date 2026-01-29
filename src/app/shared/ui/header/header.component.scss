@@ -24,6 +24,11 @@
     gap: var(--spacing-sm);
     height: 50px; // Hauteur fixe pour éviter les sauts de layout
     flex-shrink: 0;
+    transition: opacity 0.2s ease;
+
+    &:hover {
+      opacity: 0.8;
+    }
   }
 
   &__center {

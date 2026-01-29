@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { HeaderComponent } from '@shared';
 import { ApiService } from '@api';
 import { ApiURI } from '@api';
-import { Commande, StatutCommande } from '../../model/commande.interface';
+import { Commande, StatutCommande, ModeContact } from '../../model/commande.interface';
 import { Payload } from '@shared';
 import { AppRoutes } from '@shared';
 
@@ -293,6 +293,20 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     return `${nom} ${prenom}`.trim() || 'Non renseigné';
   }
 
+  getModeContactEmoji(modeContact?: string): string {
+    if (!modeContact) return '';
+    switch (modeContact) {
+      case ModeContact.MAIL:
+        return '📧';
+      case ModeContact.TEL:
+        return '📞';
+      case ModeContact.META:
+        return '💬';
+      default:
+        return '';
+    }
+  }
+
   trackByCommandeId(index: number, commande: Commande): string {
     return commande.id_commande;
   }
@@ -336,5 +350,25 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
 
   navigateToNouvelleCommande(): void {
     this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'nouvelle']);
+  }
+
+  onAttenteReponseChange(commande: Commande, event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const attenteReponseValue = target.checked;
+
+    // Envoyer la mise à jour à la base de données
+    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${commande.id_commande}`, {
+      attente_reponse: attenteReponseValue
+    }).subscribe({
+      next: () => {
+        // Mettre à jour localement pour un feedback immédiat
+        commande.attente_reponse = attenteReponseValue;
+      },
+      error: (error) => {
+        console.error('Erreur lors de la mise à jour de l\'attente réponse:', error);
+        // Revert la valeur en cas d'erreur
+        target.checked = !attenteReponseValue;
+      }
+    });
   }
 }

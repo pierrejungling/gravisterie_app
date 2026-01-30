@@ -92,6 +92,31 @@
   color: #666;
 }
 
+// Affichage conditionnel desktop / mobile
+.mobile-view {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .desktop-view {
+    display: none !important;
+  }
+
+  .mobile-view {
+    display: block;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-view {
+    display: none !important;
+  }
+}
+
 .table-container {
   background: white;
   border-radius: 8px;
@@ -109,10 +134,13 @@
   flex: 1;
   min-height: 0;
   width: 100%;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .commandes-table {
   width: 100%;
+  min-width: 720px; // Permet le scroll horizontal sur mobile
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -479,6 +507,214 @@
   color: #f44336;
 }
 
+// ——— Vue mobile : sections repliables (style Rappels Apple) ———
+.mobile-sections {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 2rem;
+}
+
+.mobile-section {
+  border-bottom: 1px solid #e0e0e0;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.mobile-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.875rem 0.5rem 0.875rem 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+  text-align: left;
+  min-height: 48px;
+  transition: background-color 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  &:active {
+    background: rgba(0, 0, 0, 0.08);
+  }
+}
+
+.mobile-section__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.mobile-section__emoji {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.mobile-section__label {
+  flex: 1;
+}
+
+.mobile-section__count {
+  font-weight: 500;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.mobile-section__chevron {
+  font-size: 0.65rem;
+  color: #666;
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.mobile-section--expanded .mobile-section__chevron {
+  transform: rotate(-180deg);
+}
+
+.mobile-section__content {
+  padding-left: 0.25rem;
+  padding-bottom: 0.75rem;
+  animation: sectionOpen 0.25s ease;
+}
+
+@keyframes sectionOpen {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.mobile-section__empty {
+  padding: 0.75rem 0.5rem;
+  margin: 0;
+  font-size: 0.9rem;
+  color: #999;
+  font-style: italic;
+}
+
+.mobile-card {
+  background: #e9ecef;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  padding: 1rem;
+  padding-top: 2.25rem;
+  padding-bottom: 2.75rem;
+  margin-top: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  &:first-child {
+    margin-top: 0.25rem;
+  }
+
+  &.deadline-warning {
+    background: rgba(255, 152, 0, 0.15);
+    border-color: rgba(255, 152, 0, 0.3);
+  }
+
+  &.deadline-danger {
+    background: rgba(244, 67, 54, 0.15);
+    border-color: rgba(244, 67, 54, 0.3);
+  }
+}
+
+.mobile-card:active {
+  background: #dee2e6;
+}
+
+.mobile-card__header {
+  margin-bottom: 0.25rem;
+}
+
+.mobile-card__title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  word-break: break-word;
+  line-height: 1.25;
+}
+
+.mobile-card__info {
+  font-size: 0.875rem;
+  color: #666;
+
+  p {
+    margin: 0.4rem 0;
+    line-height: 1.4;
+  }
+
+  strong {
+    color: #333;
+    font-weight: 600;
+  }
+}
+
+.mobile-card__info .commande-client .mode-contact-emoji {
+  margin-left: 0.35rem;
+  font-size: 1rem;
+}
+
+.mobile-card__actions {
+  margin-top: 0.25rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-card .attente-reponse-toggle-bottom-left {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  z-index: 5;
+}
+
+.mobile-card .payment-indicator {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 500;
+  z-index: 10;
+  background: rgba(233, 236, 239, 0.9);
+  padding: 0.15rem 0.35rem;
+  border-radius: 3px;
+}
+
+.mobile-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #999;
+}
+
+.mobile-empty .empty-message {
+  font-size: 1rem;
+  font-style: italic;
+  margin: 0;
+}
+
 // Responsive
 @media (min-width: 1920px) {
   // Grands écrans : colonnes plus larges mais toujours égales
@@ -556,6 +792,104 @@
   }
 
   .commande-info {
+    font-size: 0.8rem;
+  }
+}
+
+// Smartphone : vue liste (tableau masqué)
+@media (max-width: 768px) {
+  .commandes-en-cours-wrapper {
+    padding: 0.25rem 0.75rem;
+    padding-top: 52px;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .commandes-en-cours-container {
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+    text-align: center;
+  }
+
+  .header-actions {
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .btn-add-commande {
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+  }
+
+  .btn-navigation {
+    flex: 1;
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .mobile-sections {
+    padding-bottom: 2rem;
+  }
+
+  .mobile-card .commande-checkbox {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    min-height: 22px;
+  }
+
+  .mobile-card .toggle-switch-small .toggle-slider {
+    width: 36px;
+    height: 20px;
+    min-width: 36px;
+    min-height: 20px;
+
+    &::before {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .mobile-card .toggle-switch-small.toggle-vert .toggle-slider::before {
+    transform: translateX(16px);
+  }
+}
+
+@media (max-width: 480px) {
+  .commandes-en-cours-wrapper {
+    padding: 0.25rem 0.5rem;
+    padding-top: 50px;
+  }
+
+  .page-title {
+    font-size: 1.1rem;
+  }
+
+  .btn-navigation {
+    font-size: 0.8rem;
+    padding: 0.65rem 0.75rem;
+  }
+
+  .mobile-card__title {
+    font-size: 1rem;
+  }
+
+  .mobile-card__info p {
     font-size: 0.8rem;
   }
 }

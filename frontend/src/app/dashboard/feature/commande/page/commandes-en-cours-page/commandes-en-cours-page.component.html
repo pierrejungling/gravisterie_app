@@ -18,7 +18,8 @@
       <p>Chargement des commandes...</p>
     </div>
 
-    <div class="table-container" *ngIf="!isLoading()">
+    <!-- Vue desktop : tableau par statut -->
+    <div class="table-container desktop-view" *ngIf="!isLoading()">
       <div class="table-scroll">
         <table class="commandes-table">
           <thead>
@@ -35,8 +36,8 @@
             <tr>
               <td *ngFor="let statut of statuts" class="statut-column">
                 <div class="commande-cards">
-                  <div 
-                    *ngFor="let commande of getCommandesByStatut(statut); trackBy: trackByCommandeId" 
+                  <div
+                    *ngFor="let commande of getCommandesByStatut(statut); trackBy: trackByCommandeId"
                     class="commande-card"
                     [class.deadline-warning]="getDeadlineStatus(commande) === 'warning'"
                     [class.deadline-danger]="getDeadlineStatus(commande) === 'danger'"
@@ -56,22 +57,21 @@
                       <p class="commande-date">
                         <strong>Date :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
                       </p>
-                      <p 
-                        class="commande-deadline" 
+                      <p
+                        class="commande-deadline"
                         [class.deadline-highlight-warning]="getDeadlineStatus(commande) === 'warning'"
                         [class.deadline-highlight-danger]="getDeadlineStatus(commande) === 'danger'"
                         *ngIf="commande.deadline">
                         <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
                       </p>
                     </div>
-                    <div class="commande-actions">
-                      <!-- Afficher les étapes précédentes cochées -->
-                      <div class="etapes-precedentes" *ngIf="getEtapesPrecedentes(commande, statut).length > 0" (click)="$event.stopPropagation()">
-                        <label 
-                          *ngFor="let etapePrecedente of getEtapesPrecedentes(commande, statut)" 
+                    <div class="commande-actions" (click)="$event.stopPropagation()">
+                      <div class="etapes-precedentes" *ngIf="getEtapesPrecedentes(commande, statut).length > 0">
+                        <label
+                          *ngFor="let etapePrecedente of getEtapesPrecedentes(commande, statut)"
                           class="checkbox-label checkbox-completed">
-                          <input 
-                            type="checkbox" 
+                          <input
+                            type="checkbox"
                             [checked]="true"
                             (change)="onEtapePrecedenteChange($event, commande, etapePrecedente)"
                             (click)="$event.stopPropagation()"
@@ -79,10 +79,9 @@
                           <span class="checkbox-text">{{ getStatutLabel(etapePrecedente) }}</span>
                         </label>
                       </div>
-                      <!-- Checkbox pour l'étape actuelle -->
-                      <label class="checkbox-label" (click)="$event.stopPropagation()">
-                        <input 
-                          type="checkbox" 
+                      <label class="checkbox-label">
+                        <input
+                          type="checkbox"
                           [checked]="isCheckboxChecked(commande, statut)"
                           (change)="onCheckboxChange(commande, statut)"
                           (click)="$event.stopPropagation()"
@@ -90,11 +89,10 @@
                         <span class="checkbox-text">Terminé</span>
                       </label>
                     </div>
-                    <!-- Toggle attente réponse - en bas à gauche -->
                     <div class="attente-reponse-toggle-bottom-left" (click)="$event.stopPropagation()">
                       <label class="toggle-switch-small" [class.toggle-vert]="commande['attente_reponse']" [class.toggle-rouge]="!commande['attente_reponse']">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           [checked]="commande['attente_reponse']"
                           (change)="onAttenteReponseChange(commande, $event)"
                           class="toggle-input">
@@ -111,6 +109,104 @@
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Vue mobile : sections repliables (style Rappels Apple) -->
+    <div class="mobile-view" *ngIf="!isLoading()">
+      <div class="mobile-sections" *ngIf="hasAnyCommandeEnCours()">
+        <section
+          *ngFor="let statut of statuts"
+          class="mobile-section"
+          [class.mobile-section--expanded]="isSectionExpanded(statut)">
+          <button
+            type="button"
+            class="mobile-section__header"
+            [attr.aria-expanded]="isSectionExpanded(statut)"
+            (click)="toggleSection(statut)">
+            <span class="mobile-section__title">
+              <span class="mobile-section__emoji">{{ getStatutEmoji(statut) }}</span>
+              <span class="mobile-section__label">{{ getStatutLabel(statut) }}</span>
+              <span class="mobile-section__count" *ngIf="getCommandesByStatut(statut).length > 0">
+                ({{ getCommandesByStatut(statut).length }})
+              </span>
+            </span>
+            <span class="mobile-section__chevron" aria-hidden="true">▼</span>
+          </button>
+          <div class="mobile-section__content" *ngIf="isSectionExpanded(statut)">
+            <div
+              *ngFor="let commande of getCommandesByStatut(statut); trackBy: trackByCommandeId"
+              class="mobile-card"
+              [class.deadline-warning]="getDeadlineStatus(commande) === 'warning'"
+              [class.deadline-danger]="getDeadlineStatus(commande) === 'danger'"
+              [title]="commande.produit || 'Commande #' + commande.id_commande"
+              (click)="onCommandeClick(commande)">
+              <span class="payment-indicator" *ngIf="commande['payé']">✓ payé</span>
+              <div class="mobile-card__header">
+                <h3 class="mobile-card__title">
+                  {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
+                </h3>
+              </div>
+              <div class="mobile-card__info">
+                <p class="commande-client">
+                  <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
+                  <span class="mode-contact-emoji" *ngIf="commande.mode_contact">{{ getModeContactEmoji(commande.mode_contact) }}</span>
+                </p>
+                <p class="commande-date">
+                  <strong>Date :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
+                </p>
+                <p
+                  class="commande-deadline"
+                  [class.deadline-highlight-warning]="getDeadlineStatus(commande) === 'warning'"
+                  [class.deadline-highlight-danger]="getDeadlineStatus(commande) === 'danger'"
+                  *ngIf="commande.deadline">
+                  <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
+                </p>
+              </div>
+              <div class="mobile-card__actions" (click)="$event.stopPropagation()">
+                <div class="etapes-precedentes" *ngIf="getEtapesPrecedentes(commande, statut).length > 0">
+                  <label
+                    *ngFor="let etapePrecedente of getEtapesPrecedentes(commande, statut)"
+                    class="checkbox-label checkbox-completed">
+                    <input
+                      type="checkbox"
+                      [checked]="true"
+                      (change)="onEtapePrecedenteChange($event, commande, etapePrecedente)"
+                      (click)="$event.stopPropagation()"
+                      class="commande-checkbox checkbox-completed-input">
+                    <span class="checkbox-text">{{ getStatutLabel(etapePrecedente) }}</span>
+                  </label>
+                </div>
+                <label class="checkbox-label">
+                  <input
+                    type="checkbox"
+                    [checked]="isCheckboxChecked(commande, statut)"
+                    (change)="onCheckboxChange(commande, statut)"
+                    (click)="$event.stopPropagation()"
+                    class="commande-checkbox">
+                  <span class="checkbox-text">Terminé</span>
+                </label>
+              </div>
+              <div class="attente-reponse-toggle-bottom-left" (click)="$event.stopPropagation()">
+                <label class="toggle-switch-small" [class.toggle-vert]="commande['attente_reponse']" [class.toggle-rouge]="!commande['attente_reponse']">
+                  <input
+                    type="checkbox"
+                    [checked]="commande['attente_reponse']"
+                    (change)="onAttenteReponseChange(commande, $event)"
+                    class="toggle-input">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label-small">{{ commande['attente_reponse'] ? 'Rien à faire' : 'Client attend' }}</span>
+                </label>
+              </div>
+            </div>
+            <p class="mobile-section__empty" *ngIf="getCommandesByStatut(statut).length === 0">
+              Aucune commande
+            </p>
+          </div>
+        </section>
+      </div>
+      <div class="mobile-empty" *ngIf="!hasAnyCommandeEnCours()">
+        <p class="empty-message">Aucune commande en cours</p>
       </div>
     </div>
   </div>

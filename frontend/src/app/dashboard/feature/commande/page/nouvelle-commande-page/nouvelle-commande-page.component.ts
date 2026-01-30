@@ -397,7 +397,9 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
   onViewCommandes(): void {
     this.showSuccessPopup.set(false);
-    this.router.navigate([AppRoutes.COMMANDES_EN_COURS]);
+    this.router.navigate([AppRoutes.COMMANDES_EN_COURS], {
+      queryParams: { from: 'nouvelle' }
+    });
   }
 
   onSupportFocus(event: Event): void {

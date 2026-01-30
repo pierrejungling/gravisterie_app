@@ -194,3 +194,61 @@
 .fade-in {
   animation: fadeIn 0.5s ease-in;
 }
+
+// Responsive smartphone
+@media (max-width: 768px) {
+  #sign-up-wrapper {
+    padding: 1.5rem var(--spacing-sm);
+    padding-top: 5rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .sub-title {
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  form {
+    padding: var(--spacing-lg);
+    margin: 0 var(--spacing-xs);
+  }
+
+  .button-area button {
+    min-height: 48px;
+    padding: 1rem 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  #sign-up-wrapper {
+    padding: 1rem 0.75rem;
+    padding-top: 4.5rem;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .sub-title {
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  form {
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+  }
+
+  .success-area,
+  .error-area {
+    max-width: 100%;
+  }
+
+  .button-area button {
+    width: 100%;
+    min-height: 48px;
+  }
+}

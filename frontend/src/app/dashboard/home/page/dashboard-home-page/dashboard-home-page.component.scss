@@ -196,6 +196,18 @@
 // Responsive
 @media (max-width: 768px) {
   .dashboard-home {
+    padding-top: 70px;
+    padding-bottom: var(--spacing-lg);
+
+    &__container {
+      padding: 0 var(--spacing-sm);
+    }
+
+    &__logo-section {
+      margin-bottom: var(--spacing-lg);
+      padding: var(--spacing-lg) 0;
+    }
+
     &__logo {
       max-width: 250px;
     }
@@ -204,18 +216,80 @@
       font-size: 2rem;
     }
 
+    &__subtitle {
+      font-size: 1.1rem;
+    }
+
     &__cards {
       grid-template-columns: 1fr;
+      gap: var(--spacing-md);
+      margin-top: var(--spacing-lg);
     }
   }
 
   .dashboard-card {
+    padding: var(--spacing-md);
+    min-height: 44px;
+
     &__icon {
       font-size: 2.5rem;
     }
 
     &__title {
       font-size: 1.25rem;
+    }
+
+    &__description {
+      font-size: 0.9rem;
+    }
+
+    &__footer {
+      padding-top: var(--spacing-sm);
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-home {
+    padding-top: 60px;
+    padding-left: 0;
+    padding-right: 0;
+
+    &__container {
+      padding: 0 0.75rem;
+    }
+
+    &__logo {
+      max-width: 200px;
+    }
+
+    &__title {
+      font-size: 1.5rem;
+    }
+
+    &__subtitle {
+      font-size: 1rem;
+    }
+
+    &__cards {
+      gap: var(--spacing-sm);
+    }
+  }
+
+  .dashboard-card {
+    padding: var(--spacing-sm) var(--spacing-md);
+    min-height: 56px;
+
+    &__icon {
+      font-size: 2rem;
+    }
+
+    &__title {
+      font-size: 1.1rem;
+    }
+
+    &__description {
+      font-size: 0.85rem;
     }
   }
 }

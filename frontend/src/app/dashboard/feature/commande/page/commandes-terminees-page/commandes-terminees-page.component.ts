@@ -141,7 +141,9 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
   }
 
   navigateToEnCours(): void {
-    this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'en-cours']);
+    this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'en-cours'], {
+      queryParams: { from: 'terminees' }
+    });
   }
 
   getClientName(client: Commande['client']): string {

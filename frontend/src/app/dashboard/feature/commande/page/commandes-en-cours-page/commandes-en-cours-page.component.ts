@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { HeaderComponent } from '@shared';
 import { ApiService } from '@api';
 import { ApiURI } from '@api';
@@ -22,7 +22,10 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   
   private readonly apiService: ApiService = inject(ApiService);
   private readonly router: Router = inject(Router);
+  private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly scrollKey = 'commandes-en-cours-scroll';
+  private readonly expandedSectionsKey = 'commandes-en-cours-expanded-sections';
+  private readonly restoreExpandedKey = 'commandes-en-cours-restore-expanded';
 
   // Ordre des colonnes de statut
   readonly statuts: StatutCommande[] = [
@@ -66,6 +69,90 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     [StatutCommande.TERMINE]: '✅',
     [StatutCommande.ANNULEE]: '❌',
   };
+
+  /** Sections repliables (vue mobile) : ensemble des statuts dont la section est ouverte */
+  expandedSections: WritableSignal<Set<StatutCommande>> = signal(new Set<StatutCommande>([]));
+
+  isSectionExpanded(statut: StatutCommande): boolean {
+    return this.expandedSections().has(statut);
+  }
+
+  toggleSection(statut: StatutCommande): void {
+    const next = new Set(this.expandedSections());
+    if (next.has(statut)) {
+      next.delete(statut);
+    } else {
+      next.add(statut);
+    }
+    this.expandedSections.set(next);
+    this.saveExpandedSections(next);
+  }
+
+  private saveExpandedSections(sections: Set<StatutCommande>): void {
+    try {
+      sessionStorage.setItem(this.expandedSectionsKey, JSON.stringify([...sections]));
+    } catch {
+      // ignorer si sessionStorage indisponible
+    }
+  }
+
+  /** Au chargement : fermer tout si on vient du dashboard / terminées / nouvelle ; sinon restaurer si rechargement ou retour depuis détail */
+  private setInitialExpandedSections(): void {
+    const from = this.route.snapshot.queryParamMap.get('from');
+
+    // Rechargement de la page « commandes en cours » → restaurer les chevrons ouverts
+    const nav = performance.getEntriesByType?.('navigation')[0] as PerformanceNavigationTiming | undefined;
+    if (nav?.type === 'reload') {
+      this.restoreExpandedSections();
+      return;
+    }
+
+    // Arrivée depuis dashboard, commandes terminées ou nouvelle commande → tout fermer
+    if (from === 'dashboard' || from === 'terminees' || from === 'nouvelle') {
+      this.expandedSections.set(new Set<StatutCommande>());
+      this.saveExpandedSections(new Set<StatutCommande>());
+      return;
+    }
+
+    // Retour depuis la page détail (flag posé avant la navigation) → restaurer les chevrons
+    try {
+      if (sessionStorage.getItem(this.restoreExpandedKey) === '1') {
+        sessionStorage.removeItem(this.restoreExpandedKey);
+        this.restoreExpandedSections();
+        return;
+      }
+    } catch {
+      // ignorer
+    }
+
+    // Autre cas (ex. lien direct) → tout fermé
+    this.expandedSections.set(new Set<StatutCommande>());
+  }
+
+  private restoreExpandedSections(): void {
+    try {
+      const raw = sessionStorage.getItem(this.expandedSectionsKey);
+      if (raw) {
+        const parsed: string[] = JSON.parse(raw);
+        const valid = new Set<StatutCommande>();
+        const statutSet = new Set(this.statuts);
+        for (const s of parsed) {
+          if (statutSet.has(s as StatutCommande)) {
+            valid.add(s as StatutCommande);
+          }
+        }
+        this.expandedSections.set(valid);
+        return;
+      }
+    } catch {
+      // garder fermé
+    }
+    this.expandedSections.set(new Set<StatutCommande>());
+  }
+
+  hasAnyCommandeEnCours(): boolean {
+    return this.statuts.some(statut => this.getCommandesByStatut(statut).length > 0);
+  }
 
   ngOnInit(): void {
     // Sauvegarder la position de scroll avant le rechargement
@@ -133,6 +220,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
       next: (response) => {
         if (response.result && response.data) {
           this.commandes.set(response.data);
+          this.setInitialExpandedSections();
         }
         this.isLoading.set(false);
         // Réinitialiser le flag pour permettre la restauration après le chargement
@@ -277,6 +365,10 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     return this.statutLabels[statut];
   }
 
+  getStatutEmoji(statut: StatutCommande): string {
+    return this.statutEmojis[statut] ?? '';
+  }
+
   formatDate(dateString: string): string {
     if (!dateString) return '-';
     const date = new Date(dateString);
@@ -339,6 +431,11 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   onCommandeClick(commande: Commande): void {
+    try {
+      sessionStorage.setItem(this.restoreExpandedKey, '1');
+    } catch {
+      // ignorer
+    }
     this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'detail', commande.id_commande], {
       queryParams: { from: 'en-cours' }
     });

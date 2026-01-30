@@ -835,3 +835,79 @@
     }
   }
 }
+
+// Responsive smartphone
+@media (max-width: 768px) {
+  .nouvelle-commande-wrapper {
+    padding: 1rem var(--spacing-sm);
+    padding-top: 70px;
+  }
+
+  .nouvelle-commande-container {
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius);
+  }
+
+  .page-title {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-md);
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-md);
+
+    button {
+      width: 100%;
+      min-height: 48px;
+      padding: 1rem 1.25rem;
+    }
+  }
+
+  .popup-content {
+    width: 95%;
+    max-height: 85vh;
+  }
+
+  .popup-header {
+    padding: 1.5rem 1rem 1rem;
+  }
+
+  .popup-title {
+    font-size: 1.35rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .nouvelle-commande-wrapper {
+    padding: 0.75rem 0.5rem;
+    padding-top: 60px;
+  }
+
+  .nouvelle-commande-container {
+    padding: var(--spacing-md);
+  }
+
+  .page-title {
+    font-size: 1.25rem;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+  }
+
+  .address-section {
+    padding: var(--spacing-sm);
+  }
+
+  .mode-contact-radio-label {
+    padding: 0.75rem;
+    min-height: 44px;
+  }
+}

@@ -23,11 +23,11 @@ export class TokenService {
                 const payload = {sub: credential.credential_id};
                 const token = await this.jwtService.signAsync(payload, {
                     secret: configManager.getValue(ConfigKey.JWT_TOKEN_SECRET),
-                    expiresIn: configManager.getValue(ConfigKey.JWT_TOKEN_EXPIRE_IN)
+                    expiresIn: configManager.getValue(ConfigKey.JWT_TOKEN_EXPIRE_IN) as string
                 });
                 const refreshToken = await this.jwtService.signAsync(payload, {
                     secret: configManager.getValue(ConfigKey.JWT_REFRESH_TOKEN_SECRET),
-                    expiresIn: configManager.getValue(ConfigKey.JWT_REFRESH_TOKEN_EXPIRE_IN)
+                    expiresIn: configManager.getValue(ConfigKey.JWT_REFRESH_TOKEN_EXPIRE_IN) as string
                 });
                 
                 

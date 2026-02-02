@@ -27,7 +27,7 @@ export const validationErrorToApiCodeResponse = (error: ValidationError): ApiCod
     if (isNil(error.constraints)) {
         return [];
     }
-    const keys: string[] = Object.keys(error.constraints);
+    const keys: string[] = Object.keys(error.constraints as { [type: string]: string });
     return keys.map((k: string) => {
         const code = ApiCodeResponse[`${camelToSnake(error.property)}_${camelToSnake(k)}` as keyof typeof ApiCodeResponse];
         return isNil(code) ? ApiCodeResponse.PAYLOAD_PARAM_IS_MISSING : code;

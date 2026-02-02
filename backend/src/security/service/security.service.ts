@@ -25,12 +25,13 @@ export class SecurityService {
         let result: Credential | null = null;
         if (payload.socialLogin) {
             if (payload.facebookHash !== null && payload.facebookHash !== undefined && payload.facebookHash.length > 0) {
-                result = await this.repository.findOneBy({facebookHash: payload.facebookHash, isAdmin: isAdmin});
+                result = await this.repository.findOneBy({facebookHash: payload.facebookHash});
             } else if (payload.googleHash !== null && payload.googleHash !== undefined && payload.googleHash.length > 0) {
-                result = await this.repository.findOneBy({googleHash: payload.googleHash, isAdmin: isAdmin});
+                result = await this.repository.findOneBy({googleHash: payload.googleHash});
             }
         } else {
-            result = await this.repository.findOneBy({username: payload.username, isAdmin: isAdmin});
+            // Recherche par username uniquement (pas de filtre isAdmin pour simplifier)
+            result = await this.repository.findOneBy({username: payload.username});
         }
         if (result !== null && result !== undefined && (payload.socialLogin || await comparePassword(payload.password, result.password))) {
             return this.tokenService.getTokens(result);

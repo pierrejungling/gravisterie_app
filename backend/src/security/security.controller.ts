@@ -16,13 +16,8 @@ export class SecurityController {
     @Public()
     @Post('signin') // ACCOUNT_SIGNIN_SUCCESS
     public signIn(@Body() payload: SignInPayload) {
+        // Utilise le même endpoint pour tous les utilisateurs (admin ou non)
         return this.service.signIn(payload, false);
-    }
-
-    @Public()
-    @Post('admin-signin') // ACCOUNT_ADMIN_SIGNIN_SUCCESS
-    public adminSignIn(@Body() payload: SignInPayload) {
-        return this.service.signIn(payload,true);
     }
 
     @Public()

@@ -275,22 +275,23 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
   isFormValid(): boolean {
     const nomCommande = this.formGroup.get('nom_commande')?.value?.trim();
-    const mail = this.formGroup.get('coordonnees_contact.mail')?.value?.trim();
-    const mailValid = this.formGroup.get('coordonnees_contact.mail')?.valid;
-    
-    // Seul le nom de la commande est obligatoire
-    // Si un email est fourni, il doit être valide
-    if (mail && !mailValid) {
-      return false;
-    }
-    
+    // Seul le nom de la commande est obligatoire pour activer le bouton.
+    // L'email et les autres champs optionnels sont validés à l'envoi / côté backend.
     return !!nomCommande;
   }
 
   onSubmit(): void {
     if (this.isFormValid()) {
+      const mailControl = this.formGroup.get('coordonnees_contact.mail');
+      const mailValue = mailControl?.value?.trim();
+      if (mailValue && mailControl && !mailControl.valid) {
+        this.formGroup.markAllAsTouched();
+        this.errors.set(getFormValidationErrors(this.formGroup));
+        return;
+      }
+
       const formValue = this.formGroup.value;
-      
+
       // Préparer le payload
       const coordonneesContact: any = {};
       if (formValue.coordonnees_contact?.nom?.trim()) {
@@ -331,20 +332,26 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
         coordonneesContact.adresse = adresseParts.join(', ');
       }
 
+      // S'assurer que les types correspondent à ce que le backend attend (@IsInt, @IsBoolean, etc.)
+      const quantiteNum = formValue.quantité != null
+        ? (typeof formValue.quantité === 'number' ? formValue.quantité : parseInt(String(formValue.quantité), 10))
+        : 1;
+      const quantiteFinale = Number.isNaN(quantiteNum) || quantiteNum < 1 ? 1 : quantiteNum;
+
       const payload: any = {
         nom_commande: formValue.nom_commande || '',
         ...(formValue.deadline && { deadline: formValue.deadline }),
         ...(Object.keys(coordonneesContact).length > 0 && { coordonnees_contact: coordonneesContact }),
-        description_projet: formValue.description_projet,
-        dimensions_souhaitees: formValue.dimensions_souhaitees,
-        couleur: formValue.couleur || [],
+        description_projet: formValue.description_projet ?? undefined,
+        dimensions_souhaitees: formValue.dimensions_souhaitees ?? undefined,
+        couleur: Array.isArray(formValue.couleur) ? formValue.couleur : [],
         support: (formValue.support?.trim() || this.supportParDefaut),
-        police_ecriture: formValue.police_ecriture,
-        texte_personnalisation: formValue.texte_personnalisation,
-        quantité: formValue.quantité || 1,
-        payé: formValue.payé || false,
+        police_ecriture: formValue.police_ecriture ?? undefined,
+        texte_personnalisation: formValue.texte_personnalisation ?? undefined,
+        quantité: quantiteFinale,
+        payé: Boolean(formValue.payé),
         commentaire_paye: formValue.commentaire_paye || '',
-        attente_reponse: formValue.attente_reponse ?? false,
+        attente_reponse: Boolean(formValue.attente_reponse ?? false),
         mode_contact: formValue.coordonnees_contact?.mode_contact || formValue.mode_contact || '',
         statut_initial: formValue.statut_initial || '',
         fichiers_joints: [] // Pour l'instant, on envoie un tableau vide. L'upload de fichiers sera géré séparément

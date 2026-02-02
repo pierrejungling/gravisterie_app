@@ -927,26 +927,56 @@
   }
 }
 
-// Responsive smartphone
+// Responsive smartphone : même style que Détail commande (sur tel)
 @media (max-width: 768px) {
   .nouvelle-commande-wrapper {
     padding: 1rem var(--spacing-sm);
-    padding-top: 56px;
+    padding-top: 50px;
     padding-bottom: 100px;
+    background-color: #f5f5f5;
   }
 
   .nouvelle-commande-container {
-    padding: var(--spacing-lg);
-    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    padding-bottom: 3rem;
+    border-radius: 6px;
+    background: white;
+    border: 2px solid transparent;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   .page-title {
-    font-size: 1.5rem;
-    margin-bottom: var(--spacing-md);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    color: #666;
+    text-align: left;
+  }
+
+  .form-section {
+    margin-bottom: 1.5rem;
+    padding: 1.5rem 1.5rem 2rem;
+    padding-bottom: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+    background: rgba(0, 0, 0, 0.02);
+
+    &:first-of-type {
+      padding-top: 0.5rem;
+    }
   }
 
   .section-title {
     font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    color: #333;
+    padding: 0.5rem 0;
+    border-radius: 8px;
+  }
+
+  .address-section {
+    padding: 0.75rem;
   }
 
   .popup-content {
@@ -965,13 +995,16 @@
 
 @media (max-width: 480px) {
   .nouvelle-commande-wrapper {
-    padding: 0.75rem 0.5rem;
-    padding-top: 50px;
+    padding: 0.5rem 0.5rem;
+    padding-top: 44px;
     padding-bottom: 100px;
+    background-color: #f5f5f5;
   }
 
   .nouvelle-commande-container {
-    padding: var(--spacing-md);
+    padding: 1rem;
+    padding-bottom: 3rem;
+    border-radius: 6px;
   }
 
   .page-title {

@@ -807,17 +807,15 @@
 }
 
 // Smartphone : barre d’actions et titres de section en sticky au scroll
-// Safari iOS : le sticky ne fonctionne pas dans un div avec overflow:auto → on laisse le body/window scroller
 @media (max-width: 768px) {
   .commandes-en-cours-wrapper {
-    // Hauteur du header app fixe ; hauteur barre d’actions ; top pour titres de section (sous la barre)
-    --mobile-app-header: 56px;
+    // Barre : stick au bord du wrapper. Titres de section : sticky seulement quand ils montent jusqu’au bas de .page-header (barre menu)
     --mobile-fixed-bar-height: 69px;
-    --mobile-sticky-top: calc(var(--mobile-app-header) + var(--mobile-fixed-bar-height));
+    --mobile-sticky-top: var(--mobile-fixed-bar-height);
     padding: 0.5rem 0.25rem;
-    padding-top: var(--mobile-app-header);
-    min-height: 100vh;
-    overflow: visible;
+    padding-top: 0;
+    height: 100vh;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -860,9 +858,8 @@
     overflow: visible; // requis pour que le sticky du header soit relatif au wrapper qui scroll
   }
 
-  // Titres de section : sticky sous la barre d’actions (préfixe -webkit- pour Safari iOS)
+  // Titres de section : sticky sous la barre d’actions ; chaque nouveau titre remplace le précédent au scroll
   .mobile-section__header {
-    position: -webkit-sticky;
     position: sticky;
     top: var(--mobile-sticky-top);
     z-index: 50;
@@ -936,7 +933,7 @@
 @media (max-width: 480px) {
   .commandes-en-cours-wrapper {
     padding: 0.5rem 0.15rem;
-    --mobile-app-header: 52px;
+    padding-top: 0;
   }
 
   .btn-navigation {

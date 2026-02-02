@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { configManager } from '@common/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { HealthController } from './health.controller';
 import { AccountModule } from '../feature/account/account.module';
 import { SecurityModule } from '../security/security.module';
 import { LagModule } from '../module/lag/lag.module';
@@ -15,7 +16,7 @@ import { APP_GUARD } from '@nestjs/core';
             SecurityModule,
             LagModule,
         ],
-        controllers: [AppController],
+        controllers: [AppController, HealthController],
         providers: [AppService, {
             provide: APP_GUARD,
             useClass: JwtGuard

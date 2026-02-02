@@ -104,9 +104,7 @@
 
   .mobile-view {
     display: block;
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
+    overflow: visible;
     -webkit-overflow-scrolling: touch;
   }
 }
@@ -541,6 +539,7 @@
   padding: 0.875rem 0.5rem 0.875rem 0;
   background: transparent;
   border: none;
+  border-radius: 8px;
   cursor: pointer;
   font-family: inherit;
   font-size: 1rem;
@@ -807,32 +806,46 @@
   }
 }
 
-// Smartphone : vue liste (tableau masqué)
+// Smartphone : barre d’actions et titres de section en sticky au scroll
 @media (max-width: 768px) {
   .commandes-en-cours-wrapper {
+    // Barre : stick au bord du wrapper. Titres de section : sticky seulement quand ils montent jusqu’au bas de .page-header (barre menu)
+    --mobile-fixed-bar-height: 69px;
+    --mobile-sticky-top: var(--mobile-fixed-bar-height);
     padding: 0.5rem 0.25rem;
-    padding-top: 44px;
-    height: auto;
-    min-height: 100vh;
-    overflow: visible;
+    padding-top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .commandes-en-cours-container {
     min-width: 0;
     overflow: visible;
     width: 100%;
+    flex: none;
+    min-height: min-content;
   }
 
+  // Barre d’actions : dans le flux au départ, puis sticky tout en haut (au contact du header app)
   .page-header {
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
     flex-direction: column;
     align-items: stretch;
     gap: 0.75rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0;
+    padding: 0.75rem 1rem;
+    background: #f5f5f5;
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
   }
 
   .page-title {
-    font-size: 1.75rem;
-    text-align: center;
+    display: none;
   }
 
   .mobile-sections {
@@ -842,11 +855,20 @@
   .mobile-section {
     width: 100%;
     margin-bottom: 0.75rem;
+    overflow: visible; // requis pour que le sticky du header soit relatif au wrapper qui scroll
   }
 
+  // Titres de section : sticky sous la barre d’actions ; chaque nouveau titre remplace le précédent au scroll
   .mobile-section__header {
+    position: sticky;
+    top: var(--mobile-sticky-top);
+    z-index: 50;
     min-height: 56px;
     padding: 1rem 0.75rem;
+    background: #f5f5f5;
+    border-bottom: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
 
   .mobile-section__label {
@@ -911,16 +933,7 @@
 @media (max-width: 480px) {
   .commandes-en-cours-wrapper {
     padding: 0.5rem 0.15rem;
-    padding-top: 42px;
-  }
-
-  .page-title {
-    font-size: 1.5rem;
-  }
-
-  .mobile-section__header {
-    min-height: 52px;
-    padding: 0.9rem 0.65rem;
+    padding-top: 0;
   }
 
   .btn-navigation {

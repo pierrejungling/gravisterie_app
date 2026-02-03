@@ -1,25 +1,59 @@
 <app-header></app-header>
 
+<!-- Barre d'actions fixe (desktop) -->
+<div class="nouvelle-commande-actions-bar" *ngIf="formGroup">
+  <div class="nouvelle-commande-actions-bar__container">
+    <div class="nouvelle-commande-actions-bar__left">
+      <button 
+        type="button" 
+        class="btn-action-bar btn-toggle-prix"
+        (click)="togglePrixFields()"
+        [title]="showPrixFields() ? 'Masquer les frais' : 'Afficher les frais'">
+        {{ showPrixFields() ? '💰 Masquer frais' : '💰 Afficher frais' }}
+      </button>
+      <button 
+        type="button" 
+        class="btn-action-bar btn-cancel"
+        (click)="onCancel()"
+        title="Annuler">
+        ✕ Annuler
+      </button>
+    </div>
+    <div class="nouvelle-commande-actions-bar__right">
+      <div class="attente-reponse-toggle-bar">
+        <label class="toggle-switch-small" [class.toggle-vert]="getAttenteReponseControl().value" [class.toggle-rouge]="!getAttenteReponseControl().value">
+          <input 
+            type="checkbox" 
+            [formControl]="getAttenteReponseControl()"
+            class="toggle-input">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label-small">{{ getAttenteReponseControl().value ? 'Rien à faire' : 'Client attend' }}</span>
+        </label>
+      </div>
+      <button type="submit" form="nouvelleCommandeForm" class="btn-action-bar btn-save" [disabled]="!isFormValid()">💾 Créer la commande</button>
+    </div>
+  </div>
+</div>
+
 <div class="nouvelle-commande-wrapper">
   <div class="nouvelle-commande-container">
-    <h1 class="page-title">Nouvelle Commande</h1>
-    
-    <!-- Popup de succès amélioré -->
-    <div class="popup-overlay" *ngIf="showSuccessPopup()" (click)="showSuccessPopup.set(false)">
-      <div class="popup-content" (click)="$event.stopPropagation()">
-        <div class="popup-header">
-          <h2 class="popup-title">Commande bien enregistrée</h2>
+    <!-- Popup de succès -->
+    <div class="success-popup-overlay" *ngIf="showSuccessPopup()" (click)="showSuccessPopup.set(false)">
+      <div class="success-popup" (click)="$event.stopPropagation()">
+        <div class="success-popup-header">
+          <div class="success-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="white"/>
+            </svg>
+          </div>
+          <h3>Commande bien enregistrée</h3>
         </div>
-        <div class="popup-body">
-          <p class="popup-message">Votre commande a été créée avec succès !</p>
+        <div class="success-popup-body">
+          <p>Votre commande a été créée avec succès !</p>
         </div>
-        <div class="popup-actions">
-          <button type="button" class="btn-popup-secondary" (click)="onCreateNewCommande()">
-            Créer une nouvelle commande
-          </button>
-          <button type="button" class="btn-popup-primary" (click)="onViewCommandes()">
-            Voir la commande
-          </button>
+        <div class="success-popup-actions">
+          <button type="button" class="btn-success-outline" (click)="onCreateNewCommande()">Créer une nouvelle commande</button>
+          <button type="button" class="btn-success-filled" (click)="onViewCommandes()">Voir la commande</button>
         </div>
       </div>
     </div>
@@ -28,20 +62,27 @@
       <p>{{ getGeneralError() }}</p>
     </div>
 
-    <form id="nouvelleCommandeForm" [formGroup]="formGroup" (ngSubmit)="onSubmit()">
+    <div class="detail-header">
+      <div class="header-title-section">
+        <h1 class="page-title">Nouvelle Commande</h1>
+        <div class="commande-title-edit">
+          <app-floating-label-input
+            [label]="'Nom / Intitulé de la commande'"
+            [control]="get('nom_commande')"
+            [formGroup]="formGroup"
+            [readonly]="false">
+          </app-floating-label-input>
+        </div>
+      </div>
+    </div>
+
+    <form id="nouvelleCommandeForm" [formGroup]="formGroup" *ngIf="formGroup" (ngSubmit)="onSubmit()">
       
       <!-- Informations de la commande -->
       <section class="form-section">
         <h2 class="section-title">Informations de la commande</h2>
         
-        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('nom_commande')">
-          <app-floating-label-input
-            [label]="'Nom / Intitulé de la commande'"
-            [control]="get('nom_commande')"
-            [formGroup]="formGroup">
-          </app-floating-label-input>
-          <p class="field-error" *ngIf="getFieldErrorMessage('nom_commande')">{{ getFieldErrorMessage('nom_commande') }}</p>
-        </div>
+        <!-- Le champ nom_commande est maintenant dans le header, on ne l'affiche plus ici -->
 
         <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('deadline')">
           <app-floating-label-input
@@ -52,104 +93,134 @@
           </app-floating-label-input>
           <p class="field-error" *ngIf="getFieldErrorMessage('deadline')">{{ getFieldErrorMessage('deadline') }}</p>
         </div>
+
+        <div class="input-wrapper">
+          <div class="textarea-container">
+            <textarea
+              class="description-textarea"
+              formControlName="description_projet"
+              rows="4"
+              placeholder=" "></textarea>
+            <label class="textarea-label" [class.fixed-label]="get('description_projet').value && get('description_projet').value.length > 0">
+              Description du projet
+            </label>
+          </div>
+        </div>
+
+        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('dimensions_souhaitees')">
+          <app-floating-label-input
+            [label]="'Dimensions souhaitées'"
+            [control]="get('dimensions_souhaitees')"
+            [formGroup]="formGroup">
+          </app-floating-label-input>
+          <p class="field-error" *ngIf="getFieldErrorMessage('dimensions_souhaitees')">{{ getFieldErrorMessage('dimensions_souhaitees') }}</p>
+        </div>
+
+        <div class="input-wrapper">
+          <app-floating-label-input
+            #supportInput
+            [label]="'Support'"
+            [control]="get('support')!"
+            [formGroup]="formGroup"
+            [placeholder]="supportParDefaut">
+          </app-floating-label-input>
+          <p class="default-value-hint">Par défaut: {{ supportParDefaut }}</p>
+        </div>
+
       </section>
 
       <!-- Coordonnées de contact -->
       <section class="form-section">
         <h2 class="section-title">Coordonnées de contact</h2>
         
-        <div class="form-row">
-          <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('coordonnees_contact.nom')">
-            <app-floating-label-input
-              [label]="'Nom'"
-              [control]="getCoordonneeControl('nom')"
-              [formGroup]="coordonneesContact">
-            </app-floating-label-input>
-            <p class="field-error" *ngIf="getFieldErrorMessage('coordonnees_contact.nom')">{{ getFieldErrorMessage('coordonnees_contact.nom') }}</p>
-          </div>
-          
-          <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('coordonnees_contact.prenom')">
-            <app-floating-label-input
-              [label]="'Prénom'"
-              [control]="getCoordonneeControl('prenom')"
-              [formGroup]="coordonneesContact">
-            </app-floating-label-input>
-            <p class="field-error" *ngIf="getFieldErrorMessage('coordonnees_contact.prenom')">{{ getFieldErrorMessage('coordonnees_contact.prenom') }}</p>
-          </div>
+        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('nom')">
+          <app-floating-label-input
+            [label]="'Nom'"
+            [control]="get('nom')!"
+            [formGroup]="formGroup">
+          </app-floating-label-input>
+          <p class="field-error" *ngIf="getFieldErrorMessage('nom')">{{ getFieldErrorMessage('nom') }}</p>
         </div>
 
-        <div class="form-row">
-          <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('coordonnees_contact.telephone')">
-            <app-floating-label-input
-              [label]="'Téléphone'"
-              [control]="getCoordonneeControl('telephone')"
-              [formGroup]="coordonneesContact"
-              type="tel">
-            </app-floating-label-input>
-            <p class="field-error" *ngIf="getFieldErrorMessage('coordonnees_contact.telephone')">{{ getFieldErrorMessage('coordonnees_contact.telephone') }}</p>
-          </div>
-          
-          <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('coordonnees_contact.mail')">
-            <app-floating-label-input
-              [label]="'Email'"
-              [control]="getCoordonneeControl('mail')"
-              [formGroup]="coordonneesContact"
-              type="email">
-            </app-floating-label-input>
-            <p class="field-error" *ngIf="getFieldErrorMessage('coordonnees_contact.mail')">{{ getFieldErrorMessage('coordonnees_contact.mail') }}</p>
-          </div>
+        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('prenom')">
+          <app-floating-label-input
+            [label]="'Prénom'"
+            [control]="get('prenom')!"
+            [formGroup]="formGroup">
+          </app-floating-label-input>
+          <p class="field-error" *ngIf="getFieldErrorMessage('prenom')">{{ getFieldErrorMessage('prenom') }}</p>
+        </div>
+
+        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('telephone')">
+          <app-floating-label-input
+            [label]="'Téléphone'"
+            [control]="get('telephone')!"
+            [formGroup]="formGroup"
+            type="tel">
+          </app-floating-label-input>
+          <p class="field-error" *ngIf="getFieldErrorMessage('telephone')">{{ getFieldErrorMessage('telephone') }}</p>
+        </div>
+
+        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('mail')">
+          <app-floating-label-input
+            [label]="'Email'"
+            [control]="get('mail')!"
+            [formGroup]="formGroup"
+            type="email">
+          </app-floating-label-input>
+          <p class="field-error" *ngIf="getFieldErrorMessage('mail')">{{ getFieldErrorMessage('mail') }}</p>
         </div>
 
         <!-- Adresse décomposée -->
         <div class="address-section">
           <label class="section-subtitle">Adresse</label>
           
-          <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('coordonnees_contact.rue')">
+          <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('rue')">
             <app-floating-label-input
               [label]="'Rue et numéro'"
-              [control]="getCoordonneeControl('rue')"
-              [formGroup]="coordonneesContact">
+              [control]="get('rue')!"
+              [formGroup]="formGroup">
             </app-floating-label-input>
-            <p class="field-error" *ngIf="getFieldErrorMessage('coordonnees_contact.rue')">{{ getFieldErrorMessage('coordonnees_contact.rue') }}</p>
+            <p class="field-error" *ngIf="getFieldErrorMessage('rue')">{{ getFieldErrorMessage('rue') }}</p>
           </div>
 
           <div class="form-row">
-            <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('coordonnees_contact.code_postal')">
+            <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('code_postal')">
               <app-floating-label-input
                 [label]="'Code postal'"
-                [control]="getCoordonneeControl('code_postal')"
-                [formGroup]="coordonneesContact">
+                [control]="get('code_postal')!"
+                [formGroup]="formGroup">
               </app-floating-label-input>
-              <p class="field-error" *ngIf="getFieldErrorMessage('coordonnees_contact.code_postal')">{{ getFieldErrorMessage('coordonnees_contact.code_postal') }}</p>
+              <p class="field-error" *ngIf="getFieldErrorMessage('code_postal')">{{ getFieldErrorMessage('code_postal') }}</p>
             </div>
             
-            <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('coordonnees_contact.ville')">
+            <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('ville')">
               <app-floating-label-input
                 [label]="'Ville'"
-                [control]="getCoordonneeControl('ville')"
-                [formGroup]="coordonneesContact">
+                [control]="get('ville')!"
+                [formGroup]="formGroup">
               </app-floating-label-input>
-              <p class="field-error" *ngIf="getFieldErrorMessage('coordonnees_contact.ville')">{{ getFieldErrorMessage('coordonnees_contact.ville') }}</p>
+              <p class="field-error" *ngIf="getFieldErrorMessage('ville')">{{ getFieldErrorMessage('ville') }}</p>
             </div>
           </div>
 
-          <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('coordonnees_contact.pays')">
+          <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('pays')">
             <app-floating-label-input
               [label]="'Pays'"
-              [control]="getCoordonneeControl('pays')"
-              [formGroup]="coordonneesContact">
+              [control]="get('pays')!"
+              [formGroup]="formGroup">
             </app-floating-label-input>
-            <p class="field-error" *ngIf="getFieldErrorMessage('coordonnees_contact.pays')">{{ getFieldErrorMessage('coordonnees_contact.pays') }}</p>
+            <p class="field-error" *ngIf="getFieldErrorMessage('pays')">{{ getFieldErrorMessage('pays') }}</p>
           </div>
         </div>
 
-        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('coordonnees_contact.tva')">
+        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('tva')">
           <app-floating-label-input
             [label]="'TVA'"
-            [control]="getCoordonneeControl('tva')"
-            [formGroup]="coordonneesContact">
+            [control]="get('tva')!"
+            [formGroup]="formGroup">
           </app-floating-label-input>
-          <p class="field-error" *ngIf="getFieldErrorMessage('coordonnees_contact.tva')">{{ getFieldErrorMessage('coordonnees_contact.tva') }}</p>
+          <p class="field-error" *ngIf="getFieldErrorMessage('tva')">{{ getFieldErrorMessage('tva') }}</p>
         </div>
 
         <div class="input-wrapper">
@@ -160,7 +231,7 @@
                 type="radio"
                 name="mode_contact"
                 [value]="mode.value"
-                [formControl]="getCoordonneeControl('mode_contact')">
+                [formControl]="get('mode_contact')">
               <span class="mode-contact-emoji">{{ mode.emoji }}</span>
               <span>{{ mode.label }}</span>
             </label>
@@ -168,50 +239,53 @@
         </div>
       </section>
 
-      <!-- Description du projet -->
+      <!-- Prix et Frais -->
       <section class="form-section">
-        <h2 class="section-title">Description du projet</h2>
-        
+        <h2 class="section-title">Prix et Frais</h2>
+
+        <!-- Quantité et Prix -->
+        <div class="prix-quantity-group">
+          <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('quantité')">
+            <app-floating-label-input
+              [label]="'Quantité'"
+              [control]="get('quantité')"
+              [formGroup]="formGroup"
+              type="number">
+            </app-floating-label-input>
+            <p class="field-error" *ngIf="getFieldErrorMessage('quantité')">{{ getFieldErrorMessage('quantité') }}</p>
+          </div>
+
+          <div class="input-wrapper">
+            <app-floating-label-input
+              [label]="'Prix unitaire final'"
+              [control]="get('prix_unitaire_final')"
+              [formGroup]="formGroup"
+              type="number"
+              step="0.01"
+              suffix="€">
+            </app-floating-label-input>
+          </div>
+
+          <div class="input-wrapper">
+            <app-floating-label-input
+              [label]="'Prix final'"
+              [control]="get('prix_final')"
+              [formGroup]="formGroup"
+              type="number"
+              step="0.01"
+              suffix="€">
+            </app-floating-label-input>
+          </div>
+        </div>
+
         <div class="input-wrapper">
-          <textarea
-            class="textarea-input"
-            formControlName="description_projet"
-            placeholder="Décrivez votre projet..."
-            rows="5">
-          </textarea>
-        </div>
-      </section>
-
-      <!-- Dimensions et support -->
-      <section class="form-section">
-        <h2 class="section-title">Dimensions et support</h2>
-        
-        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('dimensions_souhaitees')">
-          <app-floating-label-input
-            [label]="'Dimensions souhaitées'"
-            [control]="get('dimensions_souhaitees')"
-            [formGroup]="formGroup">
-          </app-floating-label-input>
-          <p class="field-error" *ngIf="getFieldErrorMessage('dimensions_souhaitees')">{{ getFieldErrorMessage('dimensions_souhaitees') }}</p>
-        </div>
-
-        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('quantité')">
-          <app-floating-label-input
-            [label]="'Quantité'"
-            [control]="get('quantité')"
-            [formGroup]="formGroup"
-            type="number">
-          </app-floating-label-input>
-          <p class="field-error" *ngIf="getFieldErrorMessage('quantité')">{{ getFieldErrorMessage('quantité') }}</p>
-        </div>
-
-        <div class="input-wrapper">
-          <div class="paye-status-block" [class.paye-oui]="formGroup.get('payé')?.value" [class.paye-non]="!formGroup.get('payé')?.value">
+          <div class="paye-status-block" [class.paye-oui]="get('payé').value" [class.paye-non]="!get('payé').value">
             <label class="checkbox-label-paye">
               <input
                 type="checkbox"
-                formControlName="payé">
-              <span class="paye-label-text">{{ formGroup.get('payé')?.value ? 'Payé' : 'Non payé' }}</span>
+                formControlName="payé"
+                (change)="onPayeChange()">
+              <span class="paye-label-text">{{ get('payé').value ? 'Payé' : 'Non payé' }}</span>
             </label>
             <div class="paye-commentaire-wrapper">
               <textarea
@@ -224,140 +298,248 @@
           </div>
         </div>
 
-        <div class="input-wrapper">
-          <div class="support-input-wrapper">
-            <input
-              class="support-input"
-              type="text"
-              [formControl]="get('support')"
-              [placeholder]="getSupportPlaceholder()"
-              (focus)="onSupportFocus($event)"
-              (blur)="onSupportBlur()">
-            <label 
-              class="support-label"
-              [class.fixed-label]="get('support').value && get('support').value.length > 0">
-              Support
-            </label>
+        <!-- Champs de prix du support (masqués par défaut) -->
+        <div class="prix-fields" *ngIf="showPrixFields()">
+          <h3 class="supports-title">Support / Frais</h3>
+          
+          <!-- Liste des supports -->
+          <div formArrayName="supports" class="supports-list">
+            <div *ngFor="let supportControl of supportsFormArray.controls; let i = index" 
+                 [formGroupName]="i" 
+                 class="support-item">
+              <ng-container [formGroup]="$any(supportControl)">
+                <!-- Nom du support -->
+                <div class="input-wrapper">
+                  <app-floating-label-input
+                    [label]="'Nom du support / frais'"
+                    [control]="$any(supportControl).get('nom_support')!"
+                    [formGroup]="$any(supportControl)">
+                  </app-floating-label-input>
+                </div>
+
+                <!-- Toggle Prix support unitaire (au-dessus du champ prix support) -->
+                <div class="support-toggle-row">
+                  <label class="toggle-switch-small" [class.toggle-vert]="isPrixUnitaire($any(supportControl))" [class.toggle-rouge]="!isPrixUnitaire($any(supportControl))">
+                    <input
+                      type="checkbox"
+                      formControlName="prix_unitaire"
+                      class="toggle-input">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label-small">{{ isPrixUnitaire($any(supportControl)) ? 'Prix unitaire' : 'Prix pour X unités' }}</span>
+                  </label>
+                </div>
+
+                <!-- Prix support et URL support sur la même ligne -->
+                <div class="support-price-url-row">
+                  <div class="input-wrapper">
+                    <app-floating-label-input
+                      [label]="isPrixUnitaire($any(supportControl)) ? 'Prix unitaire' : 'Prix total'"
+                      [control]="$any(supportControl).get('prix_support')!"
+                      [formGroup]="$any(supportControl)"
+                      type="number"
+                      step="0.01"
+                      suffix="€">
+                    </app-floating-label-input>
+                  </div>
+
+                  <div class="input-wrapper">
+                    <app-floating-label-input
+                      [label]="'URL'"
+                      [control]="$any(supportControl).get('url_support')!"
+                      [formGroup]="$any(supportControl)">
+                    </app-floating-label-input>
+                  </div>
+                </div>
+
+                <!-- Texte "Le prix ci-dessus correspond à X unité(s)" (en dessous du champ prix support total) -->
+                <div class="support-prix-pour-unites" *ngIf="!isPrixUnitaire($any(supportControl))">
+                  <span>Le prix ci-dessus correspond à</span>
+                  <input
+                    type="number"
+                    formControlName="nombre_unites"
+                    class="nombre-unites-input"
+                    [disabled]="isPrixUnitaire($any(supportControl))"
+                    placeholder="X"
+                    min="1">
+                  <span>unité(s)</span>
+                </div>
+
+                <!-- Prix support unitaire calculé (read-only) -->
+                <div class="input-wrapper calculated-field">
+                  <app-floating-label-input
+                    [label]="'Prix unitaire (calculé)'"
+                    [control]="$any(supportControl).get('prix_support_unitaire')!"
+                    [formGroup]="$any(supportControl)"
+                    type="number"
+                    step="0.01"
+                    suffix="€"
+                    [readonly]="true">
+                  </app-floating-label-input>
+                </div>
+              </ng-container>
+
+              <!-- Bouton supprimer -->
+              <button
+                type="button"
+                class="btn-remove-support"
+                (click)="removeSupport(i)"
+                [disabled]="supportsFormArray.length <= 1"
+                *ngIf="supportsFormArray.length > 1">
+                Supprimer
+              </button>
+            </div>
           </div>
-          <p class="input-hint" *ngIf="!get('support').value || get('support').value.length === 0">
-            Par défaut: {{ supportParDefaut }}
-          </p>
+
+          <!-- Bouton ajouter support -->
+          <button
+            type="button"
+            class="btn-add-support"
+            (click)="addSupport()">
+            + Ajouter un support
+          </button>
+
+          <!-- Récapitulatifs détaillés -->
+          <div class="prix-recapitulatif">
+            <h4 class="recap-title">Détails des frais</h4>
+            <table class="recap-table">
+              <thead>
+                <tr>
+                  <th>Support / Frais</th>
+                  <th>Prix unitaire</th>
+                  <th>Quantité</th>
+                  <th>Prix total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let supportControl of supportsFormArray.controls; let i = index">
+                  <td class="support-name-cell">
+                    {{ $any(supportControl).get('nom_support')?.value || 'Support ' + (i + 1) }}
+                  </td>
+                  <td class="price-cell">
+                    {{ ($any(supportControl).get('prix_support_unitaire')?.value || 0) | number:'1.2-2' }} €
+                  </td>
+                  <td class="quantity-cell">
+                    {{ get('quantité').value || 1 }}
+                  </td>
+                  <td class="total-cell">
+                    {{ (($any(supportControl).get('prix_support_unitaire')?.value || 0) * (get('quantité').value || 1)) | number:'1.2-2' }} €
+                  </td>
+                </tr>
+                <tr *ngIf="supportsFormArray.length === 0" class="empty-row">
+                  <td colspan="4" class="empty-message">Aucun support</td>
+                </tr>
+                <tr class="total-row">
+                  <td class="total-label"><strong>Total</strong></td>
+                  <td class="total-cell"><strong>{{ get('prix_final_supports_unitaires').value || '0.00' }} €</strong></td>
+                  <td class="quantity-cell"><strong>{{ get('quantité').value || 1 }}</strong></td>
+                  <td class="total-cell"><strong>{{ get('prix_final_supports').value || '0.00' }} €</strong></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="recap-summary">
+              <div class="recap-summary-item">
+                <span class="recap-label"><strong>Prix final de vente :</strong></span>
+                <span class="recap-value"><strong>{{ get('prix_final').value || '0.00' }} €</strong></span>
+              </div>
+              <div class="recap-summary-item benefit-item">
+                <span class="recap-label"><strong>Prix bénéfice :</strong></span>
+                <span class="recap-value benefit-value"><strong>{{ get('prix_benefice').value || '0.00' }} €</strong></span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
+    </form>
 
-      <!-- Personnalisation -->
-      <section class="form-section">
-        <h2 class="section-title">Personnalisation</h2>
-        
-        <div class="input-wrapper">
-          <label class="label">Couleur (sélection multiple)</label>
-          <div class="couleur-checkboxes">
-            <label *ngFor="let couleur of couleursDisponibles" class="checkbox-label">
-              <input
-                type="checkbox"
-                [checked]="isCouleurSelected(couleur)"
-                (change)="toggleCouleur(couleur)">
-              <span>{{couleur}}</span>
-            </label>
-          </div>
-        </div>
+    <!-- Personnalisation -->
+    <section class="form-section form-section--spaced">
+      <h2 class="section-title">Personnalisation</h2>
 
-        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('police_ecriture')">
-          <app-floating-label-input
-            [label]="'Police d\'écriture'"
-            [control]="get('police_ecriture')"
-            [formGroup]="formGroup">
-          </app-floating-label-input>
-          <p class="field-error" *ngIf="getFieldErrorMessage('police_ecriture')">{{ getFieldErrorMessage('police_ecriture') }}</p>
-        </div>
-
-        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('texte_personnalisation')">
-          <app-floating-label-input
-            [label]="'Texte de la personnalisation'"
-            [control]="get('texte_personnalisation')"
-            [formGroup]="formGroup">
-          </app-floating-label-input>
-          <p class="field-error" *ngIf="getFieldErrorMessage('texte_personnalisation')">{{ getFieldErrorMessage('texte_personnalisation') }}</p>
-        </div>
-      </section>
-
-      <!-- Statut initial -->
-      <section class="form-section">
-        <h2 class="section-title">Statut initial (optionnel)</h2>
-        <p class="section-hint">Si aucun statut n'est sélectionné, la commande sera créée avec le statut "Attente" par défaut. Les statuts précédents seront automatiquement validés.</p>
-        
-        <div class="statuts-radio-group">
-          <label *ngFor="let statut of statuts" class="statut-radio-label">
-            <input
-              type="radio"
-              name="statut_initial"
-              [value]="statut"
-              [checked]="isStatutSelected(statut)"
-              (change)="onStatutChange(statut)">
-            <span>{{ statutLabels[statut] }}</span>
+      <!-- Couleur (sélection multiple) -->
+      <div class="input-wrapper">
+        <label class="label">Couleur (sélection multiple)</label>
+        <div class="couleurs-grid">
+          <label 
+            *ngFor="let couleur of couleursDisponibles" 
+            class="couleur-checkbox-label"
+            [class.selected]="isCouleurSelected(couleur)">
+            <input 
+              type="checkbox" 
+              [checked]="isCouleurSelected(couleur)"
+              (change)="toggleCouleur(couleur)"
+              class="couleur-checkbox">
+            <span class="couleur-label">{{ couleur }}</span>
           </label>
         </div>
+      </div>
 
-        <div class="input-wrapper" style="margin-top: 1rem;">
-          <div class="attente-reponse-toggle">
-            <label class="toggle-switch" [class.toggle-vert]="formGroup.get('attente_reponse')?.value" [class.toggle-rouge]="!formGroup.get('attente_reponse')?.value">
-              <input 
-                type="checkbox" 
-                formControlName="attente_reponse"
-                class="toggle-input">
-              <span class="toggle-slider"></span>
-              <span class="toggle-label">{{ formGroup.get('attente_reponse')?.value ? 'Rien à faire' : 'Client attend' }}</span>
-            </label>
-          </div>
-        </div>
-      </section>
+      <!-- Police d'écriture -->
+      <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('police_ecriture')">
+        <app-floating-label-input
+          [label]="'Police d\'écriture'"
+          [control]="get('police_ecriture')!"
+          [formGroup]="formGroup">
+        </app-floating-label-input>
+        <p class="field-error" *ngIf="getFieldErrorMessage('police_ecriture')">{{ getFieldErrorMessage('police_ecriture') }}</p>
+      </div>
 
-      <!-- Fichiers joints -->
-      <section class="form-section">
-        <h2 class="section-title">Fichiers joints</h2>
-        
-        <div 
-          class="file-upload-area"
-          [class.drag-over]="isDragOver"
-          (dragover)="onDragOver($event)"
-          (dragleave)="onDragLeave($event)"
-          (drop)="onDrop($event)">
-          <input
-            type="file"
-            id="file-input"
-            multiple
-            accept="image/*,.pdf,.doc,.docx"
-            (change)="onFileSelected($event)"
-            style="display: none;">
-          <label for="file-input" class="file-upload-label">
-            <span>📎 Cliquez ou glissez-déposez des fichiers ici</span>
-            <small>Formats acceptés: Images, PDF, DOC, DOCX</small>
-          </label>
-        </div>
+      <!-- Texte de la personnalisation -->
+      <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('texte_personnalisation')">
+        <app-floating-label-input
+          [label]="'Texte de la personnalisation'"
+          [control]="get('texte_personnalisation')"
+          [formGroup]="formGroup">
+        </app-floating-label-input>
+        <p class="field-error" *ngIf="getFieldErrorMessage('texte_personnalisation')">{{ getFieldErrorMessage('texte_personnalisation') }}</p>
+      </div>
+    </section>
 
-        <div class="uploaded-files" *ngIf="uploadedFiles.length > 0">
-          <div *ngFor="let file of uploadedFiles; let i = index" class="file-item">
-            <span>{{file.name}}</span>
-            <button type="button" class="remove-file-btn" (click)="removeFile(i)">✕</button>
-          </div>
-        </div>
-      </section>
+    <!-- Statut initial de la commande -->
+    <section class="statuts-section">
+      <h2 class="section-title">Statut initial de la commande</h2>
+      
+      <div class="statuts-list">
+        <label 
+          *ngFor="let statut of statuts" 
+          class="statut-radio-label"
+          [class.selected]="isStatutSelected(statut)">
+          <input 
+            type="radio" 
+            name="statut_initial"
+            [value]="statut"
+            [checked]="isStatutSelected(statut)"
+            (change)="onStatutChange(statut)"
+            class="statut-radio">
+          <span class="statut-label">{{ statutLabels[statut] }}</span>
+        </label>
+      </div>
+    </section>
+  </div>
 
-      <!-- Boutons d'action (desktop) -->
-      <div class="form-actions">
-        <button type="button" class="btn-secondary" (click)="onCancel()">Annuler</button>
-        <button type="submit" class="btn-primary" [disabled]="!isFormValid()">
+  <!-- Footer fixe mobile/tablette : Afficher frais, Annuler, Créer la commande, + Toggle attente réponse -->
+  <footer class="form-actions-footer" *ngIf="formGroup">
+    <div class="form-actions-footer__buttons">
+      <div class="form-actions-footer__row">
+        <button type="button" class="btn-footer btn-footer-prix" (click)="togglePrixFields()">
+          {{ showPrixFields() ? '💰 Masquer frais' : '💰 Afficher frais' }}
+        </button>
+        <button type="button" class="btn-footer btn-secondary" (click)="onCancel()">Annuler</button>
+      </div>
+      <div class="form-actions-footer__row">
+        <button type="submit" form="nouvelleCommandeForm" class="btn-footer btn-primary" [disabled]="!isFormValid()">
           Créer la commande
         </button>
       </div>
-    </form>
-  </div>
-
-  <!-- Footer fixe mobile/tablette : ANNULER + Créer la commande -->
-  <footer class="form-actions-footer">
-    <button type="button" class="btn-footer btn-secondary" (click)="onCancel()">Annuler</button>
-    <button type="submit" form="nouvelleCommandeForm" class="btn-footer btn-primary" [disabled]="!isFormValid()">
-      Créer la commande
-    </button>
+    </div>
+    <div class="form-actions-footer__toggle">
+      <label class="toggle-switch-small toggle-switch-small--footer" [class.toggle-vert]="getAttenteReponseControl().value" [class.toggle-rouge]="!getAttenteReponseControl().value">
+        <input
+          type="checkbox"
+          [formControl]="getAttenteReponseControl()"
+          class="toggle-input">
+        <span class="toggle-slider"></span>
+        <span class="toggle-label-small">{{ getAttenteReponseControl().value ? 'Rien à faire' : 'Client attend' }}</span>
+      </label>
+    </div>
   </footer>
 </div>

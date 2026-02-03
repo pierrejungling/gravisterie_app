@@ -87,6 +87,15 @@ export interface Commande {
     prix_support?: number;
     url_support?: string;
   };
+  supports?: Array<{
+    nom_support?: string;
+    prix_support?: number;
+    url_support?: string;
+    prix_unitaire?: boolean; // true = prix unitaire, false = prix pour X unités
+    nombre_unites?: number; // X unités si prix_unitaire = false
+    prix_support_unitaire?: number; // Calculé automatiquement
+  }>;
+  prix_unitaire_final?: number; // Prix unitaire final de vente
   personnalisation?: {
     texte?: string;
     police?: string;

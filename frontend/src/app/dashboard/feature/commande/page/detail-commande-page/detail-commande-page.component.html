@@ -1,5 +1,50 @@
 <app-header></app-header>
 
+<!-- Barre d'actions fixe (desktop) -->
+<div class="detail-actions-bar" *ngIf="!isLoading() && commande() && formGroup">
+  <div class="detail-actions-bar__container">
+    <div class="detail-actions-bar__left">
+      <button 
+        type="button" 
+        class="btn-action-bar btn-toggle-prix"
+        (click)="togglePrixFields()"
+        [title]="showPrixFields() ? 'Masquer les frais' : 'Afficher les frais'">
+        {{ showPrixFields() ? '💰 Masquer frais' : '💰 Afficher frais' }}
+      </button>
+      <button 
+        type="button" 
+        class="btn-action-bar btn-edit"
+        (click)="toggleEditMode()"
+        [title]="isEditMode() ? 'Annuler' : 'Modifier'">
+        {{ isEditMode() ? '✕ Annuler' : '✏️ Modifier' }}
+      </button>
+      <button 
+        type="button" 
+        class="btn-action-bar btn-delete"
+        (click)="openDeleteConfirm()"
+        title="Supprimer la commande">
+        🗑️ Supprimer
+      </button>
+    </div>
+    <div class="detail-actions-bar__right">
+      <div class="attente-reponse-toggle-bar">
+        <label class="toggle-switch-small" [class.toggle-vert]="get('attente_reponse').value" [class.toggle-rouge]="!get('attente_reponse').value">
+          <input 
+            type="checkbox" 
+            [formControl]="get('attente_reponse')"
+            (change)="onAttenteReponseChange()"
+            class="toggle-input">
+          <span class="toggle-slider"></span>
+          <span class="toggle-label-small">{{ get('attente_reponse').value ? 'Rien à faire' : 'Client attend' }}</span>
+        </label>
+      </div>
+      <ng-container *ngIf="isEditMode()">
+        <button type="submit" form="detailCommandeForm" class="btn-action-bar btn-save" [disabled]="!formGroup.valid">💾 Enregistrer</button>
+      </ng-container>
+    </div>
+  </div>
+</div>
+
 <div class="detail-commande-wrapper">
   <div 
     class="detail-commande-container" 
@@ -21,41 +66,7 @@
           </app-floating-label-input>
         </div>
       </div>
-      <div class="header-actions">
-        <button 
-          type="button" 
-          class="btn-toggle-prix"
-          (click)="togglePrixFields()"
-          [title]="showPrixFields() ? 'Masquer les prix' : 'Afficher les prix'">
-          {{ showPrixFields() ? '💰 Masquer prix' : '💰 Afficher prix' }}
-        </button>
-        <button 
-          type="button" 
-          class="btn-edit"
-          (click)="toggleEditMode()"
-          [title]="isEditMode() ? 'Annuler' : 'Modifier'">
-          {{ isEditMode() ? '✕ Annuler' : '✏️ Modifier' }}
-        </button>
-        <button 
-          type="button" 
-          class="btn-delete"
-          (click)="openDeleteConfirm()"
-          title="Supprimer la commande">
-          🗑️ Supprimer
-        </button>
-        <!-- Toggle attente réponse : même ligne que les boutons sur desktop -->
-        <div class="attente-reponse-toggle-top-right" *ngIf="formGroup">
-          <label class="toggle-switch-small" [class.toggle-vert]="get('attente_reponse').value" [class.toggle-rouge]="!get('attente_reponse').value">
-            <input 
-              type="checkbox" 
-              [formControl]="get('attente_reponse')"
-              (change)="onAttenteReponseChange()"
-              class="toggle-input">
-            <span class="toggle-slider"></span>
-            <span class="toggle-label-small">{{ get('attente_reponse').value ? 'Rien à faire' : 'Client attend' }}</span>
-          </label>
-        </div>
-      </div>
+      <!-- Les boutons sont maintenant dans la barre fixe en haut -->
     </div>
 
     <form id="detailCommandeForm" [formGroup]="formGroup" *ngIf="formGroup" (ngSubmit)="onSave()">
@@ -105,12 +116,53 @@
 
         <div class="input-wrapper">
           <app-floating-label-input
-            [label]="'Quantité'"
-            [control]="get('quantité')!"
+            [label]="'Support'"
+            [control]="get('support')!"
             [formGroup]="formGroup"
-            type="number"
             [readonly]="!isEditMode()">
           </app-floating-label-input>
+        </div>
+      </section>
+
+      <!-- Prix et Frais -->
+      <section class="form-section">
+        <h2 class="section-title">Prix et Frais</h2>
+
+        <!-- Quantité et Prix -->
+        <div class="prix-quantity-group">
+          <div class="input-wrapper">
+            <app-floating-label-input
+              [label]="'Quantité'"
+              [control]="get('quantité')"
+              [formGroup]="formGroup"
+              type="number"
+              [readonly]="!isEditMode()">
+            </app-floating-label-input>
+          </div>
+
+          <div class="input-wrapper">
+            <app-floating-label-input
+              [label]="'Prix unitaire final'"
+              [control]="get('prix_unitaire_final')"
+              [formGroup]="formGroup"
+              type="number"
+              step="0.01"
+              suffix="€"
+              [readonly]="!isEditMode()">
+            </app-floating-label-input>
+          </div>
+
+          <div class="input-wrapper">
+            <app-floating-label-input
+              [label]="'Prix final'"
+              [control]="get('prix_final')"
+              [formGroup]="formGroup"
+              type="number"
+              step="0.01"
+              suffix="€"
+              [readonly]="!isEditMode()">
+            </app-floating-label-input>
+          </div>
         </div>
 
         <div class="input-wrapper">
@@ -135,63 +187,160 @@
           </div>
         </div>
 
-        <div class="input-wrapper">
-          <app-floating-label-input
-            [label]="'Support'"
-            [control]="get('support')!"
-            [formGroup]="formGroup"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
-        </div>
-
-        <div class="input-wrapper">
-          <app-floating-label-input
-            [label]="'Police d\'écriture'"
-            [control]="get('police_ecriture')!"
-            [formGroup]="formGroup"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
-        </div>
-
-        <div class="input-wrapper">
-          <app-floating-label-input
-            [label]="'Texte de personnalisation'"
-            [control]="get('texte_personnalisation')"
-            [formGroup]="formGroup"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
-        </div>
-
-        <!-- Prix final toujours visible -->
-        <div class="input-wrapper">
-          <app-floating-label-input
-            [label]="'Prix final'"
-            [control]="get('prix_final')"
-            [formGroup]="formGroup"
-            type="number"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
-        </div>
-
-        <!-- Champs de prix (masqués par défaut) -->
+        <!-- Champs de prix du support (masqués par défaut) -->
         <div class="prix-fields" *ngIf="showPrixFields()">
-          <div class="input-wrapper">
-            <app-floating-label-input
-              [label]="'Prix du support'"
-              [control]="get('prix_support')"
-              [formGroup]="formGroup"
-              type="number"
-              [readonly]="!isEditMode()">
-            </app-floating-label-input>
+          <h3 class="supports-title">Support / Frais</h3>
+          
+          <!-- Liste des supports -->
+          <div formArrayName="supports" class="supports-list">
+            <div *ngFor="let supportControl of supportsFormArray.controls; let i = index" 
+                 [formGroupName]="i" 
+                 class="support-item">
+              <ng-container [formGroup]="$any(supportControl)">
+                <!-- Nom du support -->
+                <div class="input-wrapper">
+                  <app-floating-label-input
+                    [label]="'Nom du support / frais'"
+                    [control]="$any(supportControl).get('nom_support')!"
+                    [formGroup]="$any(supportControl)"
+                    [readonly]="!isEditMode()">
+                  </app-floating-label-input>
+                </div>
+
+                <!-- Toggle Prix support unitaire (au-dessus du champ prix support) -->
+                <div class="support-toggle-row">
+                  <label class="toggle-switch-small" [class.toggle-vert]="isPrixUnitaire($any(supportControl))" [class.toggle-rouge]="!isPrixUnitaire($any(supportControl))">
+                    <input
+                      type="checkbox"
+                      formControlName="prix_unitaire"
+                      [disabled]="!isEditMode()"
+                      class="toggle-input">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label-small">{{ isPrixUnitaire($any(supportControl)) ? 'Prix unitaire' : 'Prix pour X unités' }}</span>
+                  </label>
+                </div>
+
+                <!-- Prix support et URL support sur la même ligne -->
+                <div class="support-price-url-row">
+                  <div class="input-wrapper">
+                    <app-floating-label-input
+                      [label]="isPrixUnitaire($any(supportControl)) ? 'Prix unitaire' : 'Prix total'"
+                      [control]="$any(supportControl).get('prix_support')!"
+                      [formGroup]="$any(supportControl)"
+                      type="number"
+                      step="0.01"
+                      suffix="€"
+                      [readonly]="!isEditMode()">
+                    </app-floating-label-input>
+                  </div>
+
+                  <div class="input-wrapper">
+                    <app-floating-label-input
+                      [label]="'URL'"
+                      [control]="$any(supportControl).get('url_support')!"
+                      [formGroup]="$any(supportControl)"
+                      [readonly]="!isEditMode()">
+                    </app-floating-label-input>
+                  </div>
+                </div>
+
+                <!-- Texte "Le prix ci-dessus correspond à X unité(s)" (en dessous du champ prix support total) -->
+                <div class="support-prix-pour-unites" *ngIf="!isPrixUnitaire($any(supportControl))">
+                  <span>Le prix ci-dessus correspond à</span>
+                  <input
+                    type="number"
+                    formControlName="nombre_unites"
+                    class="nombre-unites-input"
+                    [disabled]="!isEditMode() || isPrixUnitaire($any(supportControl))"
+                    placeholder="X"
+                    min="1">
+                  <span>unité(s)</span>
+                </div>
+
+                <!-- Prix support unitaire calculé (read-only) -->
+                <div class="input-wrapper">
+                  <app-floating-label-input
+                    [label]="'Prix unitaire (calculé)'"
+                    [control]="$any(supportControl).get('prix_support_unitaire')!"
+                    [formGroup]="$any(supportControl)"
+                    type="number"
+                    step="0.01"
+                    suffix="€"
+                    [readonly]="true">
+                  </app-floating-label-input>
+                </div>
+              </ng-container>
+
+              <!-- Bouton supprimer -->
+              <button
+                type="button"
+                class="btn-remove-support"
+                (click)="removeSupport(i)"
+                [disabled]="!isEditMode() || supportsFormArray.length <= 1"
+                *ngIf="isEditMode() && supportsFormArray.length > 1">
+                Supprimer
+              </button>
+            </div>
           </div>
 
-          <div class="input-wrapper">
-            <app-floating-label-input
-              [label]="'URL du support'"
-              [control]="get('url_support')"
-              [formGroup]="formGroup"
-              [readonly]="!isEditMode()">
-            </app-floating-label-input>
+          <!-- Bouton ajouter support -->
+          <button
+            type="button"
+            class="btn-add-support"
+            (click)="addSupport()"
+            [disabled]="!isEditMode()"
+            *ngIf="isEditMode()">
+            + Ajouter un support
+          </button>
+
+          <!-- Récapitulatifs détaillés -->
+          <div class="prix-recapitulatif">
+            <h4 class="recap-title">Détails des frais</h4>
+            <table class="recap-table">
+              <thead>
+                <tr>
+                  <th>Support / Frais</th>
+                  <th>Prix unitaire</th>
+                  <th>Quantité</th>
+                  <th>Prix total</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let supportControl of supportsFormArray.controls; let i = index">
+                  <td class="support-name-cell">
+                    {{ $any(supportControl).get('nom_support')?.value || 'Support ' + (i + 1) }}
+                  </td>
+                  <td class="price-cell">
+                    {{ ($any(supportControl).get('prix_support_unitaire')?.value || 0) | number:'1.2-2' }} €
+                  </td>
+                  <td class="quantity-cell">
+                    {{ get('quantité').value || 1 }}
+                  </td>
+                  <td class="total-cell">
+                    {{ (($any(supportControl).get('prix_support_unitaire')?.value || 0) * (get('quantité').value || 1)) | number:'1.2-2' }} €
+                  </td>
+                </tr>
+                <tr *ngIf="supportsFormArray.length === 0" class="empty-row">
+                  <td colspan="4" class="empty-message">Aucun support</td>
+                </tr>
+                <tr class="total-row">
+                  <td class="total-label"><strong>Total</strong></td>
+                  <td class="total-cell"><strong>{{ get('prix_final_supports_unitaires').value || '0.00' }} €</strong></td>
+                  <td class="quantity-cell"><strong>{{ get('quantité').value || 1 }}</strong></td>
+                  <td class="total-cell"><strong>{{ get('prix_final_supports').value || '0.00' }} €</strong></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="recap-summary">
+              <div class="recap-summary-item">
+                <span class="recap-label"><strong>Prix final de vente :</strong></span>
+                <span class="recap-value"><strong>{{ get('prix_final').value || '0.00' }} €</strong></span>
+              </div>
+              <div class="recap-summary-item benefit-item">
+                <span class="recap-label"><strong>Prix bénéfice :</strong></span>
+                <span class="recap-value benefit-value"><strong>{{ get('prix_benefice').value || '0.00' }} €</strong></span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -304,13 +453,52 @@
           </div>
         </div>
       </section>
-
-      <!-- Boutons d'action en mode édition (desktop) -->
-      <div class="form-actions" *ngIf="isEditMode()">
-        <button type="button" class="btn-cancel" (click)="onCancel()">Annuler</button>
-        <button type="submit" class="btn-save" [disabled]="!formGroup.valid">Enregistrer</button>
-      </div>
     </form>
+
+    <!-- Personnalisation -->
+    <section class="form-section form-section--spaced">
+      <h2 class="section-title">Personnalisation</h2>
+
+      <!-- Couleur (sélection multiple) -->
+      <div class="input-wrapper">
+        <label class="label">Couleur (sélection multiple)</label>
+        <div class="couleurs-grid" [class.disabled]="!isEditMode()">
+          <label 
+            *ngFor="let couleur of couleursDisponibles" 
+            class="couleur-checkbox-label"
+            [class.selected]="isCouleurSelected(couleur)"
+            [class.disabled]="!isEditMode()">
+            <input 
+              type="checkbox" 
+              [checked]="isCouleurSelected(couleur)"
+              [disabled]="!isEditMode()"
+              (change)="toggleCouleur(couleur)"
+              class="couleur-checkbox">
+            <span class="couleur-label">{{ couleur }}</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Police d'écriture -->
+      <div class="input-wrapper">
+        <app-floating-label-input
+          [label]="'Police d\'écriture'"
+          [control]="get('police_ecriture')!"
+          [formGroup]="formGroup"
+          [readonly]="!isEditMode()">
+        </app-floating-label-input>
+      </div>
+
+      <!-- Texte de la personnalisation -->
+      <div class="input-wrapper">
+        <app-floating-label-input
+          [label]="'Texte de la personnalisation'"
+          [control]="get('texte_personnalisation')"
+          [formGroup]="formGroup"
+          [readonly]="!isEditMode()">
+        </app-floating-label-input>
+      </div>
+    </section>
 
     <!-- Statuts de la commande -->
     <section class="statuts-section">
@@ -341,7 +529,7 @@
     <div class="detail-actions-footer__buttons">
       <div class="detail-actions-footer__row">
         <button type="button" class="btn-footer btn-footer-prix" (click)="togglePrixFields()">
-          {{ showPrixFields() ? '💰 Masquer prix' : '💰 Afficher prix' }}
+          {{ showPrixFields() ? '💰 Masquer frais' : '💰 Afficher frais' }}
         </button>
         <button type="button" class="btn-footer btn-footer-delete" (click)="openDeleteConfirm()">🗑️ Supprimer</button>
       </div>

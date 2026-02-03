@@ -1,8 +1,8 @@
-<div class="input" [formGroup]="formGroup" [class.disabled]="readonly || control.disabled" [class.input--date]="type === 'date'">
+<div class="input" [formGroup]="formGroup" [class.disabled]="readonly || control.disabled" [class.input--date]="type === 'date'" [class.input--suffix]="suffix">
   <input 
     class="floating-input" 
     [type]="type"
-    placeholder=" " 
+    [placeholder]="placeholder" 
     (focus)="inputFocus=true"
     (blur)="inputFocus=false" 
     [formControl]="control" 
@@ -12,4 +12,5 @@
   <label 
     class="floating-label"
     [class.fixed-label]="inputFocus || (control.value && control.value.length > 0)">{{label}}</label>
+  <span class="input-suffix" *ngIf="suffix">{{suffix}}</span>
 </div>

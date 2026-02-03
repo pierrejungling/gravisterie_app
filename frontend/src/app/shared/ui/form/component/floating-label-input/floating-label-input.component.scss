@@ -31,33 +31,34 @@
     }
 
     &:disabled {
-      background: #f5f5f5 !important;
-      color: #666 !important;
+      background: #fafafa !important;
+      color: #333 !important;
       cursor: not-allowed !important;
-      opacity: 0.7;
-      border-color: #dee2e6;
+      opacity: 0.95;
+      border-color: #d0d0d0;
     }
 
     &[readonly] {
-      background: #f5f5f5 !important;
-      color: #666 !important;
-      cursor: not-allowed !important;
-      opacity: 0.7;
+      background: #fafafa !important;
+      color: #333 !important;
+      cursor: default !important;
+      opacity: 0.95;
+      border-color: #d0d0d0;
     }
   }
 
   &.disabled {
     .floating-input {
-      background: #f5f5f5 !important;
-      color: #666 !important;
+      background: #fafafa !important;
+      color: #333 !important;
       cursor: not-allowed !important;
-      opacity: 0.7;
-      border-color: #dee2e6;
+      opacity: 0.95;
+      border-color: #d0d0d0;
     }
 
     .floating-label {
-      color: #999 !important;
-      opacity: 0.7;
+      color: #555 !important;
+      opacity: 0.95;
     }
   }
 
@@ -92,6 +93,27 @@
       right: auto;
     }
   }
+
+  // Champ avec suffixe (ex: €)
+  &.input--suffix {
+    position: relative;
+
+    .input-suffix {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-text-light);
+      font-size: 1rem;
+      pointer-events: none;
+      z-index: 1;
+      font-weight: 500;
+    }
+
+    .floating-input {
+      padding-right: 2.5rem !important;
+    }
+  }
 }
 
 // Responsive : éviter zoom sur focus (iOS) si font-size >= 16px
@@ -99,5 +121,9 @@
   .input .floating-input {
     font-size: 16px; // Évite le zoom automatique sur iOS
     padding: 0.75rem 0.875rem;
+  }
+
+  .input.input--suffix .floating-input {
+    padding-right: 2.5rem !important;
   }
 }

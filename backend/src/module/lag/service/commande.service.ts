@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Commande, Client, Gravure, Personnalisation, Support } from '../model/entity';
+import { Commande, Client, Gravure, Personnalisation, Support, CommandeSupport } from '../model/entity';
 import { AjouterCommandePayload } from '../model/payload';
 import { StatutCommande } from '../model/entity/enum';
 import { ulid } from 'ulid';
@@ -13,7 +13,8 @@ export class CommandeService {
         @InjectRepository(Client) private readonly clientRepository: Repository<Client>,
         @InjectRepository(Gravure) private readonly gravureRepository: Repository<Gravure>,
         @InjectRepository(Personnalisation) private readonly personnalisationRepository: Repository<Personnalisation>,
-        @InjectRepository(Support) private readonly supportRepository: Repository<Support>
+        @InjectRepository(Support) private readonly supportRepository: Repository<Support>,
+        @InjectRepository(CommandeSupport) private readonly commandeSupportRepository: Repository<CommandeSupport>
     ) {}
 
     async ajouterCommande(payload: AjouterCommandePayload): Promise<Commande> {
@@ -203,12 +204,29 @@ export class CommandeService {
             }
         }
 
+        // Créer les supports multiples de la commande si fournis
+        if (payload.supports && Array.isArray(payload.supports) && payload.supports.length > 0) {
+            const supportsToCreate = payload.supports.map((supportData: any) => {
+                const commandeSupport = new CommandeSupport();
+                commandeSupport.id_commande_support = ulid();
+                commandeSupport.commande = commandeSauvegardee;
+                commandeSupport.nom_support = supportData.nom_support || null;
+                commandeSupport.prix_support = supportData.prix_support || null;
+                commandeSupport.url_support = supportData.url_support || null;
+                commandeSupport.prix_unitaire = supportData.prix_unitaire !== undefined ? supportData.prix_unitaire : true;
+                commandeSupport.nombre_unites = supportData.nombre_unites || null;
+                commandeSupport.prix_support_unitaire = supportData.prix_support_unitaire || null;
+                return commandeSupport;
+            });
+            await this.commandeSupportRepository.save(supportsToCreate);
+        }
+
         return commandeSauvegardee;
     }
 
     async getAllCommandes(): Promise<Commande[]> {
         return await this.commandeRepository.find({
-            relations: ['client'],
+            relations: ['client', 'supports'],
             order: {
                 date_commande: 'DESC'
             }
@@ -218,7 +236,7 @@ export class CommandeService {
     async getCommandeById(idCommande: string): Promise<any> {
         const commande = await this.commandeRepository.findOne({
             where: { id_commande: idCommande },
-            relations: ['client']
+            relations: ['client', 'supports']
         });
 
         if (!commande) {
@@ -244,9 +262,37 @@ export class CommandeService {
             });
         }
 
-        // Retourner un objet combiné pour faciliter l'affichage côté frontend
+        // Convertir les supports de la commande en format attendu par le frontend
+        const supports = commande.supports ? commande.supports.map((cs: CommandeSupport) => ({
+            nom_support: cs.nom_support,
+            prix_support: cs.prix_support,
+            url_support: cs.url_support,
+            prix_unitaire: cs.prix_unitaire,
+            nombre_unites: cs.nombre_unites,
+            prix_support_unitaire: cs.prix_support_unitaire
+        })) : [];
+
+        // Retourner un objet avec les propriétés explicitement listées pour éviter les conflits de type
         return {
-            ...commande,
+            id_commande: commande.id_commande,
+            date_commande: commande.date_commande,
+            deadline: commande.deadline,
+            produit: commande.produit,
+            description: commande.description,
+            fichiers_joints: commande.fichiers_joints,
+            CGV_acceptée: commande.CGV_acceptée,
+            newsletter_acceptée: commande.newsletter_acceptée,
+            statut_commande: commande.statut_commande,
+            statuts_actifs: commande.statuts_actifs,
+            prix_final: commande.prix_final,
+            prix_unitaire_final: commande.prix_unitaire_final,
+            quantité: commande.quantité,
+            payé: commande.payé,
+            commentaire_paye: commande.commentaire_paye,
+            attente_reponse: commande.attente_reponse,
+            mode_contact: commande.mode_contact,
+            client: commande.client,
+            supports: supports as any,
             support: support ? {
                 nom_support: support.nom_support,
                 prix_support: support.prix_support,
@@ -261,13 +307,13 @@ export class CommandeService {
             gravure: gravure ? {
                 dimensions: support ? support.dimensions : null
             } : null
-        };
+        } as any;
     }
 
-    async updateCommande(idCommande: string, payload: any): Promise<Commande> {
+    async updateCommande(idCommande: string, payload: any): Promise<any> {
         const commande = await this.commandeRepository.findOne({
             where: { id_commande: idCommande },
-            relations: ['client']
+            relations: ['client', 'supports']
         });
 
         if (!commande) {
@@ -283,7 +329,8 @@ export class CommandeService {
         if (payload.commentaire_paye !== undefined) commande.commentaire_paye = payload.commentaire_paye?.trim() || null;
         if (payload.attente_reponse !== undefined) commande.attente_reponse = payload.attente_reponse;
         if (payload.mode_contact !== undefined) commande.mode_contact = payload.mode_contact || null;
-        if (payload.prix_final !== undefined) commande.prix_final = payload.prix_final;
+        if (payload.prix_final !== undefined) commande.prix_final = payload.prix_final !== null ? Number(payload.prix_final) : null;
+        if (payload.prix_unitaire_final !== undefined) commande.prix_unitaire_final = payload.prix_unitaire_final !== null ? Number(payload.prix_unitaire_final) : null;
 
         // Mettre à jour les coordonnées du client si fournies
         if (payload.coordonnees_contact) {
@@ -344,7 +391,116 @@ export class CommandeService {
             }
         }
 
-        return await this.commandeRepository.save(commande);
+        // Sauvegarder d'abord la commande pour s'assurer qu'elle existe en DB
+        const commandeUpdated = await this.commandeRepository.save(commande);
+
+        // Gérer les supports multiples de la commande
+        if (payload.supports !== undefined) {
+            // Supprimer les anciens supports
+            await this.commandeSupportRepository.delete({ commande: { id_commande: idCommande } });
+
+            // Créer les nouveaux supports (même si le tableau est vide, on supprime tout)
+            if (Array.isArray(payload.supports) && payload.supports.length > 0) {
+                const supportsToCreate = payload.supports.map((supportData: any) => {
+                    // Créer l'entité manuellement pour avoir un contrôle total sur la relation
+                    const commandeSupport = new CommandeSupport();
+                    commandeSupport.id_commande_support = ulid();
+                    // Assigner directement l'entité commande sauvegardée
+                    commandeSupport.commande = commandeUpdated;
+                    commandeSupport.nom_support = supportData.nom_support || null;
+                    commandeSupport.prix_support = supportData.prix_support !== null && supportData.prix_support !== undefined && supportData.prix_support !== '' ? Number(supportData.prix_support) : null;
+                    commandeSupport.url_support = supportData.url_support || null;
+                    commandeSupport.prix_unitaire = supportData.prix_unitaire !== undefined ? Boolean(supportData.prix_unitaire) : true;
+                    commandeSupport.nombre_unites = supportData.nombre_unites !== null && supportData.nombre_unites !== undefined && supportData.nombre_unites !== '' ? parseInt(String(supportData.nombre_unites), 10) : null;
+                    commandeSupport.prix_support_unitaire = supportData.prix_support_unitaire !== null && supportData.prix_support_unitaire !== undefined && supportData.prix_support_unitaire !== '' ? Number(supportData.prix_support_unitaire) : null;
+                    return commandeSupport;
+                });
+                await this.commandeSupportRepository.save(supportsToCreate);
+            }
+        }
+        
+        // Recharger avec les relations pour retourner le format complet
+        // Utiliser une requête séparée pour forcer le rechargement des supports
+        const commandeReloaded = await this.commandeRepository.findOne({
+            where: { id_commande: idCommande },
+            relations: ['client']
+        });
+
+        if (!commandeReloaded) {
+            return commandeUpdated;
+        }
+
+        // Charger les supports séparément pour éviter les problèmes de cache
+        const supportsReloaded = await this.commandeSupportRepository.find({
+            where: { commande: { id_commande: idCommande } }
+        });
+        commandeReloaded.supports = supportsReloaded;
+
+        // Retourner le même format que getCommandeById pour cohérence
+        const gravureReloaded = await this.gravureRepository.findOne({
+            where: { commande: { id_commande: idCommande } },
+            relations: ['commande']
+        });
+
+        let support: Support | null = null;
+        let personnalisation: Personnalisation | null = null;
+
+        if (gravureReloaded) {
+            support = await this.supportRepository.findOne({
+                where: { gravure: { id_gravure: gravureReloaded.id_gravure } }
+            });
+
+            personnalisation = await this.personnalisationRepository.findOne({
+                where: { gravure: { id_gravure: gravureReloaded.id_gravure } }
+            });
+        }
+
+        // Convertir les supports de la commande en format attendu par le frontend
+        const supports = commandeReloaded.supports ? commandeReloaded.supports.map((cs: CommandeSupport) => ({
+            nom_support: cs.nom_support,
+            prix_support: cs.prix_support,
+            url_support: cs.url_support,
+            prix_unitaire: cs.prix_unitaire,
+            nombre_unites: cs.nombre_unites,
+            prix_support_unitaire: cs.prix_support_unitaire
+        })) : [];
+
+        // Retourner un objet avec les propriétés explicitement listées pour éviter les conflits de type
+        return {
+            id_commande: commandeReloaded.id_commande,
+            date_commande: commandeReloaded.date_commande,
+            deadline: commandeReloaded.deadline,
+            produit: commandeReloaded.produit,
+            description: commandeReloaded.description,
+            fichiers_joints: commandeReloaded.fichiers_joints,
+            CGV_acceptée: commandeReloaded.CGV_acceptée,
+            newsletter_acceptée: commandeReloaded.newsletter_acceptée,
+            statut_commande: commandeReloaded.statut_commande,
+            statuts_actifs: commandeReloaded.statuts_actifs,
+            prix_final: commandeReloaded.prix_final,
+            prix_unitaire_final: commandeReloaded.prix_unitaire_final,
+            quantité: commandeReloaded.quantité,
+            payé: commandeReloaded.payé,
+            commentaire_paye: commandeReloaded.commentaire_paye,
+            attente_reponse: commandeReloaded.attente_reponse,
+            mode_contact: commandeReloaded.mode_contact,
+            client: commandeReloaded.client,
+            supports: supports as any,
+            support: support ? {
+                nom_support: support.nom_support,
+                prix_support: support.prix_support,
+                url_support: support.url_support,
+                dimensions: support.dimensions
+            } : null,
+            personnalisation: personnalisation ? {
+                texte: personnalisation.texte,
+                police: personnalisation.police,
+                couleur: personnalisation.couleur
+            } : null,
+            gravure: gravureReloaded ? {
+                dimensions: support ? support.dimensions : null
+            } : null
+        } as any;
     }
 
     async updateStatutCommande(idCommande: string, nouveauStatut: StatutCommande): Promise<Commande> {

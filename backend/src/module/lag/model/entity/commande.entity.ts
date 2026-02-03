@@ -1,7 +1,8 @@
-import { Column, PrimaryColumn, Entity, ManyToOne, JoinColumn} from "typeorm";
+import { Column, PrimaryColumn, Entity, ManyToOne, JoinColumn, OneToMany} from "typeorm";
 import { ulid } from "ulid";
 import { StatutCommande } from "./enum";
 import { Client } from "./client.entity";
+import { CommandeSupport } from "./commande_support.entity";
 
 
 @Entity()
@@ -39,8 +40,14 @@ export class Commande {
     @Column({type: 'decimal', nullable: true})
     prix_final: number | null;
 
+    @Column({type: 'decimal', nullable: true})
+    prix_unitaire_final: number | null;
+
     @Column({type: 'integer', nullable: true})
     quantité: number | null;
+
+    @OneToMany(() => CommandeSupport, (commandeSupport) => commandeSupport.commande, { cascade: true })
+    supports: CommandeSupport[];
 
     @Column({type: 'boolean', default: false})
     payé: boolean;

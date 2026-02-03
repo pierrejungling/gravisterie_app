@@ -1,11 +1,11 @@
 import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HeaderComponent, FloatingLabelInputComponent } from '@shared';
 import { ApiService } from '@api';
 import { ApiURI } from '@api';
-import { Commande, StatutCommande, ModeContact } from '../../model/commande.interface';
+import { Commande, StatutCommande, ModeContact, Couleur } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 
 @Component({
@@ -34,6 +34,17 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     { value: ModeContact.MAIL, label: 'Mail', emoji: '📧' },
     { value: ModeContact.TEL, label: 'Téléphone', emoji: '📞' },
     { value: ModeContact.META, label: 'Meta', emoji: '💬' }
+  ];
+
+  // Options de couleurs disponibles
+  couleursDisponibles: Couleur[] = [
+    Couleur.NOIR,
+    Couleur.NATUREL,
+    Couleur.LASURE,
+    Couleur.OR,
+    Couleur.ARGENT,
+    Couleur.BLANC,
+    Couleur.GRAVURE_PEINTE
   ];
   
   private readonly apiService: ApiService = inject(ApiService);
@@ -224,17 +235,22 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       deadline: new FormControl({ value: cmd.deadline ? cmd.deadline.split('T')[0] : '', disabled: !isEdit }),
       description: new FormControl({ value: cmd.description || '', disabled: !isEdit }),
       dimensions: new FormControl({ value: cmd.gravure?.dimensions || '', disabled: !isEdit }),
-      couleur: new FormControl({ value: Array.isArray(cmd.personnalisation?.couleur) ? cmd.personnalisation.couleur.join(', ') : '', disabled: !isEdit }),
+      couleur: new FormControl({ value: Array.isArray(cmd.personnalisation?.couleur) ? cmd.personnalisation.couleur : [], disabled: !isEdit }),
       support: new FormControl({ value: cmd.support?.nom_support || '', disabled: !isEdit }),
       police_ecriture: new FormControl({ value: cmd.personnalisation?.police || '', disabled: !isEdit }),
       texte_personnalisation: new FormControl({ value: cmd.personnalisation?.texte || '', disabled: !isEdit }),
       quantité: new FormControl({ value: cmd.quantité || 1, disabled: !isEdit }),
+      prix_final: new FormControl({ value: cmd.prix_final || '', disabled: !isEdit }),
+      prix_unitaire_final: new FormControl({ value: cmd.prix_unitaire_final || (cmd.prix_final && cmd.quantité ? cmd.prix_final / cmd.quantité : ''), disabled: !isEdit }),
       payé: new FormControl(cmd.payé || false), // Toujours modifiable
       commentaire_paye: new FormControl({ value: cmd.commentaire_paye || '', disabled: !isEdit }),
       attente_reponse: new FormControl(cmd.attente_reponse ?? false), // Toujours modifiable
       prix_support: new FormControl({ value: cmd.support?.prix_support || '', disabled: !isEdit }),
       url_support: new FormControl({ value: cmd.support?.url_support || '', disabled: !isEdit }),
-      prix_final: new FormControl({ value: cmd.prix_final || '', disabled: !isEdit }),
+      supports: this.createSupportsFormArray(cmd, isEdit),
+      prix_final_supports_unitaires: new FormControl({ value: 0, disabled: true }), // Read-only, calculé
+      prix_final_supports: new FormControl({ value: 0, disabled: true }), // Read-only, calculé
+      prix_benefice: new FormControl({ value: 0, disabled: true }), // Read-only, calculé
       // Coordonnées contact
       nom: new FormControl({ value: cmd.client.nom || '', disabled: !isEdit }),
       prenom: new FormControl({ value: cmd.client.prénom || '', disabled: !isEdit }),
@@ -248,6 +264,50 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       tva: new FormControl({ value: cmd.client.tva || '', disabled: !isEdit }),
       mode_contact: new FormControl({ value: cmd.mode_contact || '', disabled: !isEdit }),
     });
+
+    // Écouter les changements pour recalculer automatiquement
+    // Utiliser un flag pour éviter les boucles infinies
+    let isCalculatingPF = false;
+    let isCalculatingPU = false;
+    
+    this.formGroup.get('quantité')?.valueChanges.subscribe(() => {
+      if (isCalculatingPF || isCalculatingPU) return;
+      // Si prix final existe, recalculer PU. Sinon, si PU existe, recalculer PF
+      const prixFinal = this.formGroup.get('prix_final')?.value;
+      const prixUnitaire = this.formGroup.get('prix_unitaire_final')?.value;
+      if (prixFinal) {
+        isCalculatingPU = true;
+        this.recalculatePrixUnitaireFromFinal();
+        isCalculatingPU = false;
+      } else if (prixUnitaire) {
+        isCalculatingPF = true;
+        this.recalculatePrixFinalFromUnitaire();
+        isCalculatingPF = false;
+      }
+    });
+    
+    this.formGroup.get('prix_final')?.valueChanges.subscribe(() => {
+      if (isCalculatingPF || isCalculatingPU) return;
+      isCalculatingPU = true;
+      this.recalculatePrixUnitaireFromFinal();
+      isCalculatingPU = false;
+    });
+    
+    this.formGroup.get('prix_unitaire_final')?.valueChanges.subscribe(() => {
+      if (isCalculatingPF || isCalculatingPU) return;
+      isCalculatingPF = true;
+      this.recalculatePrixFinalFromUnitaire();
+      isCalculatingPF = false;
+    });
+    
+    // Calcul initial : si prix_final existe, calculer PU, sinon si PU existe, calculer PF
+    const prixFinal = this.formGroup.get('prix_final')?.value;
+    const prixUnitaire = this.formGroup.get('prix_unitaire_final')?.value;
+    if (prixFinal) {
+      this.recalculatePrixUnitaireFromFinal();
+    } else if (prixUnitaire) {
+      this.recalculatePrixFinalFromUnitaire();
+    }
   }
 
   extractAdressePart(adresse: string | null | undefined, index: number): string {
@@ -265,6 +325,178 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return parts.length > 0 ? parts.join(', ') : null;
   }
 
+  // Créer le FormArray pour les supports
+  createSupportsFormArray(cmd: Commande, isEdit: boolean): FormArray {
+    const supportsArray = new FormArray<FormGroup>([]);
+    
+    // Si des supports existent déjà, les charger
+    if (cmd.supports && cmd.supports.length > 0) {
+      cmd.supports.forEach(support => {
+        supportsArray.push(this.createSupportFormGroup(support, isEdit));
+      });
+    } else if (cmd.support) {
+      // Migration depuis l'ancien format (support unique)
+      const supportGroup = this.createSupportFormGroup({
+        nom_support: cmd.support.nom_support,
+        prix_support: cmd.support.prix_support,
+        url_support: cmd.support.url_support,
+        prix_unitaire: true,
+        nombre_unites: 1,
+        prix_support_unitaire: cmd.support.prix_support || 0
+      }, isEdit);
+      supportsArray.push(supportGroup);
+    } else {
+      // Si aucun support, créer un support vide par défaut
+      supportsArray.push(this.createSupportFormGroup({}, isEdit));
+    }
+    
+    return supportsArray;
+  }
+
+  // Créer un FormGroup pour un support
+  createSupportFormGroup(support: any = {}, isEdit: boolean): FormGroup {
+    const prixUnitaire = support.prix_unitaire !== undefined ? support.prix_unitaire : true;
+    const prixSupport = support.prix_support || 0;
+    const nombreUnites = support.nombre_unites || 1;
+    const prixSupportUnitaire = support.prix_support_unitaire || (prixUnitaire ? prixSupport : (nombreUnites > 0 ? prixSupport / nombreUnites : 0));
+    
+    const group = new FormGroup({
+      nom_support: new FormControl({ value: support.nom_support || '', disabled: !isEdit }),
+      prix_support: new FormControl({ value: prixSupport, disabled: !isEdit }),
+      url_support: new FormControl({ value: support.url_support || '', disabled: !isEdit }),
+      prix_unitaire: new FormControl({ value: prixUnitaire, disabled: !isEdit }),
+      nombre_unites: new FormControl({ value: nombreUnites, disabled: !isEdit || prixUnitaire }),
+      prix_support_unitaire: new FormControl({ value: prixSupportUnitaire, disabled: true }) // Read-only, calculé
+    });
+
+    // Écouter les changements pour recalculer
+    group.get('prix_support')?.valueChanges.subscribe(() => this.recalculateSupportUnitaire(group));
+    group.get('nombre_unites')?.valueChanges.subscribe(() => this.recalculateSupportUnitaire(group));
+    group.get('prix_unitaire')?.valueChanges.subscribe(() => {
+      const prixUnitaireValue = group.get('prix_unitaire')?.value;
+      if (prixUnitaireValue) {
+        group.get('nombre_unites')?.disable({ emitEvent: false });
+      } else {
+        group.get('nombre_unites')?.enable({ emitEvent: false });
+      }
+      this.recalculateSupportUnitaire(group);
+    });
+
+    return group;
+  }
+
+  // Recalculer le prix support unitaire pour un support
+  recalculateSupportUnitaire(supportGroup: FormGroup): void {
+    const prixUnitaire = supportGroup.get('prix_unitaire')?.value;
+    const prixSupport = parseFloat(supportGroup.get('prix_support')?.value) || 0;
+    const nombreUnites = parseFloat(supportGroup.get('nombre_unites')?.value) || 1;
+    
+    let prixSupportUnitaire = 0;
+    if (prixUnitaire) {
+      prixSupportUnitaire = prixSupport;
+    } else {
+      prixSupportUnitaire = nombreUnites > 0 ? prixSupport / nombreUnites : 0;
+    }
+    
+    supportGroup.get('prix_support_unitaire')?.setValue(prixSupportUnitaire, { emitEvent: false });
+    this.recalculateSupportsAndBenefice();
+  }
+
+  // Recalculer le prix unitaire final à partir du prix final (formule inverse)
+  recalculatePrixUnitaireFromFinal(): void {
+    if (!this.formGroup) return;
+    
+    const prixFinal = parseFloat(this.formGroup.get('prix_final')?.value) || 0;
+    const quantite = parseFloat(this.formGroup.get('quantité')?.value) || 1;
+    const prixUnitaireFinal = quantite > 0 ? prixFinal / quantite : 0;
+    this.formGroup.get('prix_unitaire_final')?.setValue(prixUnitaireFinal.toFixed(2), { emitEvent: false });
+    
+    // Recalculer aussi les prix des supports et bénéfice
+    this.recalculateSupportsAndBenefice();
+  }
+
+  // Recalculer le prix final à partir du prix unitaire final
+  recalculatePrixFinalFromUnitaire(): void {
+    if (!this.formGroup) return;
+    
+    const prixUnitaireFinal = parseFloat(this.formGroup.get('prix_unitaire_final')?.value) || 0;
+    const quantite = parseFloat(this.formGroup.get('quantité')?.value) || 1;
+    const prixFinal = prixUnitaireFinal * quantite;
+    this.formGroup.get('prix_final')?.setValue(prixFinal.toFixed(2), { emitEvent: false });
+    
+    // Recalculer aussi les prix des supports et bénéfice
+    this.recalculateSupportsAndBenefice();
+  }
+
+  // Recalculer tous les prix (prix unitaire final, prix final supports, prix bénéfice)
+  recalculateAllPrices(): void {
+    if (!this.formGroup) return;
+    
+    // Calculer prix unitaire final = prix final / quantité
+    const prixFinal = parseFloat(this.formGroup.get('prix_final')?.value) || 0;
+    const quantite = parseFloat(this.formGroup.get('quantité')?.value) || 1;
+    const prixUnitaireFinal = quantite > 0 ? prixFinal / quantite : 0;
+    this.formGroup.get('prix_unitaire_final')?.setValue(prixUnitaireFinal.toFixed(2), { emitEvent: false });
+    
+    // Recalculer aussi les prix des supports et bénéfice
+    this.recalculateSupportsAndBenefice();
+  }
+
+  // Recalculer prix final des supports et prix bénéfice
+  recalculateSupportsAndBenefice(): void {
+    if (!this.formGroup) return;
+    
+    const prixFinal = parseFloat(this.formGroup.get('prix_final')?.value) || 0;
+    const quantite = parseFloat(this.formGroup.get('quantité')?.value) || 1;
+    
+    // Calculer prix final des supports
+    const supportsArray = this.formGroup.get('supports') as FormArray;
+    let prixFinalSupportsUnitaires = 0; // Somme des prix unitaires (sans multiplier par quantité)
+    let prixFinalSupports = 0; // Somme des prix unitaires * quantité
+    
+    supportsArray.controls.forEach((supportControl) => {
+      const supportGroup = supportControl as FormGroup;
+      const prixSupportUnitaire = parseFloat(supportGroup.get('prix_support_unitaire')?.value) || 0;
+      prixFinalSupportsUnitaires += prixSupportUnitaire;
+      prixFinalSupports += prixSupportUnitaire * quantite;
+    });
+    
+    // Stocker le prix final des supports unitaires dans le formulaire
+    this.formGroup.get('prix_final_supports_unitaires')?.setValue(prixFinalSupportsUnitaires.toFixed(2), { emitEvent: false });
+    
+    // Stocker le prix final des supports dans le formulaire
+    this.formGroup.get('prix_final_supports')?.setValue(prixFinalSupports.toFixed(2), { emitEvent: false });
+    
+    // Calculer prix bénéfice = prix final - prix final supports
+    const prixBenefice = prixFinal - prixFinalSupports;
+    this.formGroup.get('prix_benefice')?.setValue(prixBenefice.toFixed(2), { emitEvent: false });
+  }
+
+  // Ajouter un nouveau support
+  addSupport(): void {
+    const supportsArray = this.formGroup.get('supports') as FormArray;
+    const isEdit = this.isEditMode();
+    supportsArray.push(this.createSupportFormGroup({}, isEdit));
+    this.recalculateSupportsAndBenefice();
+  }
+
+  // Supprimer un support
+  removeSupport(index: number): void {
+    const supportsArray = this.formGroup.get('supports') as FormArray;
+    supportsArray.removeAt(index);
+    this.recalculateSupportsAndBenefice();
+  }
+
+  // Getter pour accéder au FormArray des supports
+  get supportsFormArray(): FormArray {
+    return this.formGroup.get('supports') as FormArray;
+  }
+
+  // Helper pour vérifier si le prix est unitaire pour un support
+  isPrixUnitaire(supportGroup: FormGroup): boolean {
+    return supportGroup.get('prix_unitaire')?.value === true;
+  }
+
   toggleEditMode(): void {
     const newEditMode = !this.isEditMode();
     this.isEditMode.set(newEditMode);
@@ -273,10 +505,26 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     if (this.formGroup) {
       const controlsToDisable = [
         'nom_commande', 'deadline', 'description', 'dimensions', 'quantité', 'commentaire_paye',
-        'support', 'police_ecriture', 'texte_personnalisation', 'prix_final',
+        'support', 'police_ecriture', 'texte_personnalisation', 'prix_unitaire_final', 'prix_final',
         'prix_support', 'url_support', 'nom', 'prenom', 'telephone', 'mail',
         'rue', 'code_postal', 'ville', 'pays', 'tva', 'mode_contact'
       ];
+      
+      // Gérer les supports dans le FormArray
+      const supportsArray = this.formGroup.get('supports') as FormArray;
+      supportsArray.controls.forEach((supportControl) => {
+        const supportGroup = supportControl as FormGroup;
+        ['nom_support', 'prix_support', 'url_support', 'prix_unitaire', 'nombre_unites'].forEach(controlName => {
+          const control = supportGroup.get(controlName);
+          if (control) {
+            if (newEditMode) {
+              control.enable();
+            } else {
+              control.disable();
+            }
+          }
+        });
+      });
       
       controlsToDisable.forEach(controlName => {
         const control = this.formGroup.get(controlName);
@@ -288,6 +536,12 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
           }
         }
       });
+      
+      // S'assurer que prix_final et prix_unitaire_final sont bien activés en mode édition
+      if (newEditMode) {
+        this.formGroup.get('prix_final')?.enable();
+        this.formGroup.get('prix_unitaire_final')?.enable();
+      }
     }
   }
 
@@ -308,7 +562,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       commentaire_paye: formValue.commentaire_paye || null,
       attente_reponse: formValue.attente_reponse ?? false,
       mode_contact: formValue.mode_contact || null,
-      prix_final: formValue.prix_final ? parseFloat(formValue.prix_final) : null,
+      prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : null,
+      prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : null,
       coordonnees_contact: {
         nom: formValue.nom,
         prenom: formValue.prenom,
@@ -322,10 +577,22 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         prix_support: formValue.prix_support ? parseFloat(formValue.prix_support) : null,
         url_support: formValue.url_support,
       },
+      supports: formValue.supports && Array.isArray(formValue.supports) 
+        ? formValue.supports
+            .filter((s: any) => s && (s.nom_support || s.prix_support || s.url_support)) // Filtrer les supports complètement vides
+            .map((s: any) => ({
+              nom_support: s.nom_support || null,
+              prix_support: s.prix_support !== null && s.prix_support !== undefined && s.prix_support !== '' ? parseFloat(String(s.prix_support)) : null,
+              url_support: s.url_support || null,
+              prix_unitaire: s.prix_unitaire !== undefined ? Boolean(s.prix_unitaire) : true,
+              nombre_unites: s.nombre_unites !== null && s.nombre_unites !== undefined && s.nombre_unites !== '' ? parseInt(String(s.nombre_unites), 10) : null,
+              prix_support_unitaire: s.prix_support_unitaire !== null && s.prix_support_unitaire !== undefined && s.prix_support_unitaire !== '' ? parseFloat(String(s.prix_support_unitaire)) : null,
+            }))
+        : [],
       personnalisation: {
         texte: formValue.texte_personnalisation,
         police: formValue.police_ecriture,
-        couleur: formValue.couleur ? (typeof formValue.couleur === 'string' ? formValue.couleur.split(',').map((c: string) => c.trim()).filter((c: string) => c) : formValue.couleur) : [],
+        couleur: Array.isArray(formValue.couleur) ? formValue.couleur : [],
       },
       gravure: {
         dimensions: formValue.dimensions,
@@ -334,7 +601,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
     const id = this.commande()!.id_commande;
     this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${id}`, payload).subscribe({
-      next: () => {
+      next: (response) => {
         this.loadCommande(id);
         this.isEditMode.set(false);
       },
@@ -750,5 +1017,25 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       month: '2-digit', 
       year: 'numeric' 
     });
+  }
+
+  toggleCouleur(couleur: Couleur): void {
+    if (!this.isEditMode()) return;
+    const couleurControl = this.formGroup.get('couleur');
+    const currentValue: string[] = couleurControl?.value || [];
+    const index = currentValue.indexOf(couleur);
+    
+    if (index > -1) {
+      currentValue.splice(index, 1);
+    } else {
+      currentValue.push(couleur);
+    }
+    
+    couleurControl?.setValue([...currentValue]);
+  }
+
+  isCouleurSelected(couleur: Couleur): boolean {
+    const currentValue: string[] = this.formGroup.get('couleur')?.value || [];
+    return currentValue.includes(couleur);
   }
 }

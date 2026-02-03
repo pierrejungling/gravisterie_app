@@ -120,4 +120,24 @@ export class AjouterCommandePayload {
     @IsOptional()
     @IsString()
     mode_contact?: string; // 'mail', 'tel', ou 'meta'
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    prix_final?: number;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    prix_unitaire_final?: number;
+
+    @ApiProperty({ required: false, type: [Object] })
+    @IsOptional()
+    @IsArray()
+    supports?: Array<{
+        nom_support?: string;
+        prix_support?: number;
+        url_support?: string;
+        prix_unitaire?: boolean;
+        nombre_unites?: number;
+        prix_support_unitaire?: number;
+    }>;
 }

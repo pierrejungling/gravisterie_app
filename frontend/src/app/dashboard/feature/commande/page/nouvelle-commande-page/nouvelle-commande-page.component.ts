@@ -1,5 +1,5 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Component, OnInit, OnDestroy, AfterViewChecked, AfterViewInit, inject, signal, WritableSignal, ViewChild, ElementRef } from '@angular/core';
+import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { HeaderComponent, FloatingLabelInputComponent, getFormValidationErrors, FormError } from '@shared';
@@ -16,8 +16,8 @@ import { AppRoutes } from '@shared';
   templateUrl: './nouvelle-commande-page.component.html',
   styleUrl: './nouvelle-commande-page.component.scss'
 })
-export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterViewChecked {
-  formGroup!: FormGroup<NouvelleCommandeForm>;
+export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterViewChecked, AfterViewInit {
+  formGroup!: FormGroup;
   errors: WritableSignal<FormError[]> = signal([]);
   submitted = false;
   showSuccessPopup: WritableSignal<boolean> = signal(false);
@@ -25,6 +25,8 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   supportInputFocus: boolean = false;
   isDragOver: boolean = false;
   private scrollRestored: boolean = false;
+  showPrixFields: WritableSignal<boolean> = signal(false);
+  @ViewChild('supportInput', { read: ElementRef }) supportInputRef?: ElementRef<HTMLElement>;
   
   private readonly apiService: ApiService = inject(ApiService);
   private readonly scrollKey = 'nouvelle-commande-scroll';
@@ -43,14 +45,10 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   
   supportParDefaut: string = 'CP 3,6mm Méranti';
 
-  // Modes de contact disponibles
-  readonly modesContact = [
-    { value: ModeContact.MAIL, label: 'Mail', emoji: '📧' },
-    { value: ModeContact.TEL, label: 'Téléphone', emoji: '📞' },
-    { value: ModeContact.META, label: 'Meta', emoji: '💬' }
-  ];
+  // Exposer StatutCommande pour l'utiliser dans le template
+  readonly StatutCommande = StatutCommande;
 
-  // Statuts disponibles pour sélection initiale
+  // Statuts normaux (sans ANNULEE pour le workflow normal)
   readonly statuts: StatutCommande[] = [
     StatutCommande.EN_ATTENTE_INFORMATION,
     StatutCommande.A_MODELLISER_PREPARER,
@@ -61,6 +59,12 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     StatutCommande.A_METTRE_EN_LIGNE,
     StatutCommande.A_FACTURER,
     StatutCommande.DEMANDE_AVIS,
+  ];
+
+  // Tous les statuts incluant ANNULEE pour l'affichage dans le détail
+  readonly allStatuts: StatutCommande[] = [
+    ...this.statuts,
+    StatutCommande.ANNULEE,
   ];
 
   readonly statutLabels: Record<StatutCommande, string> = {
@@ -76,6 +80,19 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     [StatutCommande.TERMINE]: 'Terminé',
     [StatutCommande.ANNULEE]: 'Annulée',
   };
+
+  // Statut initial sélectionné (pour nouvelle commande, EN_ATTENTE_INFORMATION par défaut)
+  get statutInitial(): StatutCommande | null {
+    return this.formGroup?.get('statut_initial')?.value || StatutCommande.EN_ATTENTE_INFORMATION;
+  }
+
+  // Modes de contact disponibles
+  readonly modesContact = [
+    { value: ModeContact.MAIL, label: 'Mail', emoji: '📧' },
+    { value: ModeContact.TEL, label: 'Téléphone', emoji: '📞' },
+    { value: ModeContact.META, label: 'Meta', emoji: '💬' }
+  ];
+
 
   constructor(private router: Router) {
     this.initFormGroup();
@@ -150,14 +167,6 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     return this.formGroup.get(key) as FormControl<any>;
   }
 
-  get coordonneesContact(): FormGroup<CoordonneesContactForm> {
-    return this.formGroup.get('coordonnees_contact') as FormGroup<CoordonneesContactForm>;
-  }
-
-  getCoordonneeControl(key: string): FormControl<any> {
-    const control = this.coordonneesContact.get(key);
-    return control as FormControl<any>;
-  }
 
   private validationMessage(key: string, value: any): string | null {
     if (key === 'required') return 'Ce champ est requis';
@@ -190,12 +199,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   private getAllFormErrors(): FormError[] {
-    const top = getFormValidationErrors(this.formGroup);
-    const coord = getFormValidationErrors(this.coordonneesContact).map((e) => ({
-      ...e,
-      control: 'coordonnees_contact.' + e.control
-    }));
-    return [...top, ...coord];
+    return getFormValidationErrors(this.formGroup);
   }
 
   getGeneralError(): string | null {
@@ -204,35 +208,254 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   private initFormGroup(): void {
-    this.formGroup = new FormGroup<NouvelleCommandeForm>(<NouvelleCommandeForm>{
+    // Créer un FormArray pour les supports avec un support vide par défaut
+    const supportsArray = new FormArray<FormGroup>([]);
+    supportsArray.push(this.createSupportFormGroup({}));
+
+    this.formGroup = new FormGroup({
       nom_commande: new FormControl<string>('', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]),
       deadline: new FormControl<string>('', []),
-      coordonnees_contact: new FormGroup<CoordonneesContactForm>(<CoordonneesContactForm>{
-        nom: new FormControl<string>('', [Validators.maxLength(50)]),
-        prenom: new FormControl<string>('', [Validators.maxLength(50)]),
-        telephone: new FormControl<string>('', [Validators.maxLength(15)]),
-        mail: new FormControl<string>('', [Validators.email]),
-        rue: new FormControl<string>('', [Validators.maxLength(100)]),
-        code_postal: new FormControl<string>('', [Validators.maxLength(10)]),
-        ville: new FormControl<string>('', [Validators.maxLength(50)]),
-        pays: new FormControl<string>('Belgique', [Validators.maxLength(50)]),
-        tva: new FormControl<string>('', [Validators.maxLength(20)]),
-        mode_contact: new FormControl<string>('')
-      }),
       description_projet: new FormControl<string>(''),
       dimensions_souhaitees: new FormControl<string>(''),
-      couleur: new FormControl<string[]>([], []),
       support: new FormControl<string>('', []),
       police_ecriture: new FormControl<string>(''),
       texte_personnalisation: new FormControl<string>(''),
-      fichiers_joints: new FormControl<File[]>([], []),
+      couleur: new FormControl<string[]>([]),
       quantité: new FormControl<number>(1, [Validators.min(1)]),
+      prix_unitaire_final: new FormControl<number | null>(null),
+      prix_final: new FormControl<number | null>(null),
       payé: new FormControl<boolean>(false),
       commentaire_paye: new FormControl<string>(''),
-      attente_reponse: new FormControl<boolean>(false), // Par défaut false = client attend réponse (rouge)
+      attente_reponse: new FormControl<boolean>(false),
+      supports: supportsArray,
+      prix_final_supports_unitaires: new FormControl({ value: 0, disabled: true }),
+      prix_final_supports: new FormControl({ value: 0, disabled: true }),
+      prix_benefice: new FormControl({ value: 0, disabled: true }),
+      // Coordonnées contact (champs individuels)
+      nom: new FormControl<string>('', [Validators.maxLength(50)]),
+      prenom: new FormControl<string>('', [Validators.maxLength(50)]),
+      telephone: new FormControl<string>('', [Validators.maxLength(15)]),
+      mail: new FormControl<string>('', [Validators.email]),
+      rue: new FormControl<string>('', [Validators.maxLength(100)]),
+      code_postal: new FormControl<string>('', [Validators.maxLength(10)]),
+      ville: new FormControl<string>('', [Validators.maxLength(50)]),
+      pays: new FormControl<string>('Belgique', [Validators.maxLength(50)]),
+      tva: new FormControl<string>('', [Validators.maxLength(20)]),
       mode_contact: new FormControl<string>(''),
-      statut_initial: new FormControl<string>('')
+      statut_initial: new FormControl<StatutCommande | null>(StatutCommande.EN_ATTENTE_INFORMATION)
     });
+
+    // Écouter les changements pour recalculer automatiquement
+    let isCalculatingPF = false;
+    let isCalculatingPU = false;
+    
+    this.formGroup.get('quantité')?.valueChanges.subscribe(() => {
+      if (isCalculatingPF || isCalculatingPU) return;
+      const prixFinal = this.formGroup.get('prix_final')?.value;
+      const prixUnitaire = this.formGroup.get('prix_unitaire_final')?.value;
+      if (prixFinal) {
+        isCalculatingPU = true;
+        this.recalculatePrixUnitaireFromFinal();
+        isCalculatingPU = false;
+      } else if (prixUnitaire) {
+        isCalculatingPF = true;
+        this.recalculatePrixFinalFromUnitaire();
+        isCalculatingPF = false;
+      }
+      this.recalculateSupportsAndBenefice();
+    });
+    
+    this.formGroup.get('prix_final')?.valueChanges.subscribe(() => {
+      if (isCalculatingPF || isCalculatingPU) return;
+      isCalculatingPU = true;
+      this.recalculatePrixUnitaireFromFinal();
+      isCalculatingPU = false;
+      this.recalculateSupportsAndBenefice();
+    });
+    
+    this.formGroup.get('prix_unitaire_final')?.valueChanges.subscribe(() => {
+      if (isCalculatingPF || isCalculatingPU) return;
+      isCalculatingPF = true;
+      this.recalculatePrixFinalFromUnitaire();
+      isCalculatingPF = false;
+      this.recalculateSupportsAndBenefice();
+    });
+
+  }
+
+  ngAfterViewInit(): void {
+    // Ajouter un listener focus sur l'input support après l'initialisation de la vue
+    setTimeout(() => {
+      if (this.supportInputRef?.nativeElement) {
+        const input = this.supportInputRef.nativeElement.querySelector('input') as HTMLInputElement;
+        if (input) {
+          input.addEventListener('focus', () => {
+            const supportControl = this.formGroup.get('support');
+            if (supportControl && supportControl.value === this.supportParDefaut) {
+              supportControl.setValue('');
+            }
+          });
+        }
+      }
+    }, 100);
+  }
+
+  // Créer un FormGroup pour un support
+  createSupportFormGroup(support: any = {}): FormGroup {
+    const prixUnitaire = support.prix_unitaire !== undefined ? support.prix_unitaire : true;
+    const prixSupport = support.prix_support || 0;
+    const nombreUnites = support.nombre_unites || 1;
+    const prixSupportUnitaire = support.prix_support_unitaire || (prixUnitaire ? prixSupport : (nombreUnites > 0 ? prixSupport / nombreUnites : 0));
+    
+    const group = new FormGroup({
+      nom_support: new FormControl({ value: support.nom_support || '', disabled: false }),
+      prix_support: new FormControl({ value: prixSupport, disabled: false }),
+      url_support: new FormControl({ value: support.url_support || '', disabled: false }),
+      prix_unitaire: new FormControl({ value: prixUnitaire, disabled: false }),
+      nombre_unites: new FormControl({ value: nombreUnites, disabled: prixUnitaire }),
+      prix_support_unitaire: new FormControl({ value: prixSupportUnitaire, disabled: true })
+    });
+
+    // Écouter les changements pour recalculer
+    group.get('prix_support')?.valueChanges.subscribe(() => this.recalculateSupportUnitaire(group));
+    group.get('nombre_unites')?.valueChanges.subscribe(() => this.recalculateSupportUnitaire(group));
+    group.get('prix_unitaire')?.valueChanges.subscribe(() => {
+      const prixUnitaireValue = group.get('prix_unitaire')?.value;
+      if (prixUnitaireValue) {
+        group.get('nombre_unites')?.disable({ emitEvent: false });
+      } else {
+        group.get('nombre_unites')?.enable({ emitEvent: false });
+      }
+      this.recalculateSupportUnitaire(group);
+    });
+
+    return group;
+  }
+
+  // Recalculer le prix support unitaire pour un support
+  recalculateSupportUnitaire(supportGroup: FormGroup): void {
+    const prixUnitaire = supportGroup.get('prix_unitaire')?.value;
+    const prixSupport = parseFloat(supportGroup.get('prix_support')?.value) || 0;
+    const nombreUnites = parseFloat(supportGroup.get('nombre_unites')?.value) || 1;
+    
+    let prixSupportUnitaire = 0;
+    if (prixUnitaire) {
+      prixSupportUnitaire = prixSupport;
+    } else {
+      prixSupportUnitaire = nombreUnites > 0 ? prixSupport / nombreUnites : 0;
+    }
+    
+    supportGroup.get('prix_support_unitaire')?.setValue(prixSupportUnitaire, { emitEvent: false });
+    this.recalculateSupportsAndBenefice();
+  }
+
+  // Recalculer prix final des supports et prix bénéfice
+  recalculateSupportsAndBenefice(): void {
+    if (!this.formGroup) return;
+    
+    const prixFinalValue = this.formGroup.get('prix_final')?.value;
+    const quantiteValue = this.formGroup.get('quantité')?.value;
+    const prixFinal = parseFloat(String(prixFinalValue || 0)) || 0;
+    const quantite = parseFloat(String(quantiteValue || 1)) || 1;
+    
+    const supportsArray = this.formGroup.get('supports') as FormArray;
+    let prixFinalSupportsUnitaires = 0;
+    let prixFinalSupports = 0;
+    
+    supportsArray.controls.forEach((supportControl: any) => {
+      const supportGroup = supportControl as FormGroup;
+      const prixSupportUnitaire = parseFloat(String(supportGroup.get('prix_support_unitaire')?.value || 0)) || 0;
+      prixFinalSupportsUnitaires += prixSupportUnitaire;
+      prixFinalSupports += prixSupportUnitaire * quantite;
+    });
+    
+    (this.formGroup.get('prix_final_supports_unitaires') as any)?.setValue(prixFinalSupportsUnitaires.toFixed(2), { emitEvent: false });
+    (this.formGroup.get('prix_final_supports') as any)?.setValue(prixFinalSupports.toFixed(2), { emitEvent: false });
+    
+    const prixBenefice = prixFinal - prixFinalSupports;
+    (this.formGroup.get('prix_benefice') as any)?.setValue(prixBenefice.toFixed(2), { emitEvent: false });
+  }
+
+  // Recalculer le prix unitaire final à partir du prix final
+  recalculatePrixUnitaireFromFinal(): void {
+    if (!this.formGroup) return;
+    
+    const prixFinalValue = this.formGroup.get('prix_final')?.value;
+    const quantiteValue = this.formGroup.get('quantité')?.value;
+    const prixFinal = parseFloat(String(prixFinalValue || 0)) || 0;
+    const quantite = parseFloat(String(quantiteValue || 1)) || 1;
+    
+    if (quantite > 0) {
+      const prixUnitaire = prixFinal / quantite;
+      (this.formGroup.get('prix_unitaire_final') as any)?.setValue(prixUnitaire.toFixed(2), { emitEvent: false });
+    }
+  }
+
+  // Recalculer le prix final à partir du prix unitaire final
+  recalculatePrixFinalFromUnitaire(): void {
+    if (!this.formGroup) return;
+    
+    const prixUnitaireValue = this.formGroup.get('prix_unitaire_final')?.value;
+    const quantiteValue = this.formGroup.get('quantité')?.value;
+    const prixUnitaire = parseFloat(String(prixUnitaireValue || 0)) || 0;
+    const quantite = parseFloat(String(quantiteValue || 1)) || 1;
+    
+    const prixFinal = prixUnitaire * quantite;
+    (this.formGroup.get('prix_final') as any)?.setValue(prixFinal.toFixed(2), { emitEvent: false });
+  }
+
+  // Ajouter un nouveau support
+  addSupport(): void {
+    const supportsArray = this.formGroup.get('supports') as FormArray;
+    supportsArray.push(this.createSupportFormGroup({}));
+    this.recalculateSupportsAndBenefice();
+  }
+
+  // Supprimer un support
+  removeSupport(index: number): void {
+    const supportsArray = this.formGroup.get('supports') as FormArray;
+    supportsArray.removeAt(index);
+    this.recalculateSupportsAndBenefice();
+  }
+
+  // Getter pour accéder au FormArray des supports
+  get supportsFormArray(): FormArray {
+    return this.formGroup.get('supports') as FormArray;
+  }
+
+  // Helper pour vérifier si le prix est unitaire pour un support
+  isPrixUnitaire(supportGroup: FormGroup): boolean {
+    return supportGroup.get('prix_unitaire')?.value === true;
+  }
+
+  togglePrixFields(): void {
+    this.showPrixFields.set(!this.showPrixFields());
+  }
+
+  onPayeChange(): void {
+    // Pour nouvelle commande, pas besoin de sauvegarder immédiatement
+  }
+
+  getAttenteReponseControl(): FormControl<boolean> {
+    return this.formGroup.get('attente_reponse') as FormControl<boolean>;
+  }
+
+  // Méthodes pour les statuts
+  isStatutSelected(statut: StatutCommande): boolean {
+    return this.statutInitial === statut;
+  }
+
+  onStatutChange(statut: StatutCommande): void {
+    this.formGroup.get('statut_initial')?.setValue(statut);
+  }
+
+  buildAdresseComplete(rue?: string, codePostal?: string, ville?: string, pays?: string): string | null {
+    const parts: string[] = [];
+    if (rue?.trim()) parts.push(rue.trim());
+    if (codePostal?.trim()) parts.push(codePostal.trim());
+    if (ville?.trim()) parts.push(ville.trim());
+    if (pays?.trim()) parts.push(pays.trim());
+    return parts.length > 0 ? parts.join(', ') : null;
   }
 
   onFileSelected(event: Event): void {
@@ -305,22 +528,6 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     return currentValue.includes(couleur);
   }
 
-  onStatutChange(statut: StatutCommande): void {
-    const statutControl = this.formGroup.get('statut_initial');
-    const currentValue = statutControl?.value;
-    
-    // Si le même statut est cliqué, le désélectionner (retour à vide = défaut)
-    if (currentValue === statut) {
-      statutControl?.setValue('');
-    } else {
-      statutControl?.setValue(statut);
-    }
-  }
-
-  isStatutSelected(statut: StatutCommande): boolean {
-    const statutControl = this.formGroup.get('statut_initial');
-    return statutControl?.value === statut;
-  }
 
   isFormValid(): boolean {
     const nomCommande = this.formGroup.get('nom_commande')?.value?.trim();
@@ -331,80 +538,73 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
   onSubmit(): void {
     if (this.isFormValid()) {
-      const mailControl = this.formGroup.get('coordonnees_contact.mail');
-      const mailValue = mailControl?.value?.trim();
+      const mailControl = this.formGroup.get('mail');
+      const mailValue = (mailControl?.value as string)?.trim();
       if (mailValue && mailControl && !mailControl.valid) {
         this.formGroup.markAllAsTouched();
         this.errors.set(getFormValidationErrors(this.formGroup));
         return;
       }
 
-      const formValue = this.formGroup.value;
+      const formValue: any = this.formGroup.value;
 
-      // Préparer le payload
+      // Préparer le payload coordonnees_contact
       const coordonneesContact: any = {};
-      if (formValue.coordonnees_contact?.nom?.trim()) {
-        coordonneesContact.nom = formValue.coordonnees_contact.nom.trim();
-      }
-      if (formValue.coordonnees_contact?.prenom?.trim()) {
-        coordonneesContact.prenom = formValue.coordonnees_contact.prenom.trim();
-      }
-      if (formValue.coordonnees_contact?.telephone?.trim()) {
-        coordonneesContact.telephone = formValue.coordonnees_contact.telephone.trim();
-      }
-      if (formValue.coordonnees_contact?.mail?.trim()) {
-        coordonneesContact.mail = formValue.coordonnees_contact.mail.trim();
-      }
-      if (formValue.coordonnees_contact?.rue?.trim()) {
-        coordonneesContact.rue = formValue.coordonnees_contact.rue.trim();
-      }
-      if (formValue.coordonnees_contact?.code_postal?.trim()) {
-        coordonneesContact.code_postal = formValue.coordonnees_contact.code_postal.trim();
-      }
-      if (formValue.coordonnees_contact?.ville?.trim()) {
-        coordonneesContact.ville = formValue.coordonnees_contact.ville.trim();
-      }
-      if (formValue.coordonnees_contact?.pays?.trim()) {
-        coordonneesContact.pays = formValue.coordonnees_contact.pays.trim();
-      }
-      if (formValue.coordonnees_contact?.tva?.trim()) {
-        coordonneesContact.tva = formValue.coordonnees_contact.tva.trim();
-      }
+      if (formValue.nom?.trim()) coordonneesContact.nom = formValue.nom.trim();
+      if (formValue.prenom?.trim()) coordonneesContact.prenom = formValue.prenom.trim();
+      if (formValue.telephone?.trim()) coordonneesContact.telephone = formValue.telephone.trim();
+      if (formValue.mail?.trim()) coordonneesContact.mail = formValue.mail.trim();
+      if (formValue.tva?.trim()) coordonneesContact.tva = formValue.tva.trim();
+      
+      const adresse = this.buildAdresseComplete(formValue.rue, formValue.code_postal, formValue.ville, formValue.pays);
+      if (adresse) coordonneesContact.adresse = adresse;
 
-      // Construire l'adresse complète pour le backend
-      const adresseParts: string[] = [];
-      if (coordonneesContact.rue) adresseParts.push(coordonneesContact.rue);
-      if (coordonneesContact.code_postal) adresseParts.push(coordonneesContact.code_postal);
-      if (coordonneesContact.ville) adresseParts.push(coordonneesContact.ville);
-      if (coordonneesContact.pays) adresseParts.push(coordonneesContact.pays);
-      if (adresseParts.length > 0) {
-        coordonneesContact.adresse = adresseParts.join(', ');
-      }
-
-      // S'assurer que les types correspondent à ce que le backend attend (@IsInt, @IsBoolean, etc.)
+      // S'assurer que les types correspondent à ce que le backend attend
       const quantiteNum = formValue.quantité != null
         ? (typeof formValue.quantité === 'number' ? formValue.quantité : parseInt(String(formValue.quantité), 10))
         : 1;
       const quantiteFinale = Number.isNaN(quantiteNum) || quantiteNum < 1 ? 1 : quantiteNum;
 
+      // Récupérer le statut initial depuis le formulaire
+      const statutInitial = formValue.statut_initial || StatutCommande.EN_ATTENTE_INFORMATION;
+
+      // Récupérer les couleurs sélectionnées
+      const couleursSelectionnees = formValue.couleur && Array.isArray(formValue.couleur) ? formValue.couleur : [];
+
       const payload: any = {
         nom_commande: formValue.nom_commande || '',
-        ...(formValue.deadline && { deadline: formValue.deadline }),
-        ...(Object.keys(coordonneesContact).length > 0 && { coordonnees_contact: coordonneesContact }),
-        description_projet: formValue.description_projet ?? undefined,
-        dimensions_souhaitees: formValue.dimensions_souhaitees ?? undefined,
-        couleur: Array.isArray(formValue.couleur) ? formValue.couleur : [],
-        support: (formValue.support?.trim() || this.supportParDefaut),
-        police_ecriture: formValue.police_ecriture ?? undefined,
-        texte_personnalisation: formValue.texte_personnalisation ?? undefined,
+        deadline: formValue.deadline || null,
+        description_projet: formValue.description_projet || null,
+        dimensions_souhaitees: formValue.dimensions_souhaitees || null,
+        couleur: couleursSelectionnees,
+        support: (formValue.support && formValue.support.trim()) ? formValue.support.trim() : this.supportParDefaut,
+        police_ecriture: formValue.police_ecriture || null,
+        texte_personnalisation: formValue.texte_personnalisation || null,
+        fichiers_joints: [],
         quantité: quantiteFinale,
         payé: Boolean(formValue.payé),
-        commentaire_paye: formValue.commentaire_paye || '',
+        commentaire_paye: formValue.commentaire_paye || null,
+        statut_initial: statutInitial,
         attente_reponse: Boolean(formValue.attente_reponse ?? false),
-        mode_contact: formValue.coordonnees_contact?.mode_contact || formValue.mode_contact || '',
-        statut_initial: formValue.statut_initial || '',
-        fichiers_joints: [] // Pour l'instant, on envoie un tableau vide. L'upload de fichiers sera géré séparément
+        mode_contact: formValue.mode_contact || null,
+        prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : null,
+        prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : null,
+        ...(Object.keys(coordonneesContact).length > 0 && { coordonnees_contact: coordonneesContact }),
+        supports: formValue.supports && Array.isArray(formValue.supports) 
+          ? formValue.supports
+              .filter((s: any) => s && (s.nom_support || s.prix_support || s.url_support))
+              .map((s: any) => ({
+                nom_support: s.nom_support || null,
+                prix_support: s.prix_support !== null && s.prix_support !== undefined && s.prix_support !== '' ? parseFloat(String(s.prix_support)) : null,
+                url_support: s.url_support || null,
+                prix_unitaire: s.prix_unitaire !== undefined ? Boolean(s.prix_unitaire) : true,
+                nombre_unites: s.nombre_unites !== null && s.nombre_unites !== undefined && s.nombre_unites !== '' ? parseInt(String(s.nombre_unites), 10) : null,
+                prix_support_unitaire: s.prix_support_unitaire !== null && s.prix_support_unitaire !== undefined && s.prix_support_unitaire !== '' ? parseFloat(String(s.prix_support_unitaire)) : null,
+              }))
+          : [],
       };
+
+      console.log('Payload envoyé:', JSON.stringify(payload, null, 2));
 
       // Appel à l'API
       this.apiService.post(ApiURI.AJOUTER_COMMANDE, payload).subscribe({
@@ -447,7 +647,8 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     this.formGroup.reset();
     
     // Réinitialiser les valeurs par défaut
-    this.formGroup.get('coordonnees_contact.pays')?.setValue('Belgique');
+    (this.formGroup.get('pays') as any)?.setValue('Belgique');
+    this.formGroup.get('statut_initial')?.setValue(StatutCommande.EN_ATTENTE_INFORMATION);
     
     this.uploadedFiles = [];
     this.errors.set([]);
@@ -466,13 +667,19 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   onSupportFocus(event: Event): void {
-    const input = event.target as HTMLInputElement;
     this.supportInputFocus = true;
-    // Si le champ contient la valeur par défaut, sélectionner tout le texte
-    if (input.value === this.supportParDefaut) {
-      setTimeout(() => {
-        input.select();
-      }, 0);
+    // Trouver l'input dans l'événement
+    const target = event.target as HTMLElement;
+    const input = target.querySelector('input') || target.closest('.input-wrapper')?.querySelector('input') as HTMLInputElement;
+    
+    if (input) {
+      // Si le champ contient la valeur par défaut, vider le champ
+      if (input.value === this.supportParDefaut) {
+        setTimeout(() => {
+          this.formGroup.get('support')?.setValue('');
+          input.focus();
+        }, 0);
+      }
     }
   }
 

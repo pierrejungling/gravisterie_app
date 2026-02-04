@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { HeaderComponent } from '@shared';
@@ -21,6 +21,9 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   private scrollRestored: boolean = false;
   /** Ne décider (fermer tout / restaurer) qu'au premier chargement ; après, garder l'état des sections. */
   private initialExpandedStateApplied: boolean = false;
+  
+  @ViewChild('tableScroll', { static: false }) tableScrollElement?: ElementRef<HTMLDivElement>;
+  @ViewChild('mobileContainer', { static: false }) mobileContainerElement?: ElementRef<HTMLDivElement>;
   
   private readonly apiService: ApiService = inject(ApiService);
   private readonly router: Router = inject(Router);
@@ -160,11 +163,17 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   ngAfterViewChecked(): void {
-    // Restaurer la position de scroll après le chargement des données
+    // Restaurer la position de scroll après le chargement initial des données
     if (!this.isLoading() && !this.scrollRestored) {
       const savedScroll = sessionStorage.getItem(this.scrollKey);
       if (savedScroll) {
-        this.restoreScrollPosition(parseInt(savedScroll, 10));
+        // Attendre un peu pour que les ViewChild soient initialisés
+        setTimeout(() => {
+          // Vérifier à nouveau que scrollRestored n'a pas été modifié entre-temps
+          if (!this.scrollRestored) {
+            this.restoreScrollPosition(parseInt(savedScroll, 10));
+          }
+        }, 200);
       }
     }
   }
@@ -172,37 +181,82 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   private restoreScrollPosition(scrollPosition: number): void {
     // Méthode robuste compatible Safari avec plusieurs tentatives
     const attemptScroll = (attempts: number = 0) => {
-      if (attempts > 10) {
-        // Arrêter après 10 tentatives
+      if (attempts > 30) {
+        // Arrêter après 30 tentatives (augmenté pour Safari)
         this.scrollRestored = true;
         return;
       }
 
       requestAnimationFrame(() => {
-        // Vérifier que le document est prêt
-        if (document.readyState === 'complete' || document.readyState === 'interactive') {
-          // Essayer différentes méthodes de scroll pour compatibilité Safari
-          window.scrollTo(0, scrollPosition);
-          document.documentElement.scrollTop = scrollPosition;
-          document.body.scrollTop = scrollPosition;
+        const container = this.getScrollContainer();
+        
+        if (container) {
+          // Restaurer le scroll du conteneur interne
+          // Safari nécessite plusieurs méthodes pour fonctionner correctement
+          
+          // Méthode 1 : scrollTop direct
+          container.scrollTop = scrollPosition;
+          
+          // Méthode 2 : scrollTo si disponible
+          if (typeof container.scrollTo === 'function') {
+            try {
+              container.scrollTo({
+                top: scrollPosition,
+                left: 0,
+                behavior: 'auto'
+              });
+            } catch (e) {
+              // Ignorer les erreurs
+            }
+          }
 
           // Vérifier si le scroll a fonctionné (avec une marge d'erreur de 5px)
-          const currentScroll = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-          if (Math.abs(currentScroll - scrollPosition) <= 5) {
-            this.scrollRestored = true;
+          // Utiliser setTimeout pour laisser Safari appliquer le scroll
+          setTimeout(() => {
+            const currentScroll = container.scrollTop;
+            
+            if (Math.abs(currentScroll - scrollPosition) <= 5) {
+              // Scroll réussi, marquer comme restauré
+              this.scrollRestored = true;
+            } else {
+              // Réessayer après un court délai (délai augmenté pour Safari)
+              setTimeout(() => attemptScroll(attempts + 1), 200);
+            }
+          }, 150);
+        } else if (document.readyState === 'complete' || document.readyState === 'interactive') {
+          // Fallback sur window scroll si le conteneur n'est pas encore disponible
+          // Mais on attend un peu plus pour que les ViewChild soient initialisés
+          if (attempts < 10) {
+            setTimeout(() => attemptScroll(attempts + 1), 100);
           } else {
-            // Réessayer après un court délai
-            setTimeout(() => attemptScroll(attempts + 1), 50);
+            // Si après 10 tentatives le conteneur n'est toujours pas disponible, utiliser window
+            window.scrollTo({
+              top: scrollPosition,
+              left: 0,
+              behavior: 'auto'
+            });
+            document.documentElement.scrollTop = scrollPosition;
+            document.body.scrollTop = scrollPosition;
+            
+            setTimeout(() => {
+              const currentScroll = this.getCurrentScrollPosition();
+              if (Math.abs(currentScroll - scrollPosition) <= 5) {
+                this.scrollRestored = true;
+              } else {
+                setTimeout(() => attemptScroll(attempts + 1), 150);
+              }
+            }, 100);
           }
         } else {
           // Attendre que le document soit prêt
-          setTimeout(() => attemptScroll(attempts + 1), 50);
+          setTimeout(() => attemptScroll(attempts + 1), 100);
         }
       });
     };
 
-    // Commencer la restauration après un court délai initial
-    setTimeout(() => attemptScroll(), 100);
+    // Commencer la restauration après un délai initial (augmenté pour Safari)
+    // Safari a besoin de plus de temps pour initialiser les ViewChild
+    setTimeout(() => attemptScroll(), 250);
   }
 
   ngOnDestroy(): void {
@@ -210,8 +264,73 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   private onBeforeUnload = (): void => {
-    sessionStorage.setItem(this.scrollKey, window.scrollY.toString());
+    // Sauvegarder le scroll du conteneur approprié
+    const scrollPos = this.getCurrentScrollPosition();
+    sessionStorage.setItem(this.scrollKey, scrollPos.toString());
   };
+
+  private getScrollContainer(): HTMLElement | null {
+    // Détecter quelle vue est active en vérifiant la visibilité des éléments
+    // Sur mobile, .desktop-view est caché, sur desktop .mobile-view est caché
+    const isMobile = window.innerWidth <= 768;
+    
+    // Essayer d'abord avec les ViewChild
+    if (isMobile) {
+      // Vue mobile : utiliser le conteneur mobile
+      if (this.mobileContainerElement?.nativeElement) {
+        return this.mobileContainerElement.nativeElement;
+      }
+    } else {
+      // Vue desktop : utiliser le conteneur du tableau
+      if (this.tableScrollElement?.nativeElement) {
+        return this.tableScrollElement.nativeElement;
+      }
+    }
+    
+    // Fallback : essayer les deux ViewChild si la détection échoue
+    if (this.tableScrollElement?.nativeElement) {
+      return this.tableScrollElement.nativeElement;
+    }
+    if (this.mobileContainerElement?.nativeElement) {
+      return this.mobileContainerElement.nativeElement;
+    }
+    
+    // Fallback final : utiliser querySelector pour trouver les éléments directement
+    // Cela fonctionne même si les ViewChild ne sont pas encore initialisés
+    if (isMobile) {
+      const mobileContainer = document.querySelector('.commandes-en-cours-container') as HTMLElement;
+      if (mobileContainer && mobileContainer.scrollHeight > mobileContainer.clientHeight) {
+        return mobileContainer;
+      }
+    } else {
+      const tableScroll = document.querySelector('.table-scroll') as HTMLElement;
+      if (tableScroll && tableScroll.scrollHeight > tableScroll.clientHeight) {
+        return tableScroll;
+      }
+    }
+    
+    // Dernier fallback : essayer les deux conteneurs
+    const tableScroll = document.querySelector('.table-scroll') as HTMLElement;
+    if (tableScroll) return tableScroll;
+    
+    const mobileContainer = document.querySelector('.commandes-en-cours-container') as HTMLElement;
+    if (mobileContainer) return mobileContainer;
+    
+    return null;
+  }
+
+  private getCurrentScrollPosition(): number {
+    const container = this.getScrollContainer();
+    if (container) {
+      // Scroll interne du conteneur
+      return container.scrollTop;
+    }
+    // Fallback sur window scroll (pour le chargement initial)
+    return window.pageYOffset || 
+           document.documentElement.scrollTop || 
+           document.body.scrollTop || 
+           (window.scrollY !== undefined ? window.scrollY : 0);
+  }
 
   loadCommandes(): void {
     this.isLoading.set(true);
@@ -265,17 +384,57 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   onCheckboxChange(commande: Commande, statut: StatutCommande): void {
-    // Appeler l'API pour mettre à jour le statut
+    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
+    
+    // Mettre à jour localement immédiatement pour un feedback instantané
+    const commandes = [...this.commandes()];
+    const index = commandes.findIndex(c => c.id_commande === commande.id_commande);
+    
+    if (index !== -1) {
+      const updatedCommande = { ...commandes[index] };
+      
+      if (statutsFinaux.includes(statut)) {
+        // Pour les statuts finaux : retirer de statuts_actifs (marquer comme terminé)
+        if (updatedCommande.statuts_actifs) {
+          updatedCommande.statuts_actifs = updatedCommande.statuts_actifs.filter(s => s !== statut);
+          if (updatedCommande.statuts_actifs.length === 0) {
+            updatedCommande.statuts_actifs = undefined;
+          }
+        }
+      } else {
+        // Pour les autres statuts : passer au statut suivant dans l'ordre
+        const ordreEtapes: StatutCommande[] = [
+          StatutCommande.EN_ATTENTE_INFORMATION,
+          StatutCommande.A_MODELLISER_PREPARER,
+          StatutCommande.A_GRAVER,
+          StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE,
+          StatutCommande.A_PRENDRE_EN_PHOTO,
+        ];
+        const currentIndex = ordreEtapes.indexOf(statut);
+        if (currentIndex !== -1 && currentIndex < ordreEtapes.length - 1) {
+          updatedCommande.statut_commande = ordreEtapes[currentIndex + 1];
+        } else if (statut === StatutCommande.A_PRENDRE_EN_PHOTO) {
+          // Si on termine "À Prendre en photo", créer statuts_actifs avec les 4 statuts finaux
+          updatedCommande.statuts_actifs = [...statutsFinaux];
+        }
+      }
+      
+      commandes[index] = updatedCommande;
+      this.commandes.set(commandes);
+    }
+    
+    // Appeler l'API pour mettre à jour en base de données
     this.apiService.put(ApiURI.UPDATE_STATUT_COMMANDE, {
       id_commande: commande.id_commande,
       statut: statut
     }).subscribe({
       next: () => {
-        // Recharger les commandes après la mise à jour
-        this.loadCommandes();
+        // Mise à jour réussie, les données locales sont déjà à jour
       },
       error: (error) => {
         console.error('Erreur lors de la mise à jour du statut:', error);
+        // En cas d'erreur, recharger pour restaurer l'état correct
+        this.loadCommandes();
       }
     });
   }
@@ -289,17 +448,43 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   onEtapePrecedenteUncheck(commande: Commande, etapePrecedente: StatutCommande): void {
-    // Quand on décoche une étape précédente, faire revenir la commande à cette étape
+    // Mettre à jour localement immédiatement pour un feedback instantané
+    const commandes = [...this.commandes()];
+    const index = commandes.findIndex(c => c.id_commande === commande.id_commande);
+    
+    if (index !== -1) {
+      const updatedCommande = { ...commandes[index] };
+      
+      // Si on décoche "À Prendre en photo", retirer statuts_actifs
+      if (etapePrecedente === StatutCommande.A_PRENDRE_EN_PHOTO) {
+        updatedCommande.statuts_actifs = undefined;
+        updatedCommande.statut_commande = StatutCommande.A_PRENDRE_EN_PHOTO;
+      } else {
+        // Sinon, revenir au statut précédent
+        updatedCommande.statut_commande = etapePrecedente;
+        // Si on revient en arrière depuis les statuts finaux, retirer statuts_actifs
+        const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
+        if (updatedCommande.statuts_actifs && updatedCommande.statuts_actifs.length > 0) {
+          updatedCommande.statuts_actifs = undefined;
+        }
+      }
+      
+      commandes[index] = updatedCommande;
+      this.commandes.set(commandes);
+    }
+    
+    // Appeler l'API pour mettre à jour en base de données
     this.apiService.put(ApiURI.UPDATE_STATUT_COMMANDE, {
       id_commande: commande.id_commande,
       statut: etapePrecedente
     }).subscribe({
       next: () => {
-        // Recharger les commandes après la mise à jour
-        this.loadCommandes();
+        // Mise à jour réussie, les données locales sont déjà à jour
       },
       error: (error) => {
         console.error('Erreur lors du retour en arrière:', error);
+        // En cas d'erreur, recharger pour restaurer l'état correct
+        this.loadCommandes();
       }
     });
   }

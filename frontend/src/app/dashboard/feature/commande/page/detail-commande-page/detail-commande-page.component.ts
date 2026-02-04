@@ -187,8 +187,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private restoreScrollPosition(scrollPosition: number): void {
     // Méthode robuste compatible Safari avec plusieurs tentatives
     const attemptScroll = (attempts: number = 0) => {
-      if (attempts > 10) {
-        // Arrêter après 10 tentatives
+      if (attempts > 20) {
+        // Arrêter après 20 tentatives (augmenté pour Safari)
         this.scrollRestored = true;
         this.isInitialLoad = false;
         return;
@@ -198,28 +198,49 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         // Vérifier que le document est prêt
         if (document.readyState === 'complete' || document.readyState === 'interactive') {
           // Essayer différentes méthodes de scroll pour compatibilité Safari
-          window.scrollTo(0, scrollPosition);
+          // Safari nécessite parfois plusieurs tentatives avec différentes méthodes
+          window.scrollTo({
+            top: scrollPosition,
+            left: 0,
+            behavior: 'auto' // 'auto' au lieu de 'smooth' pour Safari
+          });
           document.documentElement.scrollTop = scrollPosition;
           document.body.scrollTop = scrollPosition;
+          
+          // Pour Safari iOS, essayer aussi avec scrollIntoView si possible
+          if (scrollPosition > 0) {
+            const firstElement = document.body.firstElementChild;
+            if (firstElement) {
+              try {
+                firstElement.scrollTop = scrollPosition;
+              } catch (e) {
+                // Ignorer les erreurs
+              }
+            }
+          }
 
           // Vérifier si le scroll a fonctionné (avec une marge d'erreur de 5px)
-          const currentScroll = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-          if (Math.abs(currentScroll - scrollPosition) <= 5) {
-            this.scrollRestored = true;
-            this.isInitialLoad = false;
-          } else {
-            // Réessayer après un court délai
-            setTimeout(() => attemptScroll(attempts + 1), 50);
-          }
+          // Utiliser setTimeout pour laisser Safari appliquer le scroll
+          setTimeout(() => {
+            const currentScroll = this.getCurrentScrollPosition();
+            
+            if (Math.abs(currentScroll - scrollPosition) <= 5) {
+              this.scrollRestored = true;
+              this.isInitialLoad = false;
+            } else {
+              // Réessayer après un court délai (délai augmenté pour Safari)
+              setTimeout(() => attemptScroll(attempts + 1), 100);
+            }
+          }, 50);
         } else {
           // Attendre que le document soit prêt
-          setTimeout(() => attemptScroll(attempts + 1), 50);
+          setTimeout(() => attemptScroll(attempts + 1), 100);
         }
       });
     };
 
-    // Commencer la restauration après un court délai initial
-    setTimeout(() => attemptScroll(), 100);
+    // Commencer la restauration après un délai initial (augmenté pour Safari)
+    setTimeout(() => attemptScroll(), 150);
   }
 
   ngOnDestroy(): void {
@@ -231,8 +252,16 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
   private saveScrollPosition = (): void => {
     if (this.scrollKey) {
-      sessionStorage.setItem(this.scrollKey, window.scrollY.toString());
+      sessionStorage.setItem(this.scrollKey, this.getCurrentScrollPosition().toString());
     }
+  }
+
+  private getCurrentScrollPosition(): number {
+    // Méthode compatible avec tous les navigateurs, y compris Safari
+    return window.pageYOffset || 
+           document.documentElement.scrollTop || 
+           document.body.scrollTop || 
+           (window.scrollY !== undefined ? window.scrollY : 0);
   }
 
   loadCommande(id: string): void {
@@ -245,7 +274,6 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
           this.loadFichiers(id);
         }
         this.isLoading.set(false);
-        // Ne pas réinitialiser scrollRestored ici pour éviter la restauration lors des rechargements après actions utilisateur
       },
       error: (error) => {
         console.error('Erreur lors du chargement de la commande:', error);
@@ -818,19 +846,19 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       },
       support: {
         nom_support: formValue.support,
-        prix_support: formValue.prix_support ? parseFloat(formValue.prix_support) : null,
-        url_support: formValue.url_support,
+        prix_support: formValue.prix_support ? parseFloat(formValue.prix_support) : undefined,
+        url_support: formValue.url_support || undefined,
       },
       supports: formValue.supports && Array.isArray(formValue.supports) 
         ? formValue.supports
             .filter((s: any) => s && (s.nom_support || s.prix_support || s.url_support)) // Filtrer les supports complètement vides
             .map((s: any) => ({
-              nom_support: s.nom_support || null,
-              prix_support: s.prix_support !== null && s.prix_support !== undefined && s.prix_support !== '' ? parseFloat(String(s.prix_support)) : null,
-              url_support: s.url_support || null,
+              nom_support: s.nom_support || undefined,
+              prix_support: s.prix_support !== null && s.prix_support !== undefined && s.prix_support !== '' ? parseFloat(String(s.prix_support)) : undefined,
+              url_support: s.url_support || undefined,
               prix_unitaire: s.prix_unitaire !== undefined ? Boolean(s.prix_unitaire) : true,
-              nombre_unites: s.nombre_unites !== null && s.nombre_unites !== undefined && s.nombre_unites !== '' ? parseInt(String(s.nombre_unites), 10) : null,
-              prix_support_unitaire: s.prix_support_unitaire !== null && s.prix_support_unitaire !== undefined && s.prix_support_unitaire !== '' ? parseFloat(String(s.prix_support_unitaire)) : null,
+              nombre_unites: s.nombre_unites !== null && s.nombre_unites !== undefined && s.nombre_unites !== '' ? parseInt(String(s.nombre_unites), 10) : undefined,
+              prix_support_unitaire: s.prix_support_unitaire !== null && s.prix_support_unitaire !== undefined && s.prix_support_unitaire !== '' ? parseFloat(String(s.prix_support_unitaire)) : undefined,
             }))
         : [],
       personnalisation: {
@@ -844,13 +872,72 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     };
 
     const id = this.commande()!.id_commande;
+    const currentCommande = this.commande()!;
+    
+    // Mettre à jour localement immédiatement avec les nouvelles valeurs du formulaire
+    this.commande.set({
+      ...currentCommande,
+      produit: formValue.nom_commande,
+      deadline: formValue.deadline || undefined,
+      description: formValue.description,
+      quantité: formValue.quantité ? parseInt(formValue.quantité, 10) : undefined,
+      quantite_realisee: formValue.quantite_realisee !== null && formValue.quantite_realisee !== undefined && formValue.quantite_realisee !== '' ? parseInt(String(formValue.quantite_realisee), 10) : 0,
+      payé: formValue.payé || false,
+      commentaire_paye: formValue.commentaire_paye || undefined,
+      attente_reponse: formValue.attente_reponse ?? false,
+      mode_contact: formValue.mode_contact || undefined,
+      prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : undefined,
+      prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : undefined,
+      client: {
+        ...currentCommande.client,
+        nom: formValue.nom,
+        prénom: formValue.prenom,
+        téléphone: formValue.telephone,
+        mail: formValue.mail,
+        adresse: this.buildAdresseComplete(formValue.rue, formValue.code_postal, formValue.ville, formValue.pays) || undefined,
+        tva: formValue.tva,
+      },
+      support: formValue.support ? {
+        nom_support: formValue.support,
+        prix_support: formValue.prix_support ? parseFloat(formValue.prix_support) : undefined,
+        url_support: formValue.url_support || undefined,
+      } : undefined,
+      supports: formValue.supports && Array.isArray(formValue.supports) 
+        ? formValue.supports
+            .filter((s: any) => s && (s.nom_support || s.prix_support || s.url_support))
+            .map((s: any) => ({
+              nom_support: s.nom_support || undefined,
+              prix_support: s.prix_support !== null && s.prix_support !== undefined && s.prix_support !== '' ? parseFloat(String(s.prix_support)) : undefined,
+              url_support: s.url_support || undefined,
+              prix_unitaire: s.prix_unitaire !== undefined ? Boolean(s.prix_unitaire) : true,
+              nombre_unites: s.nombre_unites !== null && s.nombre_unites !== undefined && s.nombre_unites !== '' ? parseInt(String(s.nombre_unites), 10) : undefined,
+              prix_support_unitaire: s.prix_support_unitaire !== null && s.prix_support_unitaire !== undefined && s.prix_support_unitaire !== '' ? parseFloat(String(s.prix_support_unitaire)) : undefined,
+            }))
+        : [],
+      personnalisation: {
+        texte: formValue.texte_personnalisation,
+        police: formValue.police_ecriture,
+        couleur: Array.isArray(formValue.couleur) ? formValue.couleur : [],
+      },
+      gravure: {
+        dimensions: formValue.dimensions,
+      },
+    });
+    
+    // Réinitialiser le formulaire avec les nouvelles valeurs
+    this.initForm();
+    this.isEditMode.set(false);
+    
     this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${id}`, payload).subscribe({
       next: (response) => {
-        this.loadCommande(id);
-        this.isEditMode.set(false);
+        // Mise à jour réussie, les données locales sont déjà à jour
       },
       error: (error) => {
         console.error('Erreur lors de la mise à jour:', error);
+        // En cas d'erreur, restaurer l'état précédent
+        this.commande.set(currentCommande);
+        this.initForm();
+        this.isEditMode.set(true); // Remettre en mode édition pour permettre de réessayer
       }
     });
   }
@@ -865,7 +952,15 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
     const id = this.commande()!.id_commande;
     const payeValue = this.formGroup.get('payé')?.value || false;
-    const commentairePaye = this.formGroup.get('commentaire_paye')?.value || null;
+    const commentairePaye = this.formGroup.get('commentaire_paye')?.value || undefined;
+
+    // Mettre à jour localement immédiatement
+    const currentCommande = this.commande()!;
+    this.commande.set({
+      ...currentCommande,
+      payé: payeValue,
+      commentaire_paye: commentairePaye?.trim() || undefined
+    });
 
     // Envoyer uniquement les champs payé et commentaire_paye
     const payload: any = {
@@ -875,12 +970,16 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
     this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${id}`, payload).subscribe({
       next: () => {
-        // Recharger la commande pour avoir les données à jour
-        this.loadCommande(id);
+        // Mise à jour réussie, les données locales sont déjà à jour
       },
       error: (error) => {
         console.error('Erreur lors de la mise à jour du statut payé:', error);
-        // Revert la valeur en cas d'erreur
+        // En cas d'erreur, restaurer les valeurs précédentes
+        this.commande.set({
+          ...currentCommande,
+          payé: currentCommande.payé || false,
+          commentaire_paye: currentCommande.commentaire_paye || undefined
+        });
         this.formGroup.get('payé')?.setValue(!payeValue, { emitEvent: false });
       }
     });
@@ -911,17 +1010,29 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     if (isNaN(val) || val < 0) val = 0;
     if (val > quantiteTotale) val = quantiteTotale;
 
+    // Mettre à jour localement immédiatement
+    const currentCommande = this.commande()!;
+    this.commande.set({
+      ...currentCommande,
+      quantite_realisee: val
+    });
+
     const payload: any = {
       quantite_realisee: val,
     };
 
     this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${id}`, payload).subscribe({
       next: () => {
-        this.loadCommande(id);
+        // Mise à jour réussie, les données locales sont déjà à jour
       },
       error: (error) => {
         console.error('Erreur lors de la mise à jour des PCs réalisés:', error);
-        this.formGroup.get('quantite_realisee')?.setValue(this.commande()?.quantite_realisee ?? 0, { emitEvent: false });
+        // En cas d'erreur, restaurer la valeur précédente
+        this.commande.set({
+          ...currentCommande,
+          quantite_realisee: currentCommande.quantite_realisee ?? 0
+        });
+        this.formGroup.get('quantite_realisee')?.setValue(currentCommande.quantite_realisee ?? 0, { emitEvent: false });
       }
     });
   }
@@ -932,6 +1043,13 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const id = this.commande()!.id_commande;
     const attenteReponseValue = this.formGroup.get('attente_reponse')?.value ?? false;
 
+    // Mettre à jour localement immédiatement
+    const currentCommande = this.commande()!;
+    this.commande.set({
+      ...currentCommande,
+      attente_reponse: attenteReponseValue
+    });
+
     // Envoyer uniquement le champ attente_reponse
     const payload: any = {
       attente_reponse: attenteReponseValue,
@@ -939,12 +1057,15 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
     this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${id}`, payload).subscribe({
       next: () => {
-        // Recharger la commande pour avoir les données à jour
-        this.loadCommande(id);
+        // Mise à jour réussie, les données locales sont déjà à jour
       },
       error: (error) => {
         console.error('Erreur lors de la mise à jour de l\'attente réponse:', error);
-        // Revert la valeur en cas d'erreur
+        // En cas d'erreur, restaurer la valeur précédente
+        this.commande.set({
+          ...currentCommande,
+          attente_reponse: currentCommande.attente_reponse ?? false
+        });
         this.formGroup.get('attente_reponse')?.setValue(!attenteReponseValue, { emitEvent: false });
       }
     });
@@ -973,15 +1094,6 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     }
     
     const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
-    
-    // Pour les 4 dernières colonnes : ils sont cochés seulement quand ils sont complétés
-    // Si un statut final est dans statuts_actifs, c'est qu'il est actif mais pas encore complété (donc pas coché)
-    if (statutsFinaux.includes(statut)) {
-      // Un statut final est coché seulement s'il n'est PAS dans statuts_actifs (il a été complété)
-      return cmd.statuts_actifs ? !cmd.statuts_actifs.includes(statut) : false;
-    }
-    
-    // Pour les autres statuts, vérifier si c'est une étape précédente (complétée)
     const ordreEtapes: StatutCommande[] = [
       StatutCommande.EN_ATTENTE_INFORMATION,
       StatutCommande.A_MODELLISER_PREPARER,
@@ -990,40 +1102,37 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       StatutCommande.A_PRENDRE_EN_PHOTO,
     ];
     
+    // Pour les 4 statuts finaux : ils sont cochés seulement quand ils sont complétés
+    // Si un statut final est dans statuts_actifs, c'est qu'il est actif mais pas encore complété (donc pas coché)
+    if (statutsFinaux.includes(statut)) {
+      // Un statut final est coché seulement s'il n'est PAS dans statuts_actifs (il a été complété)
+      return cmd.statuts_actifs ? !cmd.statuts_actifs.includes(statut) : false;
+    }
+    
+    // Si on est dans les colonnes finales (statuts_actifs existe), toutes les étapes précédentes sont complétées
+    const isInStatutsFinaux = statutsFinaux.some(s => cmd.statuts_actifs?.includes(s));
+    
+    if (isInStatutsFinaux) {
+      // Toutes les étapes jusqu'à "À Prendre en photo" inclus sont complétées
+      const indexStatutInOrdre = ordreEtapes.indexOf(statut);
+      if (indexStatutInOrdre !== -1 && indexStatutInOrdre <= ordreEtapes.indexOf(StatutCommande.A_PRENDRE_EN_PHOTO)) {
+        return true;
+      }
+    }
+    
+    // Pour les autres statuts, vérifier si c'est une étape précédente (complétée)
     const indexStatut = ordreEtapes.indexOf(statut);
     const indexActuel = ordreEtapes.indexOf(cmd.statut_commande);
     
     // Si le statut demandé est une étape précédente, elle est complétée (cochée)
-    // Mais aussi si on est dans les colonnes finales, toutes les étapes précédentes sont complétées
     if (indexStatut !== -1 && indexActuel !== -1 && indexStatut < indexActuel) {
       return true;
     }
     
-    // Si on est dans les colonnes finales (statuts_actifs existe), toutes les étapes précédentes sont complétées
-    if (statutsFinaux.some(s => cmd.statuts_actifs?.includes(s))) {
-      const indexStatutInOrdre = ordreEtapes.indexOf(statut);
-      if (indexStatutInOrdre !== -1 && indexStatutInOrdre < ordreEtapes.indexOf(StatutCommande.A_PRENDRE_EN_PHOTO)) {
-        return true;
-      }
-    }
-    
     // "À Prendre en photo" est complétée si les statuts finaux sont créés (statuts_actifs existe)
-    // OU si au moins un des 3 statuts finaux est complété (pas dans statuts_actifs)
     if (statut === StatutCommande.A_PRENDRE_EN_PHOTO) {
-      // Si statuts_actifs existe, "À Prendre en photo" est complétée (même si les statuts finaux ne sont pas encore complétés)
-      if (cmd.statuts_actifs && cmd.statuts_actifs.length > 0) {
-        return true;
-      }
-      return false;
-    }
-    
-    // Si on est dans les colonnes finales (statuts_actifs existe), les autres étapes précédentes sont complétées
-    if (statutsFinaux.some(s => cmd.statuts_actifs?.includes(s))) {
-      // Les autres étapes précédentes sont complétées
-      const indexStatutInOrdre = ordreEtapes.indexOf(statut);
-      if (indexStatutInOrdre !== -1 && indexStatutInOrdre < ordreEtapes.indexOf(StatutCommande.A_PRENDRE_EN_PHOTO)) {
-        return true;
-      }
+      // Si statuts_actifs existe, "À Prendre en photo" est complétée
+      return isInStatutsFinaux;
     }
     
     // Le statut actuel n'est PAS coché (il est en cours, pas encore fait)
@@ -1149,34 +1258,60 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     ];
     const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
 
+    // Fonction helper pour mettre à jour localement
+    const updateLocalCommande = (updates: Partial<Commande>) => {
+      const currentCmd = this.commande()!;
+      this.commande.set({
+        ...currentCmd,
+        ...updates
+      });
+      // Réinitialiser le formulaire pour refléter les changements
+      this.initForm();
+    };
+
     // Gestion du statut ANNULEE
     if (statut === StatutCommande.ANNULEE) {
       if (target.checked) {
         // Cocher ANNULEE : passer la commande au statut ANNULEE
+        updateLocalCommande({
+          statut_commande: StatutCommande.ANNULEE,
+          statuts_actifs: undefined
+        });
+        
         this.apiService.put(ApiURI.UPDATE_STATUT_COMMANDE, {
           id_commande: cmd.id_commande,
           statut: StatutCommande.ANNULEE
         }).subscribe({
           next: () => {
-            this.loadCommande(cmd.id_commande);
+            // Mise à jour réussie, les données locales sont déjà à jour
           },
           error: (error) => {
             console.error('Erreur lors de la mise à jour du statut:', error);
             target.checked = !target.checked; // Revert checkbox
+            // Restaurer l'état précédent
+            this.commande.set(cmd);
+            this.initForm();
           }
         });
       } else {
         // Décocher ANNULEE : revenir au statut précédent (par défaut EN_ATTENTE_INFORMATION)
+        updateLocalCommande({
+          statut_commande: StatutCommande.EN_ATTENTE_INFORMATION
+        });
+        
         this.apiService.put(ApiURI.UPDATE_STATUT_COMMANDE, {
           id_commande: cmd.id_commande,
           statut: StatutCommande.EN_ATTENTE_INFORMATION
         }).subscribe({
           next: () => {
-            this.loadCommande(cmd.id_commande);
+            // Mise à jour réussie, les données locales sont déjà à jour
           },
           error: (error) => {
             console.error('Erreur lors de la mise à jour du statut:', error);
             target.checked = !target.checked; // Revert checkbox
+            // Restaurer l'état précédent
+            this.commande.set(cmd);
+            this.initForm();
           }
         });
       }
@@ -1192,16 +1327,24 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     // Si on décoche "À Prendre en photo", décocher automatiquement tous les 4 statuts finaux
     if (!target.checked && statut === StatutCommande.A_PRENDRE_EN_PHOTO) {
       // Décocher "À Prendre en photo" (retour à "À Prendre en photo")
+      updateLocalCommande({
+        statut_commande: StatutCommande.A_PRENDRE_EN_PHOTO,
+        statuts_actifs: undefined
+      });
+      
       this.apiService.put(ApiURI.UPDATE_STATUT_COMMANDE, {
         id_commande: cmd.id_commande,
         statut: StatutCommande.A_PRENDRE_EN_PHOTO
       }).subscribe({
         next: () => {
-          this.loadCommande(cmd.id_commande);
+          // Mise à jour réussie, les données locales sont déjà à jour
         },
         error: (error) => {
           console.error('Erreur lors de la mise à jour du statut:', error);
           target.checked = !target.checked; // Revert checkbox
+          // Restaurer l'état précédent
+          this.commande.set(cmd);
+          this.initForm();
         }
       });
       return;
@@ -1215,18 +1358,28 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     // Si on décoche un des 4 statuts finaux complétés
     if (!target.checked && statutsFinaux.includes(statut)) {
       // Quand on décoche un statut final complété, on le remet dans statuts_actifs
-      // Pour cela, on doit recréer les statuts_actifs avec ce statut
-      // Mais en fait, le backend gère déjà cela : décocher un statut final le remet dans statuts_actifs
+      const currentStatutsActifs = cmd.statuts_actifs || [];
+      const newStatutsActifs = currentStatutsActifs.includes(statut) 
+        ? currentStatutsActifs 
+        : [...currentStatutsActifs, statut];
+      
+      updateLocalCommande({
+        statuts_actifs: newStatutsActifs.length > 0 ? newStatutsActifs : undefined
+      });
+      
       this.apiService.put(ApiURI.UPDATE_STATUT_COMMANDE, {
         id_commande: cmd.id_commande,
         statut: statut
       }).subscribe({
         next: () => {
-          this.loadCommande(cmd.id_commande);
+          // Mise à jour réussie, les données locales sont déjà à jour
         },
         error: (error) => {
           console.error('Erreur lors de la mise à jour du statut:', error);
           target.checked = !target.checked; // Revert checkbox
+          // Restaurer l'état précédent
+          this.commande.set(cmd);
+          this.initForm();
         }
       });
       return;
@@ -1235,16 +1388,24 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     // Si on décoche une étape précédente (y compris si la commande est terminée)
     if (!target.checked && (isEtapePrecedente || cmd.statut_commande === StatutCommande.TERMINE)) {
       // Si la commande est terminée et qu'on décoche une étape, elle doit revenir dans "Commandes en cours"
+      updateLocalCommande({
+        statut_commande: statut,
+        statuts_actifs: undefined
+      });
+      
       this.apiService.put(ApiURI.UPDATE_STATUT_COMMANDE, {
         id_commande: cmd.id_commande,
         statut: statut
       }).subscribe({
         next: () => {
-          this.loadCommande(cmd.id_commande);
+          // Mise à jour réussie, les données locales sont déjà à jour
         },
         error: (error) => {
           console.error('Erreur lors de la mise à jour du statut:', error);
           target.checked = !target.checked; // Revert checkbox
+          // Restaurer l'état précédent
+          this.commande.set(cmd);
+          this.initForm();
         }
       });
       return;
@@ -1252,26 +1413,82 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
     // Si on coche le statut actuel ou un statut suivant
     if (target.checked) {
+      // Mettre à jour localement selon le type de statut
+      if (statutsFinaux.includes(statut)) {
+        // Pour les statuts finaux : retirer de statuts_actifs (marquer comme terminé)
+        const currentCmd = this.commande()!;
+        const currentStatutsActifs = currentCmd.statuts_actifs || [];
+        const newStatutsActifs = currentStatutsActifs.filter(s => s !== statut);
+        
+        // Si tous les statuts finaux sont complétés, passer la commande à TERMINE
+        if (newStatutsActifs.length === 0) {
+          updateLocalCommande({
+            statut_commande: StatutCommande.TERMINE,
+            statuts_actifs: undefined
+          });
+        } else {
+          updateLocalCommande({
+            statuts_actifs: newStatutsActifs
+          });
+        }
+      } else {
+        // Pour les autres statuts : passer au statut suivant dans l'ordre
+        const currentIndex = ordreEtapes.indexOf(statut);
+        if (currentIndex !== -1 && currentIndex < ordreEtapes.length - 1) {
+          // Passer au statut suivant
+          const nextStatut = ordreEtapes[currentIndex + 1];
+          updateLocalCommande({
+            statut_commande: nextStatut
+          });
+        } else if (statut === StatutCommande.A_PRENDRE_EN_PHOTO) {
+          // Si on termine "À Prendre en photo", créer statuts_actifs avec les 4 statuts finaux
+          updateLocalCommande({
+            statut_commande: statut,
+            statuts_actifs: [...statutsFinaux]
+          });
+        } else {
+          // Pour les autres cas, mettre à jour le statut directement
+          updateLocalCommande({
+            statut_commande: statut
+          });
+        }
+      }
+      
       this.apiService.put(ApiURI.UPDATE_STATUT_COMMANDE, {
         id_commande: cmd.id_commande,
         statut: statut
       }).subscribe({
         next: () => {
-          this.loadCommande(cmd.id_commande);
           // Si on a fini la finition : compléter automatiquement le compteur quantité réalisée au max
           if (statut === StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE) {
             const qteTotale = cmd.quantité ?? 1;
+            const updatedCommande = this.commande()!;
+            updateLocalCommande({
+              quantite_realisee: qteTotale
+            });
+            
             this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${cmd.id_commande}`, {
               quantite_realisee: qteTotale
             }).subscribe({
-              next: () => this.loadCommande(cmd.id_commande),
-              error: (err) => console.error('Erreur mise à jour quantité réalisée:', err)
+              next: () => {
+                // Mise à jour réussie, les données locales sont déjà à jour
+              },
+              error: (err) => {
+                console.error('Erreur mise à jour quantité réalisée:', err);
+                // Restaurer la quantité précédente
+                updateLocalCommande({
+                  quantite_realisee: cmd.quantite_realisee ?? 0
+                });
+              }
             });
           }
         },
         error: (error) => {
           console.error('Erreur lors de la mise à jour du statut:', error);
           target.checked = !target.checked; // Revert checkbox
+          // Restaurer l'état précédent
+          this.commande.set(cmd);
+          this.initForm();
         }
       });
     }

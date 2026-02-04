@@ -263,6 +263,16 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
   background: #dee2e6;
+
+  &.deadline-warning {
+    background: rgba(255, 152, 0, 0.25); // Orange plus foncé au survol
+    border-color: rgba(255, 152, 0, 0.5);
+  }
+
+  &.deadline-danger {
+    background: rgba(244, 67, 54, 0.25); // Rouge plus foncé au survol
+    border-color: rgba(244, 67, 54, 0.5);
+  }
 }
 
 @keyframes slideInFade {
@@ -649,6 +659,28 @@
 
 .mobile-card:active {
   background: #dee2e6;
+
+  &.deadline-warning {
+    background: rgba(255, 152, 0, 0.25); // Orange plus foncé au clic
+    border-color: rgba(255, 152, 0, 0.5);
+  }
+
+  &.deadline-danger {
+    background: rgba(244, 67, 54, 0.25); // Rouge plus foncé au clic
+    border-color: rgba(244, 67, 54, 0.5);
+  }
+}
+
+.mobile-card:hover {
+  &.deadline-warning {
+    background: rgba(255, 152, 0, 0.25); // Orange plus foncé au survol
+    border-color: rgba(255, 152, 0, 0.5);
+  }
+
+  &.deadline-danger {
+    background: rgba(244, 67, 54, 0.25); // Rouge plus foncé au survol
+    border-color: rgba(244, 67, 54, 0.5);
+  }
 }
 
 .mobile-card__header {

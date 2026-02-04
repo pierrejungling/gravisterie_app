@@ -364,23 +364,62 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     // Pour les 4 dernières colonnes, vérifier aussi statuts_actifs
     const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
     
+    let commandesFiltrees: Commande[] = [];
+    
     if (statutsFinaux.includes(statut)) {
       // Afficher les commandes qui ont ce statut dans statuts_actifs
-      return commandesNonTerminees.filter(c => 
+      commandesFiltrees = commandesNonTerminees.filter(c => 
         c.statuts_actifs && c.statuts_actifs.includes(statut)
       );
-    }
-    
-    // Pour "À Prendre en photo", exclure les commandes qui ont déjà des statuts_actifs
-    // (car elles sont passées aux 4 dernières colonnes)
-    if (statut === StatutCommande.A_PRENDRE_EN_PHOTO) {
-      return commandesNonTerminees.filter(c => 
+    } else if (statut === StatutCommande.A_PRENDRE_EN_PHOTO) {
+      // Pour "À Prendre en photo", exclure les commandes qui ont déjà des statuts_actifs
+      // (car elles sont passées aux 4 dernières colonnes)
+      commandesFiltrees = commandesNonTerminees.filter(c => 
         c.statut_commande === statut && (!c.statuts_actifs || c.statuts_actifs.length === 0)
       );
+    } else {
+      // Pour les autres colonnes, utiliser le statut principal
+      commandesFiltrees = commandesNonTerminees.filter(c => c.statut_commande === statut);
     }
     
-    // Pour les autres colonnes, utiliser le statut principal
-    return commandesNonTerminees.filter(c => c.statut_commande === statut);
+    // Trier les commandes selon le type de deadline
+    return this.sortCommandesByDeadline(commandesFiltrees);
+  }
+
+  /**
+   * Trie les commandes selon le type de deadline :
+   * 1. Deadlines passées (danger) -> en haut
+   * 2. Deadlines dans moins de 7 jours (warning) -> juste après
+   * 3. Le reste -> trié par date d'ajout (date_commande) - plus récentes en premier
+   */
+  private sortCommandesByDeadline(commandes: Commande[]): Commande[] {
+    return [...commandes].sort((a, b) => {
+      const statusA = this.getDeadlineStatus(a);
+      const statusB = this.getDeadlineStatus(b);
+      
+      // Priorité 1 : Deadlines passées (danger) en premier
+      if (statusA === 'danger' && statusB !== 'danger') {
+        return -1;
+      }
+      if (statusA !== 'danger' && statusB === 'danger') {
+        return 1;
+      }
+      
+      // Priorité 2 : Deadlines dans moins de 7 jours (warning) après les passées
+      if (statusA === 'warning' && statusB !== 'warning' && statusB !== 'danger') {
+        return -1;
+      }
+      if (statusA !== 'warning' && statusA !== 'danger' && statusB === 'warning') {
+        return 1;
+      }
+      
+      // Priorité 3 : Pour les commandes avec le même statut de deadline, trier par date d'ajout
+      // Plus anciennes en premier (date_commande croissante)
+      const dateA = a.date_commande ? new Date(a.date_commande).getTime() : 0;
+      const dateB = b.date_commande ? new Date(b.date_commande).getTime() : 0;
+      
+      return dateA - dateB; // Croissant : plus anciennes en premier
+    });
   }
 
   onCheckboxChange(commande: Commande, statut: StatutCommande): void {

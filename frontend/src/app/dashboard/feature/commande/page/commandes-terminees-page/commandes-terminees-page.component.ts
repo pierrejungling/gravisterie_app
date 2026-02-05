@@ -18,6 +18,7 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
   commandes: WritableSignal<Commande[]> = signal([]);
   isLoading: WritableSignal<boolean> = signal(false);
   private scrollRestored: boolean = false;
+  groupMode: WritableSignal<'year' | 'month'> = signal('month');
   
   private readonly apiService: ApiService = inject(ApiService);
   private readonly router: Router = inject(Router);
@@ -49,6 +50,14 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
       const dateB = new Date(b.date_commande).getTime();
       return dateB - dateA; // Tri décroissant (plus récentes en premier)
     });
+  });
+
+  groupedCommandesTerminees = computed(() => {
+    return this.groupByPeriod(this.commandesTerminees());
+  });
+
+  groupedCommandesAnnulees = computed(() => {
+    return this.groupByPeriod(this.commandesAnnulees());
   });
 
   isCommandeAnnulee(commande: Commande): boolean {
@@ -173,6 +182,52 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
     } catch {
       return 'N/A';
     }
+  }
+
+  setGroupMode(mode: 'year' | 'month'): void {
+    this.groupMode.set(mode);
+  }
+
+  private groupByPeriod(commandes: Commande[]): Array<{ label: string; commandes: Commande[]; total: number }> {
+    const mode = this.groupMode();
+    const groups = new Map<string, { label: string; commandes: Commande[]; sortKey: string; total: number }>();
+
+    for (const cmd of commandes) {
+      const date = new Date(cmd.date_commande);
+      if (Number.isNaN(date.getTime())) {
+        const key = 'unknown';
+        if (!groups.has(key)) {
+          groups.set(key, { label: 'Date inconnue', commandes: [], sortKey: '0000-00', total: 0 });
+        }
+        const group = groups.get(key)!;
+        group.commandes.push(cmd);
+        group.total += Number(cmd.prix_final) || 0;
+        continue;
+      }
+
+      const year = date.getFullYear();
+      const month = date.getMonth(); // 0-11
+      if (mode === 'year') {
+        const key = `${year}`;
+        if (!groups.has(key)) {
+          groups.set(key, { label: `${year}`, commandes: [], sortKey: `${year}`, total: 0 });
+        }
+        const group = groups.get(key)!;
+        group.commandes.push(cmd);
+        group.total += Number(cmd.prix_final) || 0;
+      } else {
+        const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+        const label = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        if (!groups.has(key)) {
+          groups.set(key, { label, commandes: [], sortKey: key, total: 0 });
+        }
+        const group = groups.get(key)!;
+        group.commandes.push(cmd);
+        group.total += Number(cmd.prix_final) || 0;
+      }
+    }
+
+    return Array.from(groups.values()).sort((a, b) => b.sortKey.localeCompare(a.sortKey));
   }
 
   trackByCommandeId(index: number, commande: Commande): string {

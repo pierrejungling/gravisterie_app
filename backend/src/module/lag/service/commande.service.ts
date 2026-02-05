@@ -352,7 +352,7 @@ export class CommandeService {
 
         const originalNom = commande.produit || 'Commande sans nom';
         const payload: AjouterCommandePayload = {
-            nom_commande: `Copie : ${originalNom}`,
+            nom_commande: `Copie | ${originalNom}`,
             deadline: undefined,
             coordonnees_contact: {
                 nom: commande.client?.nom ?? undefined,

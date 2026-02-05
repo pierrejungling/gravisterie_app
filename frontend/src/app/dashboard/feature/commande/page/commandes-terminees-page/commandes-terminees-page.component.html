@@ -4,9 +4,27 @@
   <div class="commandes-terminees-container">
     <div class="page-header">
       <h1 class="page-title">Commandes terminées / annulées</h1>
-      <button class="btn-navigation" (click)="navigateToEnCours()">
-        Voir les commandes en cours
-      </button>
+      <div class="page-header__actions">
+        <div class="group-mode group-mode--desktop">
+          <button
+            type="button"
+            class="group-mode__btn"
+            [class.active]="groupMode() === 'month'"
+            (click)="setGroupMode('month')">
+            Par mois
+          </button>
+          <button
+            type="button"
+            class="group-mode__btn"
+            [class.active]="groupMode() === 'year'"
+            (click)="setGroupMode('year')">
+            Par année
+          </button>
+        </div>
+        <button class="btn-navigation" (click)="navigateToEnCours()">
+          Voir les commandes en cours
+        </button>
+      </div>
     </div>
 
     <div class="loading-area" *ngIf="isLoading()">
@@ -14,47 +32,66 @@
     </div>
 
     <div class="commandes-list" *ngIf="!isLoading()">
+      <div class="group-mode group-mode--mobile-top">
+        <button
+          type="button"
+          class="group-mode__btn"
+          [class.active]="groupMode() === 'month'"
+          (click)="setGroupMode('month')">
+          Par mois
+        </button>
+        <button
+          type="button"
+          class="group-mode__btn"
+          [class.active]="groupMode() === 'year'"
+          (click)="setGroupMode('year')">
+          Par année
+        </button>
+      </div>
       <!-- Bloc Commandes terminées -->
       <div class="commandes-section">
         <h2 class="section-title">Commandes terminées</h2>
-        <div class="commandes-grid">
-          <div 
-            *ngIf="commandesTerminees().length === 0" 
-            class="empty-state">
-            <p class="empty-message">Aucune commande terminée</p>
-          </div>
+        <div 
+          *ngIf="commandesTerminees().length === 0" 
+          class="empty-state">
+          <p class="empty-message">Aucune commande terminée</p>
+        </div>
 
-          <div 
-            *ngFor="let commande of commandesTerminees(); trackBy: trackByCommandeId" 
-            class="commande-card"
-            [title]="commande.produit || 'Commande #' + commande.id_commande"
-            (click)="onCommandeClick(commande)">
-            <span
-              class="payment-indicator payment-indicator--unpaid"
-              *ngIf="!commande['payé'] && commande.prix_final && commande.prix_final > 0">
-              Non payé
-            </span>
-            <div class="commande-header">
-              <h3 class="commande-title">
-                {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
-              </h3>
-              <span class="commande-status-badge">
-                Terminée
+        <div class="commandes-group" *ngFor="let group of groupedCommandesTerminees()">
+          <h3 class="group-title">{{ group.label }} | {{ group.total | number:'1.0-2' }} €</h3>
+          <div class="commandes-grid">
+            <div 
+              *ngFor="let commande of group.commandes; trackBy: trackByCommandeId" 
+              class="commande-card"
+              [title]="commande.produit || 'Commande #' + commande.id_commande"
+              (click)="onCommandeClick(commande)">
+              <span
+                class="payment-indicator payment-indicator--unpaid"
+                *ngIf="!commande['payé'] && commande.prix_final && commande.prix_final > 0">
+                Non payé
               </span>
-            </div>
-            <div class="commande-info">
-              <p class="commande-client">
-                <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
-              </p>
-              <p class="commande-date">
-                <strong>Date de commande :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
-              </p>
-              <p class="commande-deadline" *ngIf="commande.deadline">
-                <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
-              </p>
-              <p class="commande-prix" *ngIf="commande.prix_final">
-                <strong>Prix final :</strong>&nbsp;{{ commande.prix_final }} €
-              </p>
+              <div class="commande-header">
+                <h3 class="commande-title">
+                  {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
+                </h3>
+                <span class="commande-status-badge">
+                  Terminée
+                </span>
+              </div>
+              <div class="commande-info">
+                <p class="commande-client">
+                  <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
+                </p>
+                <p class="commande-date">
+                  <strong>Date de commande :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
+                </p>
+                <p class="commande-deadline" *ngIf="commande.deadline">
+                  <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
+                </p>
+                <p class="commande-prix" *ngIf="commande.prix_final">
+                  <strong>Prix final :</strong>&nbsp;{{ commande.prix_final }} €
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -63,44 +100,47 @@
       <!-- Bloc Commandes annulées -->
       <div class="commandes-section">
         <h2 class="section-title">Commandes annulées</h2>
-        <div class="commandes-grid">
-          <div 
-            *ngIf="commandesAnnulees().length === 0" 
-            class="empty-state">
-            <p class="empty-message">Aucune commande annulée</p>
-          </div>
+        <div 
+          *ngIf="commandesAnnulees().length === 0" 
+          class="empty-state">
+          <p class="empty-message">Aucune commande annulée</p>
+        </div>
 
-          <div 
-            *ngFor="let commande of commandesAnnulees(); trackBy: trackByCommandeId" 
-            class="commande-card commande-annulee"
-            [title]="commande.produit || 'Commande #' + commande.id_commande"
-            (click)="onCommandeClick(commande)">
-            <span
-              class="payment-indicator payment-indicator--unpaid"
-              *ngIf="!commande['payé'] && commande.prix_final && commande.prix_final > 0">
-              Non payé
-            </span>
-            <div class="commande-header">
-              <h3 class="commande-title">
-                {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
-              </h3>
-              <span class="commande-status-badge badge-annulee">
-                Annulée
+        <div class="commandes-group" *ngFor="let group of groupedCommandesAnnulees()">
+          <h3 class="group-title">{{ group.label }} | {{ group.total | number:'1.0-2' }} €</h3>
+          <div class="commandes-grid">
+            <div 
+              *ngFor="let commande of group.commandes; trackBy: trackByCommandeId" 
+              class="commande-card commande-annulee"
+              [title]="commande.produit || 'Commande #' + commande.id_commande"
+              (click)="onCommandeClick(commande)">
+              <span
+                class="payment-indicator payment-indicator--unpaid"
+                *ngIf="!commande['payé'] && commande.prix_final && commande.prix_final > 0">
+                Non payé
               </span>
-            </div>
-            <div class="commande-info">
-              <p class="commande-client">
-                <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
-              </p>
-              <p class="commande-date">
-                <strong>Date de commande :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
-              </p>
-              <p class="commande-deadline" *ngIf="commande.deadline">
-                <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
-              </p>
-              <p class="commande-prix" *ngIf="commande.prix_final">
-                <strong>Prix final :</strong>&nbsp;{{ commande.prix_final }} €
-              </p>
+              <div class="commande-header">
+                <h3 class="commande-title">
+                  {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
+                </h3>
+                <span class="commande-status-badge badge-annulee">
+                  Annulée
+                </span>
+              </div>
+              <div class="commande-info">
+                <p class="commande-client">
+                  <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
+                </p>
+                <p class="commande-date">
+                  <strong>Date de commande :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
+                </p>
+                <p class="commande-deadline" *ngIf="commande.deadline">
+                  <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
+                </p>
+                <p class="commande-prix" *ngIf="commande.prix_final">
+                  <strong>Prix final :</strong>&nbsp;{{ commande.prix_final }} €
+                </p>
+              </div>
             </div>
           </div>
         </div>

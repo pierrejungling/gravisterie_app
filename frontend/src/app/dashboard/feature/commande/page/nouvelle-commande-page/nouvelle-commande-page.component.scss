@@ -181,13 +181,25 @@
   }
 
   &.btn-toggle-prix {
-    background: var(--color-background-light);
-    border: 1px solid var(--color-input-border);
-    color: var(--color-text);
+    background: var(--btn-toggle-prix-bg);
+    border: 1px solid var(--btn-toggle-prix-border);
+    color: var(--btn-toggle-prix-color);
 
     &:hover {
-      background: var(--color-background);
-      border-color: var(--color-input-border);
+      background: #bbdefb;
+      border-color: #64b5f6;
+    }
+
+    :root[data-theme="dark"] &,
+    [data-theme="dark"] & {
+      color: #ffffff !important;
+    }
+
+    :root[data-theme="dark"] &:hover,
+    [data-theme="dark"] &:hover {
+      background: #0d47a1 !important;
+      border-color: #0277bd !important;
+      color: #ffffff !important;
     }
   }
 
@@ -225,21 +237,40 @@
   }
 
   &.btn-save {
-    background: var(--color-background-light);
-    border: 1px solid var(--color-success);
-    color: var(--color-success);
+    background: var(--btn-save-bg);
+    border: 1px solid var(--btn-save-border);
+    color: var(--btn-save-color);
     font-weight: 500;
     line-height: 1.5;
 
     &:hover:not(:disabled) {
-      background: rgba(34, 197, 94, 0.1);
-      border-color: var(--color-success);
+      background: #c8e6c9;
+      border-color: #388e3c;
     }
 
     &:disabled {
       background: var(--color-background-light);
       border-color: var(--color-border);
       color: var(--color-text-light);
+    }
+
+    :root[data-theme="dark"] &:not(:disabled),
+    [data-theme="dark"] &:not(:disabled) {
+      color: #ffffff !important;
+    }
+
+    :root[data-theme="dark"] &:hover:not(:disabled),
+    [data-theme="dark"] &:hover:not(:disabled) {
+      background: #1b5e20 !important;
+      border-color: #2e7d32 !important;
+      color: #ffffff !important;
+    }
+
+    :root[data-theme="dark"] &:disabled,
+    [data-theme="dark"] &:disabled {
+      background: #424242 !important;
+      border-color: #616161 !important;
+      color: #9e9e9e !important;
     }
   }
 }
@@ -743,8 +774,8 @@
 
     &:disabled,
     &[readonly] {
-      background: #f5f5f5 !important;
-      color: #666 !important;
+      background: var(--color-background-light) !important;
+      color: var(--color-text-light) !important;
       cursor: not-allowed !important;
       opacity: 0.7;
     }
@@ -1458,6 +1489,7 @@
 
 .delete-confirm-body {
   padding: 1.5rem;
+  background: var(--color-secondary);
 
   p {
     margin: 0 0 1rem 0;
@@ -1467,7 +1499,7 @@
   }
 
   .delete-warning {
-    color: #dc3545;
+    color: var(--color-error);
     font-weight: 500;
     margin-bottom: 0;
   }
@@ -1475,11 +1507,11 @@
 
 .delete-confirm-actions {
   padding: 1rem 1.5rem;
-  border-top: 1px solid #e0e0e0;
+  border-top: 1px solid var(--color-input-border);
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  background: #f8f9fa;
+  background: var(--color-background-light);
 }
 
 .btn-cancel-delete,
@@ -1503,12 +1535,68 @@
 }
 
 .btn-confirm-delete {
-  background: #dc3545;
+  background: var(--color-error);
   color: white;
 }
 
 .btn-confirm-delete:hover {
   background: #c82333;
+}
+
+/* Mode sombre : popup confirmation suppression */
+:root[data-theme="dark"] .delete-confirm-popup,
+[data-theme="dark"] .delete-confirm-popup {
+  background: var(--color-secondary);
+  border: 1px solid var(--color-input-border);
+}
+
+:root[data-theme="dark"] .delete-confirm-header,
+[data-theme="dark"] .delete-confirm-header {
+  background: var(--color-background-light);
+  border-bottom-color: var(--color-input-border);
+}
+
+:root[data-theme="dark"] .delete-confirm-header h3,
+[data-theme="dark"] .delete-confirm-header h3 {
+  color: #ef9a9a;
+}
+
+:root[data-theme="dark"] .delete-confirm-body,
+[data-theme="dark"] .delete-confirm-body {
+  background: var(--color-secondary);
+}
+
+:root[data-theme="dark"] .delete-confirm-body .delete-warning,
+[data-theme="dark"] .delete-confirm-body .delete-warning {
+  color: #ef9a9a;
+}
+
+:root[data-theme="dark"] .delete-confirm-actions,
+[data-theme="dark"] .delete-confirm-actions {
+  background: var(--color-background-light);
+  border-top-color: var(--color-input-border);
+}
+
+:root[data-theme="dark"] .btn-cancel-delete,
+[data-theme="dark"] .btn-cancel-delete {
+  background: #5a6268;
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .btn-cancel-delete:hover,
+[data-theme="dark"] .btn-cancel-delete:hover {
+  background: #495057;
+}
+
+:root[data-theme="dark"] .btn-confirm-delete,
+[data-theme="dark"] .btn-confirm-delete {
+  background: #c62828;
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .btn-confirm-delete:hover,
+[data-theme="dark"] .btn-confirm-delete:hover {
+  background: #b71c1c;
 }
 
 @keyframes fadeInOverlay {
@@ -1621,13 +1709,26 @@
   }
 
   .form-actions-footer .btn-footer-prix {
-    background: #e3f2fd;
-    border-color: #90caf9;
-    color: #1976d2;
+    background: var(--btn-toggle-prix-bg);
+    border: 1px solid var(--btn-toggle-prix-border);
+    color: var(--btn-toggle-prix-color);
   }
   .form-actions-footer .btn-footer-prix:hover {
     background: #bbdefb;
     border-color: #64b5f6;
+  }
+
+  :root[data-theme="dark"] .form-actions-footer .btn-footer-prix,
+  [data-theme="dark"] .form-actions-footer .btn-footer-prix {
+    background: #1565c0 !important;
+    border-color: #0d47a1 !important;
+    color: #ffffff !important;
+  }
+  :root[data-theme="dark"] .form-actions-footer .btn-footer-prix:hover,
+  [data-theme="dark"] .form-actions-footer .btn-footer-prix:hover {
+    background: #0d47a1 !important;
+    border-color: #0277bd !important;
+    color: #ffffff !important;
   }
 
   .form-actions-footer .btn-footer-delete {
@@ -1689,21 +1790,40 @@
   }
 
   .form-actions-footer .btn-footer.btn-primary {
-    background: var(--color-background-light);
-    border-color: var(--color-success);
-    color: var(--color-success);
+    background: var(--btn-save-bg);
+    border: 1px solid var(--btn-save-border);
+    color: var(--btn-save-color);
     font-weight: 500;
     line-height: 1.5;
   }
   .form-actions-footer .btn-footer.btn-primary:hover:not(:disabled) {
-    background: rgba(34, 197, 94, 0.1);
-    border-color: var(--color-success);
+    background: #c8e6c9;
+    border-color: #388e3c;
   }
   .form-actions-footer .btn-footer.btn-primary:disabled {
     background: var(--color-background-light);
     border-color: var(--color-border);
     color: var(--color-text-light);
     cursor: not-allowed;
+  }
+
+  :root[data-theme="dark"] .form-actions-footer .btn-footer.btn-primary:not(:disabled),
+  [data-theme="dark"] .form-actions-footer .btn-footer.btn-primary:not(:disabled) {
+    background: #2e7d32 !important;
+    border-color: #1b5e20 !important;
+    color: #ffffff !important;
+  }
+  :root[data-theme="dark"] .form-actions-footer .btn-footer.btn-primary:hover:not(:disabled),
+  [data-theme="dark"] .form-actions-footer .btn-footer.btn-primary:hover:not(:disabled) {
+    background: #1b5e20 !important;
+    border-color: #2e7d32 !important;
+    color: #ffffff !important;
+  }
+  :root[data-theme="dark"] .form-actions-footer .btn-footer.btn-primary:disabled,
+  [data-theme="dark"] .form-actions-footer .btn-footer.btn-primary:disabled {
+    background: #424242 !important;
+    border-color: #616161 !important;
+    color: #9e9e9e !important;
   }
 }
 
@@ -1862,13 +1982,13 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  border-bottom: 1px solid #e0e0e0;
-  background: #f0fdf4;
+  border-bottom: 1px solid var(--color-input-border);
+  background: var(--color-background-light);
 
   .success-icon {
     width: 40px;
     height: 40px;
-    background: #22c55e;
+    background: var(--color-success);
     border-radius: 8px;
     display: flex;
     align-items: center;
@@ -1880,17 +2000,18 @@
     margin: 0;
     font-size: 1.5rem;
     font-weight: 600;
-    color: #1f2937;
+    color: var(--color-text);
   }
 }
 
 .success-popup-body {
   padding: 1.5rem;
+  background: var(--color-secondary);
 
   p {
     margin: 0;
     font-size: 0.875rem;
-    color: #6b7280;
+    color: var(--color-text-light);
     line-height: 1.6;
   }
 }
@@ -1900,6 +2021,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  background: var(--color-background-light);
+  border-top: 1px solid var(--color-input-border);
 }
 
 .btn-success-outline,
@@ -1915,22 +2038,79 @@
 
 .btn-success-outline {
   background: var(--color-secondary);
-  border: 2px solid #22c55e;
-  color: #22c55e;
+  border: 2px solid var(--color-success);
+  color: var(--color-success);
 }
 
 .btn-success-outline:hover {
-  background: #f0fdf4;
+  background: var(--color-background-light);
 }
 
 .btn-success-filled {
-  background: #22c55e;
+  background: var(--color-success);
   border: none;
   color: white;
 }
 
 .btn-success-filled:hover {
   background: #16a34a;
+}
+
+/* Mode sombre : popup succès entièrement cohérente */
+:root[data-theme="dark"] .success-popup,
+[data-theme="dark"] .success-popup {
+  background: var(--color-secondary);
+  border: 1px solid var(--color-input-border);
+}
+
+:root[data-theme="dark"] .success-popup-header,
+[data-theme="dark"] .success-popup-header {
+  background: var(--color-background-light);
+  border-bottom-color: var(--color-input-border);
+}
+
+:root[data-theme="dark"] .success-popup-header h3,
+[data-theme="dark"] .success-popup-header h3 {
+  color: var(--color-text);
+}
+
+:root[data-theme="dark"] .success-popup-body,
+[data-theme="dark"] .success-popup-body {
+  background: var(--color-secondary);
+}
+
+:root[data-theme="dark"] .success-popup-body p,
+[data-theme="dark"] .success-popup-body p {
+  color: var(--color-text-light);
+}
+
+:root[data-theme="dark"] .success-popup-actions,
+[data-theme="dark"] .success-popup-actions {
+  background: var(--color-background-light);
+  border-top-color: var(--color-input-border);
+}
+
+:root[data-theme="dark"] .btn-success-outline,
+[data-theme="dark"] .btn-success-outline {
+  background: var(--color-secondary);
+  border-color: #81c784;
+  color: #81c784;
+}
+
+:root[data-theme="dark"] .btn-success-outline:hover,
+[data-theme="dark"] .btn-success-outline:hover {
+  background: rgba(76, 175, 80, 0.15);
+}
+
+:root[data-theme="dark"] .btn-success-filled,
+[data-theme="dark"] .btn-success-filled {
+  background: #2e7d32;
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .btn-success-filled:hover,
+[data-theme="dark"] .btn-success-filled:hover {
+  background: #1b5e20;
 }
 
 @keyframes fadeInOverlay {

@@ -23,7 +23,7 @@
   font-size: 2rem;
   font-weight: 600;
   margin: 0;
-  color: var(--color-text, #333);
+  color: var(--color-text);
 }
 
 .header-actions {
@@ -33,9 +33,9 @@
 }
 
 .btn-add-commande {
-  background-color: #6c757d;
-  color: white;
-  border: none;
+  background: var(--color-background-light);
+  color: var(--color-text);
+  border: 1px solid var(--color-input-border);
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 4px;
@@ -45,15 +45,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
   line-height: 1;
 
   &:hover {
-    background-color: #5a6268;
+    background: var(--color-background);
+    border-color: var(--color-border);
   }
 
   &:active {
-    background-color: #545b62;
+    background: var(--color-background-light);
   }
 }
 
@@ -81,20 +82,21 @@
 .loading-area {
   text-align: center;
   padding: 3rem;
-  color: #666;
+  color: var(--color-text-light);
 }
 
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;
   background: var(--color-secondary);
+  border: 1px solid var(--color-input-border);
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .empty-message {
   font-size: 1.125rem;
-  color: #666;
+  color: var(--color-text-light);
   margin: 0;
 }
 
@@ -117,7 +119,8 @@
     padding: 0.75rem 1rem;
     border-radius: 12px;
     border-bottom: none;
-    background: rgba(0, 0, 0, 0.04);
+    background: var(--color-background-light);
+    border: 1px solid var(--color-border);
   }
 }
 
@@ -133,7 +136,7 @@
 
 .commande-card {
   background: var(--color-secondary);
-  border: 1px solid #dee2e6;
+  border: 1px solid var(--color-input-border);
   border-radius: 12px;
   padding: 1.5rem;
   transition: all 0.3s ease;
@@ -148,7 +151,7 @@
 .commande-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  border-color: #4CAF50;
+  border-color: var(--color-success);
 }
 
 .commande-header {
@@ -157,7 +160,7 @@
   align-items: flex-start;
   gap: 1rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid var(--color-input-border);
 }
 
 .commande-title {
@@ -169,8 +172,8 @@
 }
 
 .commande-status-badge {
-  background: #4CAF50;
-  color: white;
+  background: var(--color-success);
+  color: #ffffff;
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
   font-size: 0.75rem;
@@ -179,8 +182,23 @@
   white-space: nowrap;
 }
 
+:root[data-theme="dark"] .commande-status-badge,
+[data-theme="dark"] .commande-status-badge {
+  background: rgba(76, 175, 80, 0.35);
+  color: #c8e6c9;
+  border: 1px solid rgba(76, 175, 80, 0.5);
+}
+
 .commande-status-badge.badge-annulee {
-  background: #dc3545;
+  background: var(--color-error);
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .commande-status-badge.badge-annulee,
+[data-theme="dark"] .commande-status-badge.badge-annulee {
+  background: rgba(244, 67, 54, 0.35);
+  color: #ffcdd2;
+  border: 1px solid rgba(244, 67, 54, 0.5);
 }
 
 .commande-card.commande-annulee {
@@ -188,9 +206,21 @@
   background: rgba(220, 53, 69, 0.1);
 }
 
+:root[data-theme="dark"] .commande-card.commande-annulee,
+[data-theme="dark"] .commande-card.commande-annulee {
+  background: rgba(244, 67, 54, 0.06);
+  border-color: rgba(244, 67, 54, 0.5);
+}
+
 .commande-card.commande-annulee:hover {
-  border-color: #c82333;
+  border-color: var(--color-error);
   box-shadow: 0 4px 8px rgba(220, 53, 69, 0.2);
+}
+
+:root[data-theme="dark"] .commande-card.commande-annulee:hover,
+[data-theme="dark"] .commande-card.commande-annulee:hover {
+  border-color: rgba(244, 67, 54, 0.7);
+  box-shadow: 0 4px 8px rgba(244, 67, 54, 0.15);
 }
 
 .commande-info {

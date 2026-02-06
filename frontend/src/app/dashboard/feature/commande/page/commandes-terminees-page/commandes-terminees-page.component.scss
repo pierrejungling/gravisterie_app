@@ -232,8 +232,13 @@
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 600;
-  text-transform: uppercase;
   white-space: nowrap;
+}
+
+:host-context([data-theme="light"]) .commande-status-badge {
+  color: #14532d;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
 }
 
 :root[data-theme="dark"] .commande-status-badge,
@@ -246,6 +251,12 @@
 .commande-status-badge.badge-annulee {
   background: var(--color-error);
   color: #ffffff;
+}
+
+:host-context([data-theme="light"]) .commande-status-badge.badge-annulee {
+  color: #7f1d1d;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
 }
 
 :root[data-theme="dark"] .commande-status-badge.badge-annulee,

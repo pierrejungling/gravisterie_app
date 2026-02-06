@@ -168,11 +168,8 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
 
   getClientName(client: Commande['client']): string {
     if (!client) return 'Client inconnu';
-    if (client.nom && client.prénom) {
-      return `${client.nom} ${client.prénom}`;
-    }
-    if (client.nom) return client.nom;
-    if (client.prénom) return client.prénom;
+    const fullName = `${client.nom || ''} ${client.prénom || ''}`.trim();
+    if (fullName) return fullName;
     return 'Client inconnu';
   }
 

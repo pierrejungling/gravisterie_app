@@ -532,6 +532,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     
     this.formGroup = new FormGroup({
       nom_commande: new FormControl({ value: cmd.produit || '', disabled: !isEdit }, [Validators.required]),
+      date_commande: new FormControl({ value: cmd.date_commande ? cmd.date_commande.split('T')[0] : '', disabled: !isEdit }),
       deadline: new FormControl({ value: cmd.deadline ? cmd.deadline.split('T')[0] : '', disabled: !isEdit }),
       description: new FormControl({ value: cmd.description || '', disabled: !isEdit }),
       dimensions: new FormControl({ value: cmd.gravure?.dimensions || '', disabled: !isEdit }),
@@ -558,6 +559,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       // Coordonnées contact
       nom: new FormControl({ value: cmd.client.nom || '', disabled: !isEdit }),
       prenom: new FormControl({ value: cmd.client.prénom || '', disabled: !isEdit }),
+      societe: new FormControl({ value: cmd.client.société || '', disabled: !isEdit }),
       telephone: new FormControl({ value: cmd.client.téléphone || '', disabled: !isEdit }),
       mail: new FormControl({ value: cmd.client.mail || '', disabled: !isEdit }, [Validators.email]),
       // Adresse décomposée
@@ -808,10 +810,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     // Désactiver/activer tous les FormControls selon le mode édition
     if (this.formGroup) {
       const controlsToDisable = [
-        'nom_commande', 'deadline', 'description', 'dimensions', 'quantité', 'commentaire_paye',
+        'nom_commande', 'date_commande', 'deadline', 'description', 'dimensions', 'quantité', 'commentaire_paye',
         'support', 'couleur', 'police_ecriture', 'texte_personnalisation', 'prix_unitaire_final', 'prix_final',
         'prix_support', 'url_support', 'nom', 'prenom', 'telephone', 'mail',
-        'rue', 'code_postal', 'ville', 'pays', 'tva', 'mode_contact'
+        'rue', 'code_postal', 'ville', 'pays', 'societe', 'tva', 'mode_contact'
       ];
       
       // Gérer les supports dans le FormArray
@@ -859,6 +861,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const formValue = this.formGroup.value;
     const payload: any = {
       produit: formValue.nom_commande,
+      date_commande: formValue.date_commande || null,
       deadline: formValue.deadline || null,
       description: formValue.description,
       quantité: formValue.quantité ? parseInt(formValue.quantité, 10) : null,
@@ -875,6 +878,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         telephone: formValue.telephone,
         mail: formValue.mail,
         adresse: this.buildAdresseComplete(formValue.rue, formValue.code_postal, formValue.ville, formValue.pays),
+        societe: formValue.societe,
         tva: formValue.tva,
       },
       support: {
@@ -911,6 +915,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.commande.set({
       ...currentCommande,
       produit: formValue.nom_commande,
+      date_commande: formValue.date_commande || undefined,
       deadline: formValue.deadline || undefined,
       description: formValue.description,
       quantité: formValue.quantité ? parseInt(formValue.quantité, 10) : undefined,
@@ -925,6 +930,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         ...currentCommande.client,
         nom: formValue.nom,
         prénom: formValue.prenom,
+        société: formValue.societe,
         téléphone: formValue.telephone,
         mail: formValue.mail,
         adresse: this.buildAdresseComplete(formValue.rue, formValue.code_postal, formValue.ville, formValue.pays) || undefined,

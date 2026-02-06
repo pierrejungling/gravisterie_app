@@ -626,7 +626,8 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   getClientName(client: Commande['client']): string {
     const nom = client.nom || '';
     const prenom = client.prénom || '';
-    return `${nom} ${prenom}`.trim() || 'Non renseigné';
+    const fullName = `${nom} ${prenom}`.trim();
+    return fullName || 'Non renseigné';
   }
 
   getModeContactEmoji(modeContact?: string): string {

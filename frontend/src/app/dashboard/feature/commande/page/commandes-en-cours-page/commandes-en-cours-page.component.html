@@ -54,6 +54,9 @@
                         <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
                         <span class="mode-contact-emoji" *ngIf="commande.mode_contact">{{ getModeContactEmoji(commande.mode_contact) }}</span>
                       </p>
+                      <p class="commande-societe" *ngIf="commande.client['société']">
+                        <strong>Société :</strong>&nbsp;{{ commande.client['société'] }}
+                      </p>
                       <p class="commande-date">
                         <strong>Date :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
                       </p>
@@ -151,6 +154,9 @@
                 <p class="commande-client">
                   <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
                   <span class="mode-contact-emoji" *ngIf="commande.mode_contact">{{ getModeContactEmoji(commande.mode_contact) }}</span>
+                </p>
+                <p class="commande-societe" *ngIf="commande.client['société']">
+                  <strong>Société :</strong>&nbsp;{{ commande.client['société'] }}
                 </p>
                 <p class="commande-date">
                   <strong>Date :</strong>&nbsp;{{ formatDate(commande.date_commande) }}

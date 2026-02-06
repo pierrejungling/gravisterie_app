@@ -29,6 +29,12 @@ export class CoordonneesContactPayload {
     @ApiProperty({ required: false })
     @IsOptional()
     @IsString()
+    @Length(0, 50)
+    societe?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsString()
     @Length(0, 100)
     adresse?: string;
 
@@ -50,6 +56,11 @@ export class AjouterCommandePayload {
     @IsOptional()
     @IsDateString()
     deadline?: string;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsDateString()
+    date_commande?: string;
 
     @ApiProperty({ type: () => CoordonneesContactPayload, required: false })
     @IsOptional()

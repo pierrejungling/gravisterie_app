@@ -35,6 +35,7 @@ export class CommandeService {
             const clientId = ulid();
             const mailValue = payload.coordonnees_contact?.mail?.trim() || null;
             const telephoneValue = payload.coordonnees_contact?.telephone?.trim() || null;
+            const societeValue = payload.coordonnees_contact?.societe?.trim() || null;
             
             // Vérifier si un client avec cet email existe déjà (seulement si un email est fourni)
             let existingClient: Client | null = null;
@@ -51,6 +52,7 @@ export class CommandeService {
                 client.prénom = payload.coordonnees_contact?.prenom?.trim() || null;
                 client.mail = mailValue;
                 client.téléphone = telephoneValue;
+                client.société = societeValue;
                 client.adresse = payload.coordonnees_contact?.adresse?.trim() || null;
                 client.tva = payload.coordonnees_contact?.tva?.trim() || null;
                 
@@ -80,6 +82,9 @@ export class CommandeService {
             if (payload.coordonnees_contact?.telephone !== undefined) {
                 client.téléphone = payload.coordonnees_contact.telephone?.trim() || null;
             }
+            if (payload.coordonnees_contact?.societe !== undefined) {
+                client.société = payload.coordonnees_contact.societe?.trim() || null;
+            }
             if (payload.coordonnees_contact?.mail !== undefined) {
                 client.mail = payload.coordonnees_contact.mail?.trim() || null;
             }
@@ -97,7 +102,7 @@ export class CommandeService {
         commande.id_commande = ulid(); // Générer l'ID manuellement
         commande.produit = payload.nom_commande;
         commande.deadline = payload.deadline ? new Date(payload.deadline) : null;
-        commande.date_commande = new Date();
+        commande.date_commande = payload.date_commande ? new Date(payload.date_commande) : new Date();
         commande.description = payload.description_projet ?? null;
         commande.quantité = payload.quantité ?? 1;
         commande.payé = payload.payé ?? false;
@@ -368,6 +373,7 @@ export class CommandeService {
                 telephone: commande.client?.téléphone ?? undefined,
                 mail: commande.client?.mail ?? undefined,
                 adresse: commande.client?.adresse ?? undefined,
+                societe: commande.client?.société ?? undefined,
                 tva: commande.client?.tva ?? undefined,
             },
             description_projet: commande.description ?? undefined,
@@ -411,6 +417,7 @@ export class CommandeService {
         // Mettre à jour les champs de la commande
         if (payload.produit !== undefined) commande.produit = payload.produit;
         if (payload.deadline !== undefined) commande.deadline = payload.deadline ? new Date(payload.deadline) : null;
+        if (payload.date_commande !== undefined) commande.date_commande = payload.date_commande ? new Date(payload.date_commande) : commande.date_commande;
         if (payload.description !== undefined) commande.description = payload.description;
         if (payload.quantité !== undefined) commande.quantité = payload.quantité;
         if (payload.quantite_realisee !== undefined) commande.quantite_realisee = payload.quantite_realisee !== null ? parseInt(String(payload.quantite_realisee), 10) : 0;
@@ -428,6 +435,7 @@ export class CommandeService {
             if (payload.coordonnees_contact.prenom !== undefined) client.prénom = payload.coordonnees_contact.prenom?.trim() || null;
             if (payload.coordonnees_contact.telephone !== undefined) client.téléphone = payload.coordonnees_contact.telephone?.trim() || null;
             if (payload.coordonnees_contact.mail !== undefined) client.mail = payload.coordonnees_contact.mail?.trim() || null;
+            if (payload.coordonnees_contact.societe !== undefined) client.société = payload.coordonnees_contact.societe?.trim() || null;
             if (payload.coordonnees_contact.adresse !== undefined) client.adresse = payload.coordonnees_contact.adresse?.trim() || null;
             if (payload.coordonnees_contact.tva !== undefined) client.tva = payload.coordonnees_contact.tva?.trim() || null;
             await this.clientRepository.save(client);

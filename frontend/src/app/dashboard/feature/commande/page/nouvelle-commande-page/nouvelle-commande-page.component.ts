@@ -221,6 +221,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
     this.formGroup = new FormGroup({
       nom_commande: new FormControl<string>('', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]),
+      date_commande: new FormControl<string>(this.getTodayDate()),
       deadline: new FormControl<string>('', []),
       description_projet: new FormControl<string>(''),
       dimensions_souhaitees: new FormControl<string>(''),
@@ -247,6 +248,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       code_postal: new FormControl<string>('', [Validators.maxLength(10)]),
       ville: new FormControl<string>('', [Validators.maxLength(50)]),
       pays: new FormControl<string>('Belgique', [Validators.maxLength(50)]),
+      societe: new FormControl<string>('', [Validators.maxLength(50)]),
       tva: new FormControl<string>('', [Validators.maxLength(20)]),
       mode_contact: new FormControl<string>(''),
       statut_initial: new FormControl<StatutCommande | null>(StatutCommande.EN_ATTENTE_INFORMATION)
@@ -600,6 +602,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       if (formValue.prenom?.trim()) coordonneesContact.prenom = formValue.prenom.trim();
       if (formValue.telephone?.trim()) coordonneesContact.telephone = formValue.telephone.trim();
       if (formValue.mail?.trim()) coordonneesContact.mail = formValue.mail.trim();
+      if (formValue.societe?.trim()) coordonneesContact.societe = formValue.societe.trim();
       if (formValue.tva?.trim()) coordonneesContact.tva = formValue.tva.trim();
       
       const adresse = this.buildAdresseComplete(formValue.rue, formValue.code_postal, formValue.ville, formValue.pays);
@@ -623,6 +626,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
       const payload: any = {
         nom_commande: nomCommandeValue,
+        date_commande: formValue.date_commande || null,
         deadline: isVente ? null : (formValue.deadline || null),
         description_projet: formValue.description_projet || null,
         dimensions_souhaitees: isVente ? null : (formValue.dimensions_souhaitees || null),
@@ -742,6 +746,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     
     // Réinitialiser les valeurs par défaut
     (this.formGroup.get('pays') as any)?.setValue('Belgique');
+    this.formGroup.get('date_commande')?.setValue(this.getTodayDate());
     this.formGroup.get('statut_initial')?.setValue(StatutCommande.EN_ATTENTE_INFORMATION);
     if (this.isVente()) {
       this.formGroup.get('nom_commande')?.setValue(this.ventePrefix);
@@ -769,6 +774,11 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       return;
     }
     this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'terminees']);
+  }
+
+  private getTodayDate(): string {
+    const now = new Date();
+    return now.toISOString().split('T')[0];
   }
 
   onTypeToggle(event: Event): void {

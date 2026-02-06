@@ -996,7 +996,7 @@
       color: var(--color-text-light);
       pointer-events: none;
       transition: all 0.3s ease;
-      background: var(--color-secondary);
+      background: transparent;
       padding: 0 0.25rem;
       transform-origin: left top;
       z-index: 1;
@@ -1007,11 +1007,6 @@
       }
     }
 
-    /* En mode non-édition (readonly/disabled), pas de fond derrière le label */
-    &:has(.description-textarea:disabled) .textarea-label,
-    &:has(.description-textarea[readonly]) .textarea-label {
-      background: transparent !important;
-    }
 
     .description-textarea {
       width: 100%;
@@ -1052,6 +1047,16 @@
         opacity: 0.7;
       }
     }
+  }
+
+  /* Mode clair : fond derrière le label */
+  :host-context([data-theme="light"]) & .textarea-label {
+    background: var(--color-secondary);
+  }
+
+  /* Mode sombre : pas de fond derrière le label */
+  :host-context([data-theme="dark"]) & .textarea-label {
+    background: transparent;
   }
 
   &.deadline-highlight-warning {
@@ -1259,6 +1264,11 @@
   border-radius: 12px;
   margin-bottom: 1.5rem;
   border: 1px solid var(--color-border);
+}
+
+/* Mode sombre : enlever le fond des labels dans Adresse */
+:host-context([data-theme="dark"]) .address-section ::ng-deep .floating-label {
+  background: transparent !important;
 }
 
 .section-subtitle {
@@ -1583,6 +1593,19 @@
   }
 }
 
+/* Mode sombre : bouton ajouter support */
+:host-context([data-theme="dark"]) .btn-add-support {
+  background: #1565c0;
+  border-color: #0d47a1;
+  color: #ffffff;
+}
+
+:host-context([data-theme="dark"]) .btn-add-support:hover:not(:disabled) {
+  background: #0d47a1;
+  border-color: #0277bd;
+  color: #ffffff;
+}
+
 .btn-remove-support {
   background: #fff5f5;
   border-color: #dc3545;
@@ -1750,6 +1773,58 @@
       font-size: 1.25rem;
     }
   }
+}
+
+/* Mode sombre : section frais / supports */
+:host-context([data-theme="dark"]) .support-item {
+  background: var(--color-secondary) !important;
+  border-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .support-prix-pour-unites {
+  background: var(--color-background-light) !important;
+  border-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .prix-recapitulatif {
+  background: var(--color-background-light) !important;
+  border-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table thead {
+  background: var(--color-secondary) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table th {
+  color: var(--color-text) !important;
+  border-bottom-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody tr {
+  border-bottom-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody tr:hover {
+  background: var(--color-background) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody .total-row {
+  background: var(--color-secondary) !important;
+  border-top-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-title {
+  color: var(--color-text) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-summary {
+  background: var(--color-secondary) !important;
+  border-top-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-summary .benefit-item {
+  background: rgba(34, 197, 94, 0.15) !important;
+  border-top-color: rgba(34, 197, 94, 0.4) !important;
 }
 
 .recap-item {

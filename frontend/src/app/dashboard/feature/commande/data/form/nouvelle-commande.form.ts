@@ -9,12 +9,14 @@ export interface CoordonneesContactForm {
   code_postal: FormControl<string>;
   ville: FormControl<string>;
   pays: FormControl<string>;
+  societe: FormControl<string>;
   tva: FormControl<string>;
   mode_contact: FormControl<string>;
 }
 
 export interface NouvelleCommandeForm {
   nom_commande: FormControl<string>;
+  date_commande: FormControl<string>;
   deadline: FormControl<string>;
   coordonnees_contact: FormGroup<CoordonneesContactForm>;
   description_projet: FormControl<string>;

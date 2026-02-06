@@ -88,9 +88,18 @@
       <!-- Informations de la commande -->
       <section class="form-section">
         <h2 class="section-title">Informations de la {{ isVente() ? 'vente' : 'commande' }}</h2>
-        <p class="commande-date-display">
-          <strong>Date de commande :</strong>&nbsp;{{ formatDate(commande()?.date_commande || '') }}
+        <p class="commande-date-display" *ngIf="!isEditMode()">
+          <strong>{{ isVente() ? 'Date de la vente' : 'Date de commande' }} :</strong>&nbsp;{{ formatDate(commande()?.date_commande || '') }}
         </p>
+        <div class="input-wrapper" *ngIf="isEditMode()">
+          <app-floating-label-input
+            [label]="isVente() ? 'Date de la vente' : 'Date de commande'"
+            [control]="get('date_commande')"
+            [formGroup]="formGroup"
+            type="date"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
         <div 
           class="input-wrapper"
           [class.deadline-highlight-warning]="getDeadlineStatus() === 'warning' && !isCommandeTerminee() && !isCommandeAnnulee()"
@@ -545,7 +554,16 @@
 
         <div class="input-wrapper">
           <app-floating-label-input
-            [label]="'TVA'"
+            [label]="'Dénomination sociale'"
+            [control]="get('societe')!"
+            [formGroup]="formGroup"
+            [readonly]="!isEditMode()">
+          </app-floating-label-input>
+        </div>
+
+        <div class="input-wrapper">
+          <app-floating-label-input
+            [label]="'N° de TVA'"
             [control]="get('tva')!"
             [formGroup]="formGroup"
             [readonly]="!isEditMode()">

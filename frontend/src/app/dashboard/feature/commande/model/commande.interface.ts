@@ -13,6 +13,7 @@ export interface CoordonneesContact {
   telephone: string;
   mail: string;
   adresse?: string;
+  societe?: string;
   tva?: string;
 }
 
@@ -69,6 +70,7 @@ export interface Client {
   id_client: string;
   nom?: string;
   prénom?: string;
+  société?: string;
   mail?: string | null;
   téléphone?: string | null;
   adresse?: string;

@@ -269,13 +269,25 @@
   }
 
   &.btn-cancel {
-    background: var(--color-background-light);
-    border: 1px solid var(--color-input-border);
-    color: var(--color-text);
+    background: var(--btn-edit-bg);
+    border: 1px solid var(--btn-edit-border);
+    color: var(--btn-edit-color);
 
     &:hover {
-      background: var(--color-background);
-      border-color: var(--color-input-border);
+      background: #ffe0b2;
+      border-color: #ffb74d;
+    }
+
+    :root[data-theme="dark"] &,
+    [data-theme="dark"] & {
+      color: #ffffff !important;
+    }
+
+    :root[data-theme="dark"] &:hover,
+    [data-theme="dark"] &:hover {
+      background: #bf360c !important;
+      border-color: #d84315 !important;
+      color: #ffffff !important;
     }
   }
 
@@ -838,14 +850,21 @@
   &.calculated-field {
     ::ng-deep app-floating-label-input {
       .floating-input {
-        background: white !important;
-        color: #333 !important;
+        background: var(--color-background-light) !important;
+        color: var(--color-text-light) !important;
         cursor: default !important;
-        opacity: 1 !important;
-        border-color: var(--color-border-dark, #333) !important;
+        opacity: 0.8 !important;
+        border-color: var(--color-border) !important;
       }
     }
   }
+}
+
+/* Mode sombre : champ calculé */
+:host-context([data-theme="dark"]) .input-wrapper.calculated-field ::ng-deep .floating-input {
+  background: var(--color-background-light) !important;
+  color: var(--color-text-light) !important;
+  border-color: var(--color-border) !important;
 }
 
 .address-section {
@@ -854,6 +873,11 @@
   border-radius: 12px;
   margin-bottom: 1.5rem;
   border: 1px solid var(--color-border);
+}
+
+/* Mode sombre : enlever le fond des labels dans Adresse */
+:host-context([data-theme="dark"]) .address-section ::ng-deep .floating-label {
+  background: transparent !important;
 }
 
 .section-subtitle {
@@ -1075,6 +1099,19 @@
   }
 }
 
+/* Mode sombre : bouton ajouter support */
+:host-context([data-theme="dark"]) .btn-add-support {
+  background: #1565c0;
+  border-color: #0d47a1;
+  color: #ffffff;
+}
+
+:host-context([data-theme="dark"]) .btn-add-support:hover:not(:disabled) {
+  background: #0d47a1;
+  border-color: #0277bd;
+  color: #ffffff;
+}
+
 .btn-remove-support {
   background: var(--color-background-light);
   border-color: var(--color-error);
@@ -1242,6 +1279,58 @@
       font-size: 1.25rem;
     }
   }
+}
+
+/* Mode sombre : section frais / supports */
+:host-context([data-theme="dark"]) .support-item {
+  background: var(--color-secondary) !important;
+  border-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .support-prix-pour-unites {
+  background: var(--color-background-light) !important;
+  border-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .prix-recapitulatif {
+  background: var(--color-background-light) !important;
+  border-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table thead {
+  background: var(--color-secondary) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table th {
+  color: var(--color-text) !important;
+  border-bottom-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody tr {
+  border-bottom-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody tr:hover {
+  background: var(--color-background) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody .total-row {
+  background: var(--color-secondary) !important;
+  border-top-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-title {
+  color: var(--color-text) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-summary {
+  background: var(--color-secondary) !important;
+  border-top-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-summary .benefit-item {
+  background: rgba(34, 197, 94, 0.15) !important;
+  border-top-color: rgba(34, 197, 94, 0.4) !important;
 }
 
 .recap-item {
@@ -1834,13 +1923,25 @@
   }
 
   .form-actions-footer .btn-footer.btn-secondary {
-    background: var(--color-background-light);
-    border-color: var(--color-border);
-    color: var(--color-text);
+    background: var(--btn-edit-bg);
+    border-color: var(--btn-edit-border);
+    color: var(--btn-edit-color);
   }
   .form-actions-footer .btn-footer.btn-secondary:hover {
-    background: var(--color-background);
-    border-color: var(--color-input-border);
+    background: #ffe0b2;
+    border-color: #ffb74d;
+  }
+
+  :root[data-theme="dark"] .form-actions-footer .btn-footer.btn-secondary,
+  [data-theme="dark"] .form-actions-footer .btn-footer.btn-secondary {
+    color: #ffffff !important;
+  }
+
+  :root[data-theme="dark"] .form-actions-footer .btn-footer.btn-secondary:hover,
+  [data-theme="dark"] .form-actions-footer .btn-footer.btn-secondary:hover {
+    background: #bf360c !important;
+    border-color: #d84315 !important;
+    color: #ffffff !important;
   }
 
   .form-actions-footer .btn-footer.btn-primary {

@@ -102,6 +102,16 @@
         
         <!-- Le champ nom_commande est maintenant dans le header, on ne l'affiche plus ici -->
 
+        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('date_commande')">
+          <app-floating-label-input
+            [label]="'Date de commande'"
+            [control]="get('date_commande')"
+            [formGroup]="formGroup"
+            type="date">
+          </app-floating-label-input>
+          <p class="field-error" *ngIf="getFieldErrorMessage('date_commande')">{{ getFieldErrorMessage('date_commande') }}</p>
+        </div>
+
         <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('deadline')" *ngIf="!isVente()">
           <app-floating-label-input
             [label]="'Deadline'"
@@ -263,9 +273,18 @@
           </div>
         </div>
 
+        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('societe')">
+          <app-floating-label-input
+            [label]="'Dénomination sociale'"
+            [control]="get('societe')!"
+            [formGroup]="formGroup">
+          </app-floating-label-input>
+          <p class="field-error" *ngIf="getFieldErrorMessage('societe')">{{ getFieldErrorMessage('societe') }}</p>
+        </div>
+
         <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('tva')">
           <app-floating-label-input
-            [label]="'TVA'"
+            [label]="'N° de TVA'"
             [control]="get('tva')!"
             [formGroup]="formGroup">
           </app-floating-label-input>

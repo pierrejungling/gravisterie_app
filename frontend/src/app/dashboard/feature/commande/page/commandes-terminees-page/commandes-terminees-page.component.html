@@ -82,6 +82,9 @@
                 <p class="commande-client">
                   <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
                 </p>
+                <p class="commande-societe" *ngIf="commande.client['société']">
+                  <strong>Société :</strong>&nbsp;{{ commande.client['société'] }}
+                </p>
                 <p class="commande-date">
                   <strong>{{ isVente(commande) ? 'Date de la vente' : 'Date de commande' }} :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
                 </p>
@@ -130,6 +133,9 @@
               <div class="commande-info">
                 <p class="commande-client">
                   <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
+                </p>
+                <p class="commande-societe" *ngIf="commande.client['société']">
+                  <strong>Société :</strong>&nbsp;{{ commande.client['société'] }}
                 </p>
                 <p class="commande-date">
                   <strong>{{ isVente(commande) ? 'Date de la vente' : 'Date de commande' }} :</strong>&nbsp;{{ formatDate(commande.date_commande) }}

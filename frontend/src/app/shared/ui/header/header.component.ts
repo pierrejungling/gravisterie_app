@@ -288,9 +288,12 @@ export class HeaderComponent {
   }
 
   private getClientName(client: Commande['client']): string {
+    const societe = client?.société || '';
     const nom = client?.nom || '';
     const prenom = client?.prénom || '';
     const fullName = `${nom} ${prenom}`.trim();
+    if (societe && fullName) return `${societe} — ${fullName}`;
+    if (societe) return societe;
     if (fullName) return fullName;
     return client?.mail || client?.téléphone || 'Client inconnu';
   }
@@ -304,6 +307,7 @@ export class HeaderComponent {
       commande.personnalisation?.texte,
       client?.nom,
       client?.prénom,
+      client?.société,
       client?.mail,
       client?.téléphone,
       client?.tva,

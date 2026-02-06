@@ -27,6 +27,10 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   isDragOver: boolean = false;
   private scrollRestored: boolean = false;
   showPrixFields: WritableSignal<boolean> = signal(false);
+  isVente: WritableSignal<boolean> = signal(false);
+  private readonly ventePrefix = 'Vente | ';
+  private isAdjustingNom = false;
+  private lastNonVenteStatut: StatutCommande = StatutCommande.EN_ATTENTE_INFORMATION;
   @ViewChild('supportInput', { read: ElementRef }) supportInputRef?: ElementRef<HTMLElement>;
   
   private readonly apiService: ApiService = inject(ApiService);
@@ -246,6 +250,17 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       tva: new FormControl<string>('', [Validators.maxLength(20)]),
       mode_contact: new FormControl<string>(''),
       statut_initial: new FormControl<StatutCommande | null>(StatutCommande.EN_ATTENTE_INFORMATION)
+    });
+
+    const nomControl = this.formGroup.get('nom_commande');
+    nomControl?.valueChanges.subscribe((value) => {
+      if (!this.isVente() || this.isAdjustingNom) return;
+      const normalized = this.ensureVentePrefix(value || '');
+      if (normalized !== (value || '')) {
+        this.isAdjustingNom = true;
+        nomControl.setValue(normalized, { emitEvent: false });
+        this.isAdjustingNom = false;
+      }
     });
 
     // Écouter les changements pour recalculer automatiquement
@@ -555,7 +570,12 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     const nomCommande = this.formGroup.get('nom_commande')?.value?.trim();
     // Seul le nom de la commande est obligatoire pour activer le bouton.
     // L'email et les autres champs optionnels sont validés à l'envoi / côté backend.
-    return !!nomCommande;
+    if (!nomCommande) return false;
+    if (this.isVente()) {
+      if (!nomCommande.startsWith(this.ventePrefix)) return false;
+      return nomCommande.slice(this.ventePrefix.length).trim().length > 0;
+    }
+    return true;
   }
 
   onSubmit(): void {
@@ -569,6 +589,10 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       }
 
       const formValue: any = this.formGroup.value;
+      const isVente = this.isVente();
+      const nomCommandeValue = isVente
+        ? this.ensureVentePrefix(formValue.nom_commande || '')
+        : (formValue.nom_commande || '');
 
       // Préparer le payload coordonnees_contact
       const coordonneesContact: any = {};
@@ -588,26 +612,32 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       const quantiteFinale = Number.isNaN(quantiteNum) || quantiteNum < 1 ? 1 : quantiteNum;
 
       // Récupérer le statut initial depuis le formulaire
-      const statutInitial = formValue.statut_initial || StatutCommande.EN_ATTENTE_INFORMATION;
+      const statutInitial = isVente
+        ? StatutCommande.TERMINE
+        : (formValue.statut_initial || StatutCommande.EN_ATTENTE_INFORMATION);
 
       // Récupérer les couleurs sélectionnées
-      const couleursSelectionnees = formValue.couleur && Array.isArray(formValue.couleur) ? formValue.couleur : [];
+      const couleursSelectionnees = isVente
+        ? []
+        : (formValue.couleur && Array.isArray(formValue.couleur) ? formValue.couleur : []);
 
       const payload: any = {
-        nom_commande: formValue.nom_commande || '',
-        deadline: formValue.deadline || null,
+        nom_commande: nomCommandeValue,
+        deadline: isVente ? null : (formValue.deadline || null),
         description_projet: formValue.description_projet || null,
-        dimensions_souhaitees: formValue.dimensions_souhaitees || null,
+        dimensions_souhaitees: isVente ? null : (formValue.dimensions_souhaitees || null),
         couleur: couleursSelectionnees,
-        support: (formValue.support && formValue.support.trim()) ? formValue.support.trim() : this.supportParDefaut,
-        police_ecriture: formValue.police_ecriture || null,
-        texte_personnalisation: formValue.texte_personnalisation || null,
+        support: isVente
+          ? null
+          : ((formValue.support && formValue.support.trim()) ? formValue.support.trim() : this.supportParDefaut),
+        police_ecriture: isVente ? null : (formValue.police_ecriture || null),
+        texte_personnalisation: isVente ? null : (formValue.texte_personnalisation || null),
         fichiers_joints: [],
         quantité: quantiteFinale,
         payé: Boolean(formValue.payé),
         commentaire_paye: formValue.commentaire_paye || null,
         statut_initial: statutInitial,
-        attente_reponse: Boolean(formValue.attente_reponse ?? false),
+        attente_reponse: isVente ? false : Boolean(formValue.attente_reponse ?? false),
         mode_contact: formValue.mode_contact || null,
         prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : null,
         prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : null,
@@ -713,6 +743,11 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     // Réinitialiser les valeurs par défaut
     (this.formGroup.get('pays') as any)?.setValue('Belgique');
     this.formGroup.get('statut_initial')?.setValue(StatutCommande.EN_ATTENTE_INFORMATION);
+    if (this.isVente()) {
+      this.formGroup.get('nom_commande')?.setValue(this.ventePrefix);
+      this.formGroup.get('attente_reponse')?.setValue(false);
+      this.formGroup.get('statut_initial')?.setValue(StatutCommande.TERMINE);
+    }
     
     this.filePreviewUrls.forEach(url => URL.revokeObjectURL(url));
     this.filePreviewUrls.clear();
@@ -726,10 +761,56 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
   onViewCommandes(): void {
     this.showSuccessPopup.set(false);
-    try {
-      sessionStorage.setItem(this.entryFromKey, 'nouvelle');
-    } catch {}
-    this.router.navigate([AppRoutes.COMMANDES_EN_COURS]);
+    if (!this.isVente()) {
+      try {
+        sessionStorage.setItem(this.entryFromKey, 'nouvelle');
+      } catch {}
+      this.router.navigate([AppRoutes.COMMANDES_EN_COURS]);
+      return;
+    }
+    this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'terminees']);
+  }
+
+  onTypeToggle(event: Event): void {
+    const target = event.target as HTMLInputElement;
+    this.setVenteMode(target.checked);
+  }
+
+  setVenteMode(isVente: boolean): void {
+    this.isVente.set(isVente);
+    const nomControl = this.formGroup.get('nom_commande');
+    if (isVente) {
+      const currentStatut = this.formGroup.get('statut_initial')?.value;
+      if (currentStatut && currentStatut !== StatutCommande.TERMINE) {
+        this.lastNonVenteStatut = currentStatut;
+      }
+      this.formGroup.get('statut_initial')?.setValue(StatutCommande.TERMINE);
+      this.formGroup.get('attente_reponse')?.setValue(false);
+      if (nomControl) {
+        nomControl.setValue(this.ensureVentePrefix(nomControl.value || ''), { emitEvent: false });
+      }
+      return;
+    }
+    this.formGroup.get('statut_initial')?.setValue(this.lastNonVenteStatut || StatutCommande.EN_ATTENTE_INFORMATION);
+    if (nomControl) {
+      nomControl.setValue(this.removeVentePrefix(nomControl.value || ''), { emitEvent: false });
+    }
+  }
+
+  private ensureVentePrefix(value: string): string {
+    const raw = value || '';
+    const trimmed = raw.trimStart();
+    if (trimmed.startsWith(this.ventePrefix)) return trimmed;
+    const withoutPrefix = trimmed.replace(/^Vente\s*\|\s*/i, '');
+    return `${this.ventePrefix}${withoutPrefix.trimStart()}`;
+  }
+
+  private removeVentePrefix(value: string): string {
+    const raw = value || '';
+    if (raw.trimStart().startsWith(this.ventePrefix)) {
+      return raw.trimStart().slice(this.ventePrefix.length).trimStart();
+    }
+    return raw;
   }
 
   onSupportFocus(event: Event): void {

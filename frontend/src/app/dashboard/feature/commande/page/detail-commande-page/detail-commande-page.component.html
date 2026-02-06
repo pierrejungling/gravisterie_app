@@ -27,7 +27,7 @@
       </button>
     </div>
     <div class="detail-actions-bar__right">
-      <div class="attente-reponse-toggle-bar">
+      <div class="attente-reponse-toggle-bar" *ngIf="!isVente()">
         <label class="toggle-switch-small" [class.toggle-vert]="get('attente_reponse').value" [class.toggle-rouge]="!get('attente_reponse').value">
           <input 
             type="checkbox" 
@@ -53,7 +53,7 @@
     *ngIf="!isLoading() && commande()">
     <div class="detail-header">
       <div class="header-title-section">
-        <h1 class="page-title">Détail de la commande</h1>
+        <h1 class="page-title">Détail de la {{ isVente() ? 'vente' : 'commande' }}</h1>
         <div class="commande-title-row" *ngIf="!isEditMode()">
           <h2 class="commande-title-main">
             {{ commande()?.produit || 'Commande #' + (commande()?.id_commande?.substring(0, 8) || '') }}
@@ -63,7 +63,7 @@
         </div>
         <div class="commande-title-edit" *ngIf="isEditMode()">
           <app-floating-label-input
-            [label]="'Nom / Intitulé de la commande'"
+            [label]="isVente() ? 'Nom / Intitulé de la vente' : 'Nom / Intitulé de la commande'"
             [control]="get('nom_commande')"
             [formGroup]="formGroup"
             [readonly]="false">
@@ -79,7 +79,7 @@
         class="btn-duplicate"
         (click)="duplicateCommande()"
         [disabled]="isDuplicating()">
-        {{ isDuplicating() ? 'Duplication en cours...' : 'Dupliquer la commande' }}
+        {{ isDuplicating() ? 'Duplication en cours...' : 'Dupliquer la ' + (isVente() ? 'vente' : 'commande') }}
       </button>
     </section>
 
@@ -87,14 +87,15 @@
       
       <!-- Informations de la commande -->
       <section class="form-section">
-        <h2 class="section-title">Informations de la commande</h2>
+        <h2 class="section-title">Informations de la {{ isVente() ? 'vente' : 'commande' }}</h2>
         <p class="commande-date-display">
           <strong>Date de commande :</strong>&nbsp;{{ formatDate(commande()?.date_commande || '') }}
         </p>
         <div 
           class="input-wrapper"
           [class.deadline-highlight-warning]="getDeadlineStatus() === 'warning' && !isCommandeTerminee() && !isCommandeAnnulee()"
-          [class.deadline-highlight-danger]="getDeadlineStatus() === 'danger' && !isCommandeTerminee() && !isCommandeAnnulee()">
+          [class.deadline-highlight-danger]="getDeadlineStatus() === 'danger' && !isCommandeTerminee() && !isCommandeAnnulee()"
+          *ngIf="!isVente()">
           <app-floating-label-input
             [label]="'Deadline'"
             [control]="get('deadline')"
@@ -114,12 +115,12 @@
               rows="4"
               placeholder=" "></textarea>
             <label class="textarea-label" [class.fixed-label]="get('description').value && get('description').value.length > 0">
-              Description du projet
+              {{ isVente() ? 'Description' : 'Description du projet' }}
             </label>
           </div>
         </div>
 
-        <div class="input-wrapper">
+        <div class="input-wrapper" *ngIf="!isVente()">
           <app-floating-label-input
             [label]="'Dimensions souhaitées'"
             [control]="get('dimensions')!"
@@ -128,7 +129,7 @@
           </app-floating-label-input>
         </div>
 
-        <div class="input-wrapper">
+        <div class="input-wrapper" *ngIf="!isVente()">
           <app-floating-label-input
             [label]="'Support'"
             [control]="get('support')!"
@@ -140,7 +141,7 @@
         <!-- Fichiers joints -->
         <section class="form-section fichiers-section">
           <h2 class="section-title">Fichiers joints</h2>
-          <p class="fichiers-hint" *ngIf="commandeFichiersSorted().length === 0">Aucun fichier pour cette commande.</p>
+          <p class="fichiers-hint" *ngIf="commandeFichiersSorted().length === 0">Aucun fichier pour cette {{ isVente() ? 'vente' : 'commande' }}.</p>
           <ul class="fichiers-list" *ngIf="commandeFichiersSorted().length > 0">
             <li *ngFor="let fichier of commandeFichiersSorted()" class="fichiers-list-item">
               <button
@@ -228,7 +229,7 @@
         <h2 class="section-title">Prix et Frais</h2>
 
         <!-- Quantité et Prix -->
-        <div class="prix-quantity-group">
+        <div class="prix-quantity-group" *ngIf="!isVente()">
           <div class="input-wrapper">
             <app-floating-label-input
               [label]="'Quantité'"
@@ -251,6 +252,20 @@
             </app-floating-label-input>
           </div>
 
+          <div class="input-wrapper">
+            <app-floating-label-input
+              [label]="'Prix final'"
+              [control]="get('prix_final')"
+              [formGroup]="formGroup"
+              type="number"
+              step="0.01"
+              suffix="€"
+              [readonly]="!isEditMode()">
+            </app-floating-label-input>
+          </div>
+        </div>
+
+        <div class="prix-quantity-group" *ngIf="isVente()">
           <div class="input-wrapper">
             <app-floating-label-input
               [label]="'Prix final'"
@@ -555,7 +570,7 @@
     </form>
 
     <!-- Personnalisation -->
-    <section class="form-section form-section--spaced">
+    <section class="form-section form-section--spaced" *ngIf="!isVente()">
       <h2 class="section-title">Personnalisation</h2>
 
       <!-- Couleur (sélection multiple) -->
@@ -600,7 +615,7 @@
     </section>
 
     <!-- PCs réalisés -->
-    <section class="form-section pcs-realises-section">
+    <section class="form-section pcs-realises-section" *ngIf="!isVente()">
       <h2 class="section-title">Quantité produite</h2>
       <div class="pcs-realises-wrapper" [class.pcs-realises-disabled]="!isQuantiteRealiseeEditable()">
         <div class="pcs-realises-block">
@@ -625,7 +640,7 @@
     </section>
 
     <!-- Statuts de la commande -->
-    <section class="statuts-section">
+    <section class="statuts-section" *ngIf="!isVente()">
       <div class="statuts-section__title-row">
         <h2 class="section-title">Statuts de la commande</h2>
         <div class="detail-status-badge detail-status-badge--terminee" *ngIf="isCommandeTerminee()">Terminée</div>
@@ -672,7 +687,7 @@
         </ng-container>
       </div>
     </div>
-    <div class="detail-actions-footer__toggle">
+    <div class="detail-actions-footer__toggle" *ngIf="!isVente()">
       <label class="toggle-switch-small toggle-switch-small--footer" [class.toggle-vert]="get('attente_reponse').value" [class.toggle-rouge]="!get('attente_reponse').value">
         <input
           type="checkbox"
@@ -714,8 +729,10 @@
       <h3>Confirmer la duplication</h3>
     </div>
     <div class="delete-confirm-body">
-      <p>Êtes-vous sûr de vouloir dupliquer cette commande ?</p>
-      <p class="delete-warning">Une nouvelle commande sera créée en “En attente”.</p>
+      <p>Êtes-vous sûr de vouloir dupliquer cette {{ isVente() ? 'vente' : 'commande' }} ?</p>
+      <p class="delete-warning">
+        {{ isVente() ? 'Une nouvelle vente sera créée en terminée.' : 'Une nouvelle commande sera créée en “En attente”.' }}
+      </p>
     </div>
     <div class="delete-confirm-actions">
       <button type="button" class="btn-cancel-delete" (click)="closeDuplicateConfirm()">Non</button>
@@ -728,14 +745,14 @@
 <div class="delete-confirm-overlay duplicate-confirm" *ngIf="showDuplicateSuccess()" (click)="closeDuplicateSuccess()">
   <div class="delete-confirm-popup" (click)="$event.stopPropagation()">
     <div class="delete-confirm-header">
-      <h3>Commande bien dupliquée</h3>
+      <h3>{{ isVente() ? 'Vente' : 'Commande' }} bien dupliquée</h3>
     </div>
     <div class="delete-confirm-body">
-      <p>La commande a été dupliquée avec succès.</p>
+      <p>La {{ isVente() ? 'vente' : 'commande' }} a été dupliquée avec succès.</p>
     </div>
     <div class="delete-confirm-actions">
-      <button type="button" class="btn-cancel-delete" (click)="closeDuplicateSuccess()">Rester sur la commande</button>
-      <button type="button" class="btn-confirm-delete" (click)="viewDuplicatedCommande()">Voir la commande dupliquée</button>
+      <button type="button" class="btn-cancel-delete" (click)="closeDuplicateSuccess()">Rester sur la {{ isVente() ? 'vente' : 'commande' }}</button>
+      <button type="button" class="btn-confirm-delete" (click)="viewDuplicatedCommande()">Voir la {{ isVente() ? 'vente' : 'commande' }} dupliquée</button>
     </div>
   </div>
 </div>

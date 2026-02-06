@@ -68,7 +68,7 @@ export class DashboardHomePageComponent implements OnInit {
   
   dashboardCards: DashboardCard[] = [
     {
-      title: 'Nouvelle commande',
+      title: 'Nouvelle commande / vente',
       description: 'Créer une nouvelle commande',
       route: '/dashboard/commandes/nouvelle',
       icon: '➕',
@@ -81,8 +81,8 @@ export class DashboardHomePageComponent implements OnInit {
       count: 0
     },
     {
-      title: 'Commandes terminées ou annulées',
-      description: 'Consultez vos commandes finalisées',
+      title: 'Commandes / ventes terminées ou annulées',
+      description: 'Consultez vos commandes / ventes finalisées',
       route: '/dashboard/commandes/terminees',
       icon: '✅',
       countTerminees: 0,
@@ -144,13 +144,13 @@ export class DashboardHomePageComponent implements OnInit {
           ).length;
 
           // Mettre à jour le compteur de la carte "Commandes en cours"
-          const commandesEnCoursCard = this.dashboardCards.find(card => card.title === 'Commandes en cours');
+          const commandesEnCoursCard = this.dashboardCards.find(card => card.route === '/dashboard/commandes/en-cours');
           if (commandesEnCoursCard) {
             commandesEnCoursCard.count = commandesEnCours;
           }
 
-          // Mettre à jour les compteurs de la carte "Commandes terminées ou annulées"
-          const commandesTermineesCard = this.dashboardCards.find(card => card.title === 'Commandes terminées ou annulées');
+          // Mettre à jour les compteurs de la carte "Commandes et ventes terminées ou annulées"
+          const commandesTermineesCard = this.dashboardCards.find(card => card.route === '/dashboard/commandes/terminees');
           if (commandesTermineesCard) {
             commandesTermineesCard.countTerminees = commandesTerminees;
             commandesTermineesCard.countAnnulees = commandesAnnulees;

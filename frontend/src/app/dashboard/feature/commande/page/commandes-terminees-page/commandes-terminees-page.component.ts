@@ -23,6 +23,7 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
   private readonly apiService: ApiService = inject(ApiService);
   private readonly router: Router = inject(Router);
   private readonly scrollKey = 'commandes-terminees-scroll';
+  private readonly ventePrefix = 'Vente | ';
 
   // Commandes terminées triées par date (plus récentes en premier)
   commandesTerminees = computed(() => {
@@ -62,6 +63,11 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
 
   isCommandeAnnulee(commande: Commande): boolean {
     return commande.statut_commande === StatutCommande.ANNULEE;
+  }
+
+  isVente(commande: Commande): boolean {
+    const produit = commande?.produit || '';
+    return produit.trimStart().startsWith(this.ventePrefix);
   }
 
   ngOnInit(): void {

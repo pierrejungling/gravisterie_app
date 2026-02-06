@@ -351,8 +351,16 @@ export class CommandeService {
         })) : [];
 
         const originalNom = commande.produit || 'Commande sans nom';
+        const ventePrefix = 'Vente | ';
+        const isVente = originalNom.trimStart().startsWith(ventePrefix);
+        const nomBase = isVente
+            ? originalNom.trimStart().slice(ventePrefix.length).trimStart()
+            : originalNom;
+        const nomCommande = isVente
+            ? `${ventePrefix}Copie | ${nomBase}`
+            : `Copie | ${nomBase}`;
         const payload: AjouterCommandePayload = {
-            nom_commande: `Copie | ${originalNom}`,
+            nom_commande: nomCommande,
             deadline: undefined,
             coordonnees_contact: {
                 nom: commande.client?.nom ?? undefined,
@@ -363,17 +371,17 @@ export class CommandeService {
                 tva: commande.client?.tva ?? undefined,
             },
             description_projet: commande.description ?? undefined,
-            dimensions_souhaitees: support?.dimensions ?? undefined,
-            couleur: personnalisation?.couleur ?? undefined,
-            support: support?.nom_support ?? undefined,
-            police_ecriture: personnalisation?.police ?? undefined,
-            texte_personnalisation: personnalisation?.texte ?? undefined,
+            dimensions_souhaitees: isVente ? undefined : (support?.dimensions ?? undefined),
+            couleur: isVente ? undefined : (personnalisation?.couleur ?? undefined),
+            support: isVente ? undefined : (support?.nom_support ?? undefined),
+            police_ecriture: isVente ? undefined : (personnalisation?.police ?? undefined),
+            texte_personnalisation: isVente ? undefined : (personnalisation?.texte ?? undefined),
             quantité: commande.quantité ?? 1,
             payé: false,
             commentaire_paye: undefined,
             attente_reponse: false,
             mode_contact: commande.mode_contact ?? undefined,
-            statut_initial: StatutCommande.EN_ATTENTE_INFORMATION,
+            statut_initial: isVente ? StatutCommande.TERMINE : StatutCommande.EN_ATTENTE_INFORMATION,
             supports: supports as any,
         };
 

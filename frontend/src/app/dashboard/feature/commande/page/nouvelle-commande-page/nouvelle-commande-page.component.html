@@ -20,7 +20,7 @@
       </button>
     </div>
     <div class="nouvelle-commande-actions-bar__right">
-      <div class="attente-reponse-toggle-bar">
+      <div class="attente-reponse-toggle-bar" *ngIf="!isVente()">
         <label class="toggle-switch-small" [class.toggle-vert]="getAttenteReponseControl().value" [class.toggle-rouge]="!getAttenteReponseControl().value">
           <input 
             type="checkbox" 
@@ -30,7 +30,9 @@
           <span class="toggle-label-small">{{ getAttenteReponseControl().value ? 'Rien à faire' : 'Client attend' }}</span>
         </label>
       </div>
-      <button type="submit" form="nouvelleCommandeForm" class="btn-action-bar btn-save" [disabled]="!isFormValid()">💾 Créer la commande</button>
+      <button type="submit" form="nouvelleCommandeForm" class="btn-action-bar btn-save" [disabled]="!isFormValid()">
+        💾 Créer la {{ isVente() ? 'vente' : 'commande' }}
+      </button>
     </div>
   </div>
 </div>
@@ -46,14 +48,18 @@
               <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="white"/>
             </svg>
           </div>
-          <h3>Commande bien enregistrée</h3>
+          <h3>{{ isVente() ? 'Vente bien enregistrée' : 'Commande bien enregistrée' }}</h3>
         </div>
         <div class="success-popup-body">
-          <p>Votre commande a été créée avec succès !</p>
+          <p>Votre {{ isVente() ? 'vente' : 'commande' }} a été créée avec succès !</p>
         </div>
         <div class="success-popup-actions">
-          <button type="button" class="btn-success-outline" (click)="onCreateNewCommande()">Créer une nouvelle commande</button>
-          <button type="button" class="btn-success-filled" (click)="onViewCommandes()">Voir la commande</button>
+          <button type="button" class="btn-success-outline" (click)="onCreateNewCommande()">
+            Créer une nouvelle {{ isVente() ? 'vente' : 'commande' }}
+          </button>
+          <button type="button" class="btn-success-filled" (click)="onViewCommandes()">
+            Voir la {{ isVente() ? 'vente' : 'commande' }}
+          </button>
         </div>
       </div>
     </div>
@@ -64,10 +70,22 @@
 
     <div class="detail-header">
       <div class="header-title-section">
-        <h1 class="page-title">Nouvelle Commande</h1>
+        <div class="commande-type-toggle commande-type-toggle--top-right">
+          <span class="commande-type-toggle__option" [class.active]="!isVente()">Commande</span>
+          <label class="toggle-switch-small toggle-switch-small--neutral">
+            <input
+              type="checkbox"
+              class="toggle-input"
+              [checked]="isVente()"
+              (change)="onTypeToggle($event)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="commande-type-toggle__option" [class.active]="isVente()">Vente</span>
+        </div>
+        <h1 class="page-title">Nouvelle {{ isVente() ? 'Vente' : 'Commande' }}</h1>
         <div class="commande-title-edit">
           <app-floating-label-input
-            [label]="'Nom / Intitulé de la commande'"
+            [label]="isVente() ? 'Nom / Intitulé de la vente' : 'Nom / Intitulé de la commande'"
             [control]="get('nom_commande')"
             [formGroup]="formGroup"
             [readonly]="false">
@@ -80,11 +98,11 @@
       
       <!-- Informations de la commande -->
       <section class="form-section">
-        <h2 class="section-title">Informations de la commande</h2>
+        <h2 class="section-title">Informations de la {{ isVente() ? 'vente' : 'commande' }}</h2>
         
         <!-- Le champ nom_commande est maintenant dans le header, on ne l'affiche plus ici -->
 
-        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('deadline')">
+        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('deadline')" *ngIf="!isVente()">
           <app-floating-label-input
             [label]="'Deadline'"
             [control]="get('deadline')"
@@ -102,12 +120,12 @@
               rows="4"
               placeholder=" "></textarea>
             <label class="textarea-label" [class.fixed-label]="get('description_projet').value && get('description_projet').value.length > 0">
-              Description du projet
+              {{ isVente() ? 'Description' : 'Description du projet' }}
             </label>
           </div>
         </div>
 
-        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('dimensions_souhaitees')">
+        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('dimensions_souhaitees')" *ngIf="!isVente()">
           <app-floating-label-input
             [label]="'Dimensions souhaitées'"
             [control]="get('dimensions_souhaitees')"
@@ -116,7 +134,7 @@
           <p class="field-error" *ngIf="getFieldErrorMessage('dimensions_souhaitees')">{{ getFieldErrorMessage('dimensions_souhaitees') }}</p>
         </div>
 
-        <div class="input-wrapper">
+        <div class="input-wrapper" *ngIf="!isVente()">
           <app-floating-label-input
             #supportInput
             [label]="'Support'"
@@ -130,7 +148,7 @@
         <!-- Fichiers joints -->
         <div class="input-wrapper fichiers-joints-wrapper">
           <label class="label">Fichiers joints</label>
-          <p class="fichiers-hint">Images (JPG, PNG, etc.), PDF, DOC/DOCX. Ils seront envoyés sur le stockage après la création de la commande.</p>
+          <p class="fichiers-hint">Images (JPG, PNG, etc.), PDF, DOC/DOCX. Ils seront envoyés sur le stockage après la création de la {{ isVente() ? 'vente' : 'commande' }}.</p>
           <div
             class="fichiers-drop-zone"
             [class.drag-over]="isDragOver"
@@ -275,7 +293,7 @@
         <h2 class="section-title">Prix et Frais</h2>
 
         <!-- Quantité et Prix -->
-        <div class="prix-quantity-group">
+        <div class="prix-quantity-group" *ngIf="!isVente()">
           <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('quantité')">
             <app-floating-label-input
               [label]="'Quantité'"
@@ -297,6 +315,19 @@
             </app-floating-label-input>
           </div>
 
+          <div class="input-wrapper">
+            <app-floating-label-input
+              [label]="'Prix final'"
+              [control]="get('prix_final')"
+              [formGroup]="formGroup"
+              type="number"
+              step="0.01"
+              suffix="€">
+            </app-floating-label-input>
+          </div>
+        </div>
+
+        <div class="prix-quantity-group" *ngIf="isVente()">
           <div class="input-wrapper">
             <app-floating-label-input
               [label]="'Prix final'"
@@ -483,7 +514,7 @@
     </form>
 
     <!-- Personnalisation -->
-    <section class="form-section form-section--spaced">
+    <section class="form-section form-section--spaced" *ngIf="!isVente()">
       <h2 class="section-title">Personnalisation</h2>
 
       <!-- Couleur (sélection multiple) -->
@@ -526,7 +557,7 @@
     </section>
 
     <!-- Statut initial de la commande -->
-    <section class="statuts-section">
+    <section class="statuts-section" *ngIf="!isVente()">
       <h2 class="section-title">Statut initial de la commande</h2>
       
       <div class="statuts-list">
@@ -558,11 +589,11 @@
       </div>
       <div class="form-actions-footer__row">
         <button type="submit" form="nouvelleCommandeForm" class="btn-footer btn-primary" [disabled]="!isFormValid()">
-          Créer la commande
+          Créer la {{ isVente() ? 'vente' : 'commande' }}
         </button>
       </div>
     </div>
-    <div class="form-actions-footer__toggle">
+    <div class="form-actions-footer__toggle" *ngIf="!isVente()">
       <label class="toggle-switch-small toggle-switch-small--footer" [class.toggle-vert]="getAttenteReponseControl().value" [class.toggle-rouge]="!getAttenteReponseControl().value">
         <input
           type="checkbox"

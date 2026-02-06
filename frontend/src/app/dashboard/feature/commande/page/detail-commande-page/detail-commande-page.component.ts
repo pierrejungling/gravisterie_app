@@ -76,6 +76,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     Couleur.BLANC,
     Couleur.GRAVURE_PEINTE
   ];
+
+  private readonly ventePrefix = 'Vente | ';
   
   private readonly apiService: ApiService = inject(ApiService);
   private readonly router: Router = inject(Router);
@@ -160,6 +162,11 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
   isCommandeAnnulee(): boolean {
     return this.commande()?.statut_commande === StatutCommande.ANNULEE;
+  }
+
+  isVente(): boolean {
+    const produit = this.commande()?.produit || '';
+    return produit.trimStart().startsWith(this.ventePrefix);
   }
 
   private readonly detailReturnPageKey = 'detail-return-page';

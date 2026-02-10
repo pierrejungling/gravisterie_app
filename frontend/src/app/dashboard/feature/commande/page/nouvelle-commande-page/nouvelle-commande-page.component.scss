@@ -1133,6 +1133,54 @@
   color: #ffffff !important;
 }
 
+/* Mode sombre robuste : Annuler / Enregistrer (barre + footer) */
+:host-context([data-theme="dark"]) .btn-action-bar.btn-cancel,
+:host-context([data-theme="dark"]) .form-actions-footer .btn-footer.btn-secondary {
+  background: #e65100 !important;
+  border-color: #bf360c !important;
+  color: #ffffff !important;
+}
+
+:host-context([data-theme="dark"]) .btn-action-bar.btn-cancel:hover,
+:host-context([data-theme="dark"]) .btn-action-bar.btn-cancel:focus,
+:host-context([data-theme="dark"]) .btn-action-bar.btn-cancel:focus-visible,
+:host-context([data-theme="dark"]) .btn-action-bar.btn-cancel:active,
+:host-context([data-theme="dark"]) .form-actions-footer .btn-footer.btn-secondary:hover,
+:host-context([data-theme="dark"]) .form-actions-footer .btn-footer.btn-secondary:focus,
+:host-context([data-theme="dark"]) .form-actions-footer .btn-footer.btn-secondary:focus-visible,
+:host-context([data-theme="dark"]) .form-actions-footer .btn-footer.btn-secondary:active {
+  background: #bf360c !important;
+  border-color: #d84315 !important;
+  color: #ffffff !important;
+}
+
+:host-context([data-theme="dark"]) .btn-action-bar.btn-save:not(:disabled),
+:host-context([data-theme="dark"]) .form-actions-footer .btn-footer.btn-primary:not(:disabled) {
+  background: #2e7d32 !important;
+  border-color: #1b5e20 !important;
+  color: #ffffff !important;
+}
+
+:host-context([data-theme="dark"]) .btn-action-bar.btn-save:hover:not(:disabled),
+:host-context([data-theme="dark"]) .btn-action-bar.btn-save:focus:not(:disabled),
+:host-context([data-theme="dark"]) .btn-action-bar.btn-save:focus-visible:not(:disabled),
+:host-context([data-theme="dark"]) .btn-action-bar.btn-save:active:not(:disabled),
+:host-context([data-theme="dark"]) .form-actions-footer .btn-footer.btn-primary:hover:not(:disabled),
+:host-context([data-theme="dark"]) .form-actions-footer .btn-footer.btn-primary:focus:not(:disabled),
+:host-context([data-theme="dark"]) .form-actions-footer .btn-footer.btn-primary:focus-visible:not(:disabled),
+:host-context([data-theme="dark"]) .form-actions-footer .btn-footer.btn-primary:active:not(:disabled) {
+  background: #1b5e20 !important;
+  border-color: #2e7d32 !important;
+  color: #ffffff !important;
+}
+
+:host-context([data-theme="dark"]) .btn-action-bar.btn-save:disabled,
+:host-context([data-theme="dark"]) .form-actions-footer .btn-footer.btn-primary:disabled {
+  background: #424242 !important;
+  border-color: #616161 !important;
+  color: #9e9e9e !important;
+}
+
 .btn-remove-support {
   background: var(--color-background-light);
   border-color: var(--color-error);

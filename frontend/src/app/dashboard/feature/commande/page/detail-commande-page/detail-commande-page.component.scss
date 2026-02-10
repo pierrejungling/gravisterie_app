@@ -1611,6 +1611,27 @@
   color: #ffffff;
 }
 
+/* Mode sombre robuste : bouton Afficher/Masquer frais (barre + footer mobile) */
+:host-context([data-theme="dark"]) .btn-action-bar.btn-toggle-prix,
+:host-context([data-theme="dark"]) .detail-actions-footer .btn-footer-prix {
+  background: #1565c0 !important;
+  border-color: #0d47a1 !important;
+  color: #ffffff !important;
+}
+
+:host-context([data-theme="dark"]) .btn-action-bar.btn-toggle-prix:hover,
+:host-context([data-theme="dark"]) .btn-action-bar.btn-toggle-prix:focus,
+:host-context([data-theme="dark"]) .btn-action-bar.btn-toggle-prix:focus-visible,
+:host-context([data-theme="dark"]) .btn-action-bar.btn-toggle-prix:active,
+:host-context([data-theme="dark"]) .detail-actions-footer .btn-footer-prix:hover,
+:host-context([data-theme="dark"]) .detail-actions-footer .btn-footer-prix:focus,
+:host-context([data-theme="dark"]) .detail-actions-footer .btn-footer-prix:focus-visible,
+:host-context([data-theme="dark"]) .detail-actions-footer .btn-footer-prix:active {
+  background: #0d47a1 !important;
+  border-color: #0277bd !important;
+  color: #ffffff !important;
+}
+
 .btn-remove-support {
   background: #fff5f5;
   border-color: #dc3545;
@@ -2447,13 +2468,13 @@
   }
 
   .detail-actions-footer .btn-footer-cancel {
-    background: var(--color-background-light);
-    border: 1px solid var(--color-input-border);
-    color: var(--color-text);
+    background: var(--btn-edit-bg);
+    border: 1px solid var(--btn-edit-border);
+    color: var(--btn-edit-color);
   }
   .detail-actions-footer .btn-footer-cancel:hover {
-    background: var(--color-background);
-    border-color: var(--color-border);
+    background: #ffe0b2;
+    border-color: #ffb74d;
   }
 
   .detail-actions-footer .btn-footer-save {
@@ -2487,6 +2508,12 @@
     border-color: #0277bd !important;
     color: #ffffff !important;
   }
+  :root[data-theme="dark"] .detail-actions-footer .btn-footer-prix:active,
+  [data-theme="dark"] .detail-actions-footer .btn-footer-prix:active {
+    background: #0d47a1 !important;
+    border-color: #0277bd !important;
+    color: #ffffff !important;
+  }
 
   :root[data-theme="dark"] .detail-actions-footer .btn-footer-delete,
   [data-theme="dark"] .detail-actions-footer .btn-footer-delete {
@@ -2496,6 +2523,12 @@
   }
   :root[data-theme="dark"] .detail-actions-footer .btn-footer-delete:hover,
   [data-theme="dark"] .detail-actions-footer .btn-footer-delete:hover {
+    background: #b71c1c !important;
+    border-color: #d32f2f !important;
+    color: #ffffff !important;
+  }
+  :root[data-theme="dark"] .detail-actions-footer .btn-footer-delete:active,
+  [data-theme="dark"] .detail-actions-footer .btn-footer-delete:active {
     background: #b71c1c !important;
     border-color: #d32f2f !important;
     color: #ffffff !important;
@@ -2513,6 +2546,31 @@
     border-color: #d84315 !important;
     color: #ffffff !important;
   }
+  :root[data-theme="dark"] .detail-actions-footer .btn-footer-edit:active,
+  [data-theme="dark"] .detail-actions-footer .btn-footer-edit:active {
+    background: #bf360c !important;
+    border-color: #d84315 !important;
+    color: #ffffff !important;
+  }
+
+  :root[data-theme="dark"] .detail-actions-footer .btn-footer-cancel,
+  [data-theme="dark"] .detail-actions-footer .btn-footer-cancel {
+    background: #e65100 !important;
+    border-color: #bf360c !important;
+    color: #ffffff !important;
+  }
+  :root[data-theme="dark"] .detail-actions-footer .btn-footer-cancel:hover,
+  [data-theme="dark"] .detail-actions-footer .btn-footer-cancel:hover {
+    background: #bf360c !important;
+    border-color: #d84315 !important;
+    color: #ffffff !important;
+  }
+  :root[data-theme="dark"] .detail-actions-footer .btn-footer-cancel:active,
+  [data-theme="dark"] .detail-actions-footer .btn-footer-cancel:active {
+    background: #bf360c !important;
+    border-color: #d84315 !important;
+    color: #ffffff !important;
+  }
 
   :root[data-theme="dark"] .detail-actions-footer .btn-footer-save:not(:disabled),
   [data-theme="dark"] .detail-actions-footer .btn-footer-save:not(:disabled) {
@@ -2522,6 +2580,12 @@
   }
   :root[data-theme="dark"] .detail-actions-footer .btn-footer-save:hover:not(:disabled),
   [data-theme="dark"] .detail-actions-footer .btn-footer-save:hover:not(:disabled) {
+    background: #1b5e20 !important;
+    border-color: #2e7d32 !important;
+    color: #ffffff !important;
+  }
+  :root[data-theme="dark"] .detail-actions-footer .btn-footer-save:active:not(:disabled),
+  [data-theme="dark"] .detail-actions-footer .btn-footer-save:active:not(:disabled) {
     background: #1b5e20 !important;
     border-color: #2e7d32 !important;
     color: #ffffff !important;

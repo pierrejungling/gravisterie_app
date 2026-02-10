@@ -18,7 +18,7 @@ export class CoordonneesContactPayload {
     @ApiProperty({ required: false })
     @IsOptional()
     @IsString()
-    @Length(0, 15)
+    @Length(0, 30)
     telephone?: string;
 
     @ApiProperty({ required: false })

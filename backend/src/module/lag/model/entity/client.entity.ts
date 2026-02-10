@@ -19,7 +19,7 @@ export class Client {
     @Column({type: 'varchar', length: 50, nullable: true})
     mail: string | null;
 
-    @Column({type: 'varchar', length: 15, nullable: true})
+    @Column({type: 'varchar', length: 30, nullable: true})
     téléphone: string | null;
 
     @Column({type: 'varchar', length: 100, nullable: true})

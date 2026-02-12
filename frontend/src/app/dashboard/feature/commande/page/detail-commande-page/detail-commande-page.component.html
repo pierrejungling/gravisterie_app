@@ -157,7 +157,7 @@
             </label>
           </div>
           <ng-template #descriptionCopyField>
-            <div class="copy-field-readonly copy-field-readonly--multiline">
+            <div class="copy-field-readonly">
               <div class="copy-field-content">
                 <span class="copy-field-label">{{ isVente() ? 'Description' : 'Description du projet' }}</span>
                 <span class="copy-field-value">{{ getFieldDisplayValue('description') }}</span>
@@ -433,7 +433,7 @@
                 </textarea>
               </ng-container>
               <ng-template #commentairePayeCopyField>
-                <div class="copy-field-readonly copy-field-readonly--multiline">
+                <div class="copy-field-readonly">
                   <div class="copy-field-content">
                     <span class="copy-field-label">Commentaire payé</span>
                     <span class="copy-field-value">{{ getFieldDisplayValue('commentaire_paye') }}</span>
@@ -993,7 +993,7 @@
           </app-floating-label-input>
         </ng-container>
         <ng-template #textePersoCopyField>
-          <div class="copy-field-readonly copy-field-readonly--multiline">
+          <div class="copy-field-readonly">
             <div class="copy-field-content">
               <span class="copy-field-label">Texte de la personnalisation</span>
               <span class="copy-field-value">{{ getFieldDisplayValue('texte_personnalisation') }}</span>

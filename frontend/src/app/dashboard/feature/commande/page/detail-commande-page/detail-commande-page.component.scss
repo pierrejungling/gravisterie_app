@@ -961,6 +961,159 @@
   transition: all 0.3s ease;
   margin-bottom: 1.5rem;
 
+  .copy-field-readonly {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid var(--color-input-border);
+    border-radius: 6px;
+    background: var(--color-secondary);
+    color: var(--color-text);
+    padding: 0.55rem 0.75rem 0.65rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .copy-field-readonly--multiline {
+    align-items: flex-start;
+  }
+
+  .copy-field-content {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .copy-field-label {
+    font-size: 0.76rem;
+    color: var(--color-text-light);
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .copy-field-value {
+    display: block;
+    font-size: 1rem;
+    color: var(--color-text);
+    font-weight: 500;
+    line-height: 1.35;
+    white-space: pre-wrap;
+    word-break: break-word;
+    user-select: text;
+    cursor: text;
+  }
+
+  .copy-field-value--truncate {
+    display: block;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .copy-field-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .copy-field-copy-btn,
+  .copy-field-open-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    border: 1px solid var(--color-input-border);
+    border-radius: 6px;
+    background: var(--color-background-light);
+    color: var(--color-text);
+    padding: 0.45rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+
+    &:hover:not(:disabled),
+    &:focus-visible:not(:disabled) {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.18);
+      outline: none;
+    }
+
+    &:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+
+    &.copy-field-copy-btn::before {
+      content: '';
+      width: 1.15rem;
+      height: 1.15rem;
+      background-color: currentColor;
+      -webkit-mask: center / contain no-repeat url('/assets/icons/copy-svgrepo-com.svg');
+      mask: center / contain no-repeat url('/assets/icons/copy-svgrepo-com.svg');
+      flex-shrink: 0;
+    }
+
+    &.copy-field-open-btn::before {
+      content: '';
+      width: 1.15rem;
+      height: 1.15rem;
+      background-color: currentColor;
+      -webkit-mask: center / contain no-repeat url('/assets/icons/url-checker-svgrepo-com.svg');
+      mask: center / contain no-repeat url('/assets/icons/url-checker-svgrepo-com.svg');
+      flex-shrink: 0;
+    }
+
+    &.copy-field-copy-btn--inline {
+      margin-left: auto;
+    }
+  }
+
+  .copy-field-open-btn {
+    gap: 0;
+    min-width: 2.2rem;
+    padding: 0.45rem;
+  }
+
+  .copy-field-open-btn::before {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+  }
+
+  :host-context([data-theme="dark"]) .copy-field-copy-btn {
+    color: #e8eefb;
+  }
+
+  :host-context([data-theme="dark"]) .copy-field-open-btn {
+    color: #e8eefb;
+  }
+
+  @media (max-width: 640px) {
+    .copy-field-readonly:not(.copy-field-readonly--multiline) {
+      align-items: center;
+      flex-direction: row;
+    }
+
+    .copy-field-copy-btn,
+    .copy-field-open-btn {
+      align-self: auto;
+    }
+
+    .copy-field-readonly--multiline {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .copy-field-readonly--multiline .copy-field-actions {
+      align-self: flex-end;
+    }
+  }
+
   // Griser tous les champs désactivés
   ::ng-deep app-floating-label-input {
     &.disabled,
@@ -1437,9 +1590,13 @@
 
 .support-price-url-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1rem;
   margin-bottom: 1rem;
+
+  > .input-wrapper {
+    min-width: 0;
+  }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;

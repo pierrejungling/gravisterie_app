@@ -54,6 +54,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   previewPdfUrl: WritableSignal<string | null> = signal(null);
   /** Blob du DOCX en prévisualisation (null = modal fermée). */
   previewDocxBlob: WritableSignal<Blob | null> = signal(null);
+  copyFeedbackField: WritableSignal<string | null> = signal(null);
 
   // Exposer StatutCommande et ModeContact pour l'utiliser dans le template
   readonly StatutCommande = StatutCommande;
@@ -1626,6 +1627,82 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       month: '2-digit', 
       year: 'numeric' 
     });
+  }
+
+  getFieldDisplayValue(controlName: string): string {
+    const value = this.get(controlName)?.value;
+    if (value === null || value === undefined) return '-';
+    const text = String(value).trim();
+    return text.length > 0 ? text : '-';
+  }
+
+  copyFieldValue(controlName: string): void {
+    const value = this.get(controlName)?.value;
+    const textToCopy = value === null || value === undefined ? '' : String(value).trim();
+    if (!textToCopy) return;
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(textToCopy)
+        .then(() => this.showCopyFeedback(controlName))
+        .catch(() => this.copyWithFallback(textToCopy, controlName));
+      return;
+    }
+
+    this.copyWithFallback(textToCopy, controlName);
+  }
+
+  copyTextValue(text: string, feedbackKey: string): void {
+    const textToCopy = text?.trim();
+    if (!textToCopy) return;
+
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(textToCopy)
+        .then(() => this.showCopyFeedback(feedbackKey))
+        .catch(() => this.copyWithFallback(textToCopy, feedbackKey));
+      return;
+    }
+
+    this.copyWithFallback(textToCopy, feedbackKey);
+  }
+
+  toCopyText(value: unknown): string {
+    if (value === null || value === undefined) return '';
+    return String(value);
+  }
+
+  openExternalUrl(value: unknown): void {
+    const raw = this.toCopyText(value).trim();
+    if (!raw) return;
+
+    const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+      const parsed = new URL(withProtocol);
+      window.open(parsed.toString(), '_blank', 'noopener,noreferrer');
+    } catch {
+      // URL invalide: ne rien faire
+    }
+  }
+
+  private copyWithFallback(text: string, controlName: string): void {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.setAttribute('readonly', '');
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textArea);
+    if (copied) this.showCopyFeedback(controlName);
+  }
+
+  private showCopyFeedback(controlName: string): void {
+    this.copyFeedbackField.set(controlName);
+    window.setTimeout(() => {
+      if (this.copyFeedbackField() === controlName) {
+        this.copyFeedbackField.set(null);
+      }
+    }, 1200);
   }
 
   toggleCouleur(couleur: Couleur): void {

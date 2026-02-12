@@ -88,16 +88,28 @@
       <!-- Informations de la commande -->
       <section class="form-section">
         <h2 class="section-title">Informations de la {{ isVente() ? 'vente' : 'commande' }}</h2>
-        <p class="commande-date-display" *ngIf="!isEditMode()">
-          <strong>{{ isVente() ? 'Date de la vente' : 'Date de commande' }} :</strong>&nbsp;{{ formatDate(commande()?.date_commande || '') }}
-        </p>
+        <div class="input-wrapper" *ngIf="!isEditMode()">
+          <div class="copy-field-readonly">
+            <div class="copy-field-content">
+              <span class="copy-field-label">{{ isVente() ? 'Date de la vente' : 'Date de commande' }}</span>
+              <span class="copy-field-value">{{ formatDate(commande()?.date_commande || '') }}</span>
+            </div>
+            <button
+              type="button"
+              class="copy-field-copy-btn"
+              (click)="copyTextValue(formatDate(commande()?.date_commande || ''), 'date_commande')"
+              [disabled]="formatDate(commande()?.date_commande || '') === '-'">
+              {{ copyFeedbackField() === 'date_commande' ? 'Copié !' : '' }}
+            </button>
+          </div>
+        </div>
         <div class="input-wrapper" *ngIf="isEditMode()">
           <app-floating-label-input
             [label]="isVente() ? 'Date de la vente' : 'Date de commande'"
             [control]="get('date_commande')"
             [formGroup]="formGroup"
             type="date"
-            [readonly]="!isEditMode()">
+            [readonly]="false">
           </app-floating-label-input>
         </div>
         <div 
@@ -105,46 +117,100 @@
           [class.deadline-highlight-warning]="getDeadlineStatus() === 'warning' && !isCommandeTerminee() && !isCommandeAnnulee()"
           [class.deadline-highlight-danger]="getDeadlineStatus() === 'danger' && !isCommandeTerminee() && !isCommandeAnnulee()"
           *ngIf="!isVente()">
-          <app-floating-label-input
-            [label]="'Deadline'"
-            [control]="get('deadline')"
-            [formGroup]="formGroup"
-            type="date"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
+          <ng-container *ngIf="isEditMode(); else deadlineCopyField">
+            <app-floating-label-input
+              [label]="'Deadline'"
+              [control]="get('deadline')"
+              [formGroup]="formGroup"
+              type="date"
+              [readonly]="false">
+            </app-floating-label-input>
+          </ng-container>
+          <ng-template #deadlineCopyField>
+            <div class="copy-field-readonly">
+              <div class="copy-field-content">
+                <span class="copy-field-label">Deadline</span>
+                <span class="copy-field-value">{{ formatDate(commande()?.deadline || '') }}</span>
+              </div>
+              <button
+                type="button"
+                class="copy-field-copy-btn"
+                (click)="copyTextValue(formatDate(commande()?.deadline || ''), 'deadline')"
+                [disabled]="formatDate(commande()?.deadline || '') === '-'">
+                {{ copyFeedbackField() === 'deadline' ? 'Copié !' : '' }}
+              </button>
+            </div>
+          </ng-template>
         </div>
 
         <div class="input-wrapper">
-          <div class="textarea-container">
+          <div class="textarea-container" *ngIf="isEditMode(); else descriptionCopyField">
             <textarea
               class="description-textarea"
               formControlName="description"
-              [readonly]="!isEditMode()"
-              [disabled]="!isEditMode()"
+              [readonly]="false"
+              [disabled]="false"
               rows="4"
               placeholder=" "></textarea>
             <label class="textarea-label" [class.fixed-label]="get('description').value && get('description').value.length > 0">
               {{ isVente() ? 'Description' : 'Description du projet' }}
             </label>
           </div>
+          <ng-template #descriptionCopyField>
+            <div class="copy-field-readonly copy-field-readonly--multiline">
+              <div class="copy-field-content">
+                <span class="copy-field-label">{{ isVente() ? 'Description' : 'Description du projet' }}</span>
+                <span class="copy-field-value">{{ getFieldDisplayValue('description') }}</span>
+              </div>
+              <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('description')" [disabled]="getFieldDisplayValue('description') === '-'">
+                {{ copyFeedbackField() === 'description' ? 'Copié !' : '' }}
+              </button>
+            </div>
+          </ng-template>
         </div>
 
         <div class="input-wrapper" *ngIf="!isVente()">
-          <app-floating-label-input
-            [label]="'Dimensions souhaitées'"
-            [control]="get('dimensions')!"
-            [formGroup]="formGroup"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
+          <ng-container *ngIf="isEditMode(); else dimensionsCopyField">
+            <app-floating-label-input
+              [label]="'Dimensions souhaitées'"
+              [control]="get('dimensions')!"
+              [formGroup]="formGroup"
+              [readonly]="false">
+            </app-floating-label-input>
+          </ng-container>
+          <ng-template #dimensionsCopyField>
+            <div class="copy-field-readonly">
+              <div class="copy-field-content">
+                <span class="copy-field-label">Dimensions souhaitées</span>
+                <span class="copy-field-value">{{ getFieldDisplayValue('dimensions') }}</span>
+              </div>
+              <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('dimensions')" [disabled]="getFieldDisplayValue('dimensions') === '-'">
+                {{ copyFeedbackField() === 'dimensions' ? 'Copié !' : '' }}
+              </button>
+            </div>
+          </ng-template>
         </div>
 
         <div class="input-wrapper" *ngIf="!isVente()">
-          <app-floating-label-input
-            [label]="'Support'"
-            [control]="get('support')!"
-            [formGroup]="formGroup"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
+          <ng-container *ngIf="isEditMode(); else supportCopyField">
+            <app-floating-label-input
+              [label]="'Support'"
+              [control]="get('support')!"
+              [formGroup]="formGroup"
+              [readonly]="false">
+            </app-floating-label-input>
+          </ng-container>
+          <ng-template #supportCopyField>
+            <div class="copy-field-readonly">
+              <div class="copy-field-content">
+                <span class="copy-field-label">Support</span>
+                <span class="copy-field-value">{{ getFieldDisplayValue('support') }}</span>
+              </div>
+              <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('support')" [disabled]="getFieldDisplayValue('support') === '-'">
+                {{ copyFeedbackField() === 'support' ? 'Copié !' : '' }}
+              </button>
+            </div>
+          </ng-template>
         </div>
 
         <!-- Fichiers joints -->
@@ -240,51 +306,103 @@
         <!-- Quantité et Prix -->
         <div class="prix-quantity-group" *ngIf="!isVente()">
           <div class="input-wrapper">
-            <app-floating-label-input
-              [label]="'Quantité'"
-              [control]="get('quantité')"
-              [formGroup]="formGroup"
-              type="number"
-              [readonly]="!isEditMode()">
-            </app-floating-label-input>
+            <ng-container *ngIf="isEditMode(); else quantiteCopyField">
+              <app-floating-label-input
+                [label]="'Quantité'"
+                [control]="get('quantité')"
+                [formGroup]="formGroup"
+                type="number"
+                [readonly]="false">
+              </app-floating-label-input>
+            </ng-container>
+            <ng-template #quantiteCopyField>
+              <div class="copy-field-readonly">
+                <div class="copy-field-content">
+                  <span class="copy-field-label">Quantité</span>
+                  <span class="copy-field-value">{{ getFieldDisplayValue('quantité') }}</span>
+                </div>
+                <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('quantité')" [disabled]="getFieldDisplayValue('quantité') === '-'">
+                  {{ copyFeedbackField() === 'quantité' ? 'Copié !' : '' }}
+                </button>
+              </div>
+            </ng-template>
           </div>
 
           <div class="input-wrapper">
-            <app-floating-label-input
-              [label]="'Prix unitaire final'"
-              [control]="get('prix_unitaire_final')"
-              [formGroup]="formGroup"
-              type="number"
-              step="0.01"
-              suffix="€"
-              [readonly]="!isEditMode()">
-            </app-floating-label-input>
+            <ng-container *ngIf="isEditMode(); else puFinalCopyField">
+              <app-floating-label-input
+                [label]="'Prix unitaire final'"
+                [control]="get('prix_unitaire_final')"
+                [formGroup]="formGroup"
+                type="number"
+                step="0.01"
+                suffix="€"
+                [readonly]="false">
+              </app-floating-label-input>
+            </ng-container>
+            <ng-template #puFinalCopyField>
+              <div class="copy-field-readonly">
+                <div class="copy-field-content">
+                  <span class="copy-field-label">Prix unitaire final</span>
+                  <span class="copy-field-value">{{ getFieldDisplayValue('prix_unitaire_final') }}</span>
+                </div>
+                <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('prix_unitaire_final')" [disabled]="getFieldDisplayValue('prix_unitaire_final') === '-'">
+                  {{ copyFeedbackField() === 'prix_unitaire_final' ? 'Copié !' : '' }}
+                </button>
+              </div>
+            </ng-template>
           </div>
 
           <div class="input-wrapper">
-            <app-floating-label-input
-              [label]="'Prix final'"
-              [control]="get('prix_final')"
-              [formGroup]="formGroup"
-              type="number"
-              step="0.01"
-              suffix="€"
-              [readonly]="!isEditMode()">
-            </app-floating-label-input>
+            <ng-container *ngIf="isEditMode(); else prixFinalCopyField">
+              <app-floating-label-input
+                [label]="'Prix final'"
+                [control]="get('prix_final')"
+                [formGroup]="formGroup"
+                type="number"
+                step="0.01"
+                suffix="€"
+                [readonly]="false">
+              </app-floating-label-input>
+            </ng-container>
+            <ng-template #prixFinalCopyField>
+              <div class="copy-field-readonly">
+                <div class="copy-field-content">
+                  <span class="copy-field-label">Prix final</span>
+                  <span class="copy-field-value">{{ getFieldDisplayValue('prix_final') }}</span>
+                </div>
+                <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('prix_final')" [disabled]="getFieldDisplayValue('prix_final') === '-'">
+                  {{ copyFeedbackField() === 'prix_final' ? 'Copié !' : '' }}
+                </button>
+              </div>
+            </ng-template>
           </div>
         </div>
 
         <div class="prix-quantity-group" *ngIf="isVente()">
           <div class="input-wrapper">
-            <app-floating-label-input
-              [label]="'Prix final'"
-              [control]="get('prix_final')"
-              [formGroup]="formGroup"
-              type="number"
-              step="0.01"
-              suffix="€"
-              [readonly]="!isEditMode()">
-            </app-floating-label-input>
+            <ng-container *ngIf="isEditMode(); else prixFinalVenteCopyField">
+              <app-floating-label-input
+                [label]="'Prix final'"
+                [control]="get('prix_final')"
+                [formGroup]="formGroup"
+                type="number"
+                step="0.01"
+                suffix="€"
+                [readonly]="false">
+              </app-floating-label-input>
+            </ng-container>
+            <ng-template #prixFinalVenteCopyField>
+              <div class="copy-field-readonly">
+                <div class="copy-field-content">
+                  <span class="copy-field-label">Prix final</span>
+                  <span class="copy-field-value">{{ getFieldDisplayValue('prix_final') }}</span>
+                </div>
+                <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('prix_final')" [disabled]="getFieldDisplayValue('prix_final') === '-'">
+                  {{ copyFeedbackField() === 'prix_final' ? 'Copié !' : '' }}
+                </button>
+              </div>
+            </ng-template>
           </div>
         </div>
 
@@ -296,16 +414,35 @@
                 formControlName="payé"
                 (change)="onPayeChange()">
               <span class="paye-label-text">{{ get('payé').value ? 'Payé' : 'Non payé' }}</span>
+              <button
+                type="button"
+                class="copy-field-copy-btn copy-field-copy-btn--inline"
+                (click)="copyTextValue(get('payé').value ? 'Payé' : 'Non payé', 'paye_status')">
+                {{ copyFeedbackField() === 'paye_status' ? 'Copié !' : '' }}
+              </button>
             </label>
             <div class="paye-commentaire-wrapper">
-              <textarea
-                class="paye-commentaire-input"
-                formControlName="commentaire_paye"
-                placeholder="Commentaire..."
-                rows="3"
-                [readonly]="!isEditMode()"
-                [disabled]="!isEditMode()">
-              </textarea>
+              <ng-container *ngIf="isEditMode(); else commentairePayeCopyField">
+                <textarea
+                  class="paye-commentaire-input"
+                  formControlName="commentaire_paye"
+                  placeholder="Commentaire..."
+                  rows="3"
+                  [readonly]="false"
+                  [disabled]="false">
+                </textarea>
+              </ng-container>
+              <ng-template #commentairePayeCopyField>
+                <div class="copy-field-readonly copy-field-readonly--multiline">
+                  <div class="copy-field-content">
+                    <span class="copy-field-label">Commentaire payé</span>
+                    <span class="copy-field-value">{{ getFieldDisplayValue('commentaire_paye') }}</span>
+                  </div>
+                  <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('commentaire_paye')" [disabled]="getFieldDisplayValue('commentaire_paye') === '-'">
+                    {{ copyFeedbackField() === 'commentaire_paye' ? 'Copié !' : '' }}
+                  </button>
+                </div>
+              </ng-template>
             </div>
           </div>
         </div>
@@ -322,12 +459,29 @@
               <ng-container [formGroup]="$any(supportControl)">
                 <!-- Nom du support -->
                 <div class="input-wrapper">
-                  <app-floating-label-input
-                    [label]="'Nom du support / frais'"
-                    [control]="$any(supportControl).get('nom_support')!"
-                    [formGroup]="$any(supportControl)"
-                    [readonly]="!isEditMode()">
-                  </app-floating-label-input>
+                  <ng-container *ngIf="isEditMode(); else supportNomCopyField">
+                    <app-floating-label-input
+                      [label]="'Nom du support / frais'"
+                      [control]="$any(supportControl).get('nom_support')!"
+                      [formGroup]="$any(supportControl)"
+                      [readonly]="false">
+                    </app-floating-label-input>
+                  </ng-container>
+                  <ng-template #supportNomCopyField>
+                    <div class="copy-field-readonly">
+                      <div class="copy-field-content">
+                        <span class="copy-field-label">Nom du support / frais</span>
+                        <span class="copy-field-value">{{ $any(supportControl).get('nom_support')?.value || '-' }}</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="copy-field-copy-btn"
+                        (click)="copyTextValue(toCopyText($any(supportControl).get('nom_support')?.value), 'support_nom_' + i)"
+                        [disabled]="!$any(supportControl).get('nom_support')?.value">
+                        {{ copyFeedbackField() === ('support_nom_' + i) ? 'Copié !' : '' }}
+                      </button>
+                    </div>
+                  </ng-template>
                 </div>
 
                 <!-- Toggle Prix support unitaire (au-dessus du champ prix support) -->
@@ -346,24 +500,71 @@
                 <!-- Prix support et URL support sur la même ligne -->
                 <div class="support-price-url-row">
                   <div class="input-wrapper">
-                    <app-floating-label-input
-                      [label]="isPrixUnitaire($any(supportControl)) ? 'Prix unitaire' : 'Prix total'"
-                      [control]="$any(supportControl).get('prix_support')!"
-                      [formGroup]="$any(supportControl)"
-                      type="number"
-                      step="0.01"
-                      suffix="€"
-                      [readonly]="!isEditMode()">
-                    </app-floating-label-input>
+                    <ng-container *ngIf="isEditMode(); else supportPrixCopyField">
+                      <app-floating-label-input
+                        [label]="isPrixUnitaire($any(supportControl)) ? 'Prix unitaire' : 'Prix total'"
+                        [control]="$any(supportControl).get('prix_support')!"
+                        [formGroup]="$any(supportControl)"
+                        type="number"
+                        step="0.01"
+                        suffix="€"
+                        [readonly]="false">
+                      </app-floating-label-input>
+                    </ng-container>
+                    <ng-template #supportPrixCopyField>
+                      <div class="copy-field-readonly">
+                        <div class="copy-field-content">
+                          <span class="copy-field-label">{{ isPrixUnitaire($any(supportControl)) ? 'Prix unitaire' : 'Prix total' }}</span>
+                          <span class="copy-field-value">{{ $any(supportControl).get('prix_support')?.value || '-' }}</span>
+                        </div>
+                        <button
+                          type="button"
+                          class="copy-field-copy-btn"
+                          (click)="copyTextValue(toCopyText($any(supportControl).get('prix_support')?.value), 'support_pu_' + i)"
+                          [disabled]="!$any(supportControl).get('prix_support')?.value">
+                          {{ copyFeedbackField() === ('support_pu_' + i) ? 'Copié !' : '' }}
+                        </button>
+                      </div>
+                    </ng-template>
                   </div>
 
                   <div class="input-wrapper">
-                    <app-floating-label-input
-                      [label]="'URL'"
-                      [control]="$any(supportControl).get('url_support')!"
-                      [formGroup]="$any(supportControl)"
-                      [readonly]="!isEditMode()">
-                    </app-floating-label-input>
+                    <ng-container *ngIf="isEditMode(); else supportUrlCopyField">
+                      <app-floating-label-input
+                        [label]="'URL'"
+                        [control]="$any(supportControl).get('url_support')!"
+                        [formGroup]="$any(supportControl)"
+                        [readonly]="false">
+                      </app-floating-label-input>
+                    </ng-container>
+                    <ng-template #supportUrlCopyField>
+                      <div class="copy-field-readonly">
+                        <div class="copy-field-content">
+                          <span class="copy-field-label">URL</span>
+                          <span
+                            class="copy-field-value copy-field-value--truncate"
+                            [title]="$any(supportControl).get('url_support')?.value || ''">
+                            {{ $any(supportControl).get('url_support')?.value || '-' }}
+                          </span>
+                        </div>
+                        <div class="copy-field-actions">
+                          <button
+                            type="button"
+                            class="copy-field-copy-btn"
+                            (click)="copyTextValue(toCopyText($any(supportControl).get('url_support')?.value), 'support_url_' + i)"
+                            [disabled]="!$any(supportControl).get('url_support')?.value">
+                            {{ copyFeedbackField() === ('support_url_' + i) ? 'Copié !' : '' }}
+                          </button>
+                          <button
+                            type="button"
+                            class="copy-field-open-btn"
+                            (click)="openExternalUrl($any(supportControl).get('url_support')?.value)"
+                            [disabled]="!$any(supportControl).get('url_support')?.value"
+                            title="Ouvrir le lien"
+                            aria-label="Ouvrir le lien"></button>
+                        </div>
+                      </div>
+                    </ng-template>
                   </div>
                 </div>
 
@@ -382,15 +583,32 @@
 
                 <!-- Prix support unitaire calculé (read-only) -->
                 <div class="input-wrapper">
-                  <app-floating-label-input
-                    [label]="'Prix unitaire (calculé)'"
-                    [control]="$any(supportControl).get('prix_support_unitaire')!"
-                    [formGroup]="$any(supportControl)"
-                    type="number"
-                    step="0.01"
-                    suffix="€"
-                    [readonly]="true">
-                  </app-floating-label-input>
+                  <ng-container *ngIf="isEditMode(); else supportPuCalculeCopyField">
+                    <app-floating-label-input
+                      [label]="'Prix unitaire (calculé)'"
+                      [control]="$any(supportControl).get('prix_support_unitaire')!"
+                      [formGroup]="$any(supportControl)"
+                      type="number"
+                      step="0.01"
+                      suffix="€"
+                      [readonly]="true">
+                    </app-floating-label-input>
+                  </ng-container>
+                  <ng-template #supportPuCalculeCopyField>
+                    <div class="copy-field-readonly">
+                      <div class="copy-field-content">
+                        <span class="copy-field-label">Prix unitaire (calculé)</span>
+                        <span class="copy-field-value">{{ $any(supportControl).get('prix_support_unitaire')?.value || '-' }}</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="copy-field-copy-btn"
+                        (click)="copyTextValue(toCopyText($any(supportControl).get('prix_support_unitaire')?.value), 'support_pu_calc_' + i)"
+                        [disabled]="!$any(supportControl).get('prix_support_unitaire')?.value">
+                        {{ copyFeedbackField() === ('support_pu_calc_' + i) ? 'Copié !' : '' }}
+                      </button>
+                    </div>
+                  </ng-template>
                 </div>
               </ng-container>
 
@@ -473,40 +691,92 @@
         <h2 class="section-title">Coordonnées de contact</h2>
         
         <div class="input-wrapper">
-          <app-floating-label-input
-            [label]="'Nom'"
-            [control]="get('nom')!"
-            [formGroup]="formGroup"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
+          <ng-container *ngIf="isEditMode(); else nomCopyField">
+            <app-floating-label-input
+              [label]="'Nom'"
+              [control]="get('nom')!"
+              [formGroup]="formGroup"
+              [readonly]="false">
+            </app-floating-label-input>
+          </ng-container>
+          <ng-template #nomCopyField>
+            <div class="copy-field-readonly">
+              <div class="copy-field-content">
+                <span class="copy-field-label">Nom</span>
+                <span class="copy-field-value">{{ getFieldDisplayValue('nom') }}</span>
+              </div>
+              <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('nom')" [disabled]="getFieldDisplayValue('nom') === '-'">
+                {{ copyFeedbackField() === 'nom' ? 'Copié !' : '' }}
+              </button>
+            </div>
+          </ng-template>
         </div>
 
         <div class="input-wrapper">
-          <app-floating-label-input
-            [label]="'Prénom'"
-            [control]="get('prenom')!"
-            [formGroup]="formGroup"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
+          <ng-container *ngIf="isEditMode(); else prenomCopyField">
+            <app-floating-label-input
+              [label]="'Prénom'"
+              [control]="get('prenom')!"
+              [formGroup]="formGroup"
+              [readonly]="false">
+            </app-floating-label-input>
+          </ng-container>
+          <ng-template #prenomCopyField>
+            <div class="copy-field-readonly">
+              <div class="copy-field-content">
+                <span class="copy-field-label">Prénom</span>
+                <span class="copy-field-value">{{ getFieldDisplayValue('prenom') }}</span>
+              </div>
+              <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('prenom')" [disabled]="getFieldDisplayValue('prenom') === '-'">
+                {{ copyFeedbackField() === 'prenom' ? 'Copié !' : '' }}
+              </button>
+            </div>
+          </ng-template>
         </div>
 
         <div class="input-wrapper">
-          <app-floating-label-input
-            [label]="'Téléphone'"
-            [control]="get('telephone')!"
-            [formGroup]="formGroup"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
+          <ng-container *ngIf="isEditMode(); else telephoneCopyField">
+            <app-floating-label-input
+              [label]="'Téléphone'"
+              [control]="get('telephone')!"
+              [formGroup]="formGroup"
+              [readonly]="false">
+            </app-floating-label-input>
+          </ng-container>
+          <ng-template #telephoneCopyField>
+            <div class="copy-field-readonly">
+              <div class="copy-field-content">
+                <span class="copy-field-label">Téléphone</span>
+                <span class="copy-field-value">{{ getFieldDisplayValue('telephone') }}</span>
+              </div>
+              <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('telephone')" [disabled]="getFieldDisplayValue('telephone') === '-'">
+                {{ copyFeedbackField() === 'telephone' ? 'Copié !' : '' }}
+              </button>
+            </div>
+          </ng-template>
         </div>
 
         <div class="input-wrapper">
-          <app-floating-label-input
-            [label]="'Email'"
-            [control]="get('mail')!"
-            [formGroup]="formGroup"
-            type="email"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
+          <ng-container *ngIf="isEditMode(); else mailCopyField">
+            <app-floating-label-input
+              [label]="'Email'"
+              [control]="get('mail')!"
+              [formGroup]="formGroup"
+              type="email"
+              [readonly]="false">
+            </app-floating-label-input>
+          </ng-container>
+          <ng-template #mailCopyField>
+            <div class="copy-field-readonly">
+              <div class="copy-field-content">
+                <span class="copy-field-label">Email</span>
+                <span class="copy-field-value">{{ getFieldDisplayValue('mail') }}</span>
+              </div>
+              <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('mail')" [disabled]="getFieldDisplayValue('mail') === '-'">
+                {{ copyFeedbackField() === 'mail' ? 'Copié !' : '' }}
+              </button>
+            </div>
+          </ng-template>
         </div>
 
         <!-- Adresse décomposée -->
@@ -514,60 +784,138 @@
           <label class="section-subtitle">Adresse</label>
           
           <div class="input-wrapper">
-            <app-floating-label-input
-              [label]="'Rue et numéro'"
-              [control]="get('rue')!"
-              [formGroup]="formGroup"
-              [readonly]="!isEditMode()">
-            </app-floating-label-input>
+            <ng-container *ngIf="isEditMode(); else rueCopyField">
+              <app-floating-label-input
+                [label]="'Rue et numéro'"
+                [control]="get('rue')!"
+                [formGroup]="formGroup"
+                [readonly]="false">
+              </app-floating-label-input>
+            </ng-container>
+            <ng-template #rueCopyField>
+              <div class="copy-field-readonly">
+                <div class="copy-field-content">
+                  <span class="copy-field-label">Rue et numéro</span>
+                  <span class="copy-field-value">{{ getFieldDisplayValue('rue') }}</span>
+                </div>
+                <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('rue')" [disabled]="getFieldDisplayValue('rue') === '-'">
+                  {{ copyFeedbackField() === 'rue' ? 'Copié !' : '' }}
+                </button>
+              </div>
+            </ng-template>
           </div>
 
           <div class="form-row">
             <div class="input-wrapper">
-              <app-floating-label-input
-                [label]="'Code postal'"
-                [control]="get('code_postal')!"
-                [formGroup]="formGroup"
-                [readonly]="!isEditMode()">
-              </app-floating-label-input>
+              <ng-container *ngIf="isEditMode(); else codePostalCopyField">
+                <app-floating-label-input
+                  [label]="'Code postal'"
+                  [control]="get('code_postal')!"
+                  [formGroup]="formGroup"
+                  [readonly]="false">
+                </app-floating-label-input>
+              </ng-container>
+              <ng-template #codePostalCopyField>
+                <div class="copy-field-readonly">
+                  <div class="copy-field-content">
+                    <span class="copy-field-label">Code postal</span>
+                    <span class="copy-field-value">{{ getFieldDisplayValue('code_postal') }}</span>
+                  </div>
+                  <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('code_postal')" [disabled]="getFieldDisplayValue('code_postal') === '-'">
+                    {{ copyFeedbackField() === 'code_postal' ? 'Copié !' : '' }}
+                  </button>
+                </div>
+              </ng-template>
             </div>
             
             <div class="input-wrapper">
-              <app-floating-label-input
-                [label]="'Ville'"
-                [control]="get('ville')!"
-                [formGroup]="formGroup"
-                [readonly]="!isEditMode()">
-              </app-floating-label-input>
+              <ng-container *ngIf="isEditMode(); else villeCopyField">
+                <app-floating-label-input
+                  [label]="'Ville'"
+                  [control]="get('ville')!"
+                  [formGroup]="formGroup"
+                  [readonly]="false">
+                </app-floating-label-input>
+              </ng-container>
+              <ng-template #villeCopyField>
+                <div class="copy-field-readonly">
+                  <div class="copy-field-content">
+                    <span class="copy-field-label">Ville</span>
+                    <span class="copy-field-value">{{ getFieldDisplayValue('ville') }}</span>
+                  </div>
+                  <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('ville')" [disabled]="getFieldDisplayValue('ville') === '-'">
+                    {{ copyFeedbackField() === 'ville' ? 'Copié !' : '' }}
+                  </button>
+                </div>
+              </ng-template>
             </div>
           </div>
 
           <div class="input-wrapper">
-            <app-floating-label-input
-              [label]="'Pays'"
-              [control]="get('pays')!"
-              [formGroup]="formGroup"
-              [readonly]="!isEditMode()">
-            </app-floating-label-input>
+            <ng-container *ngIf="isEditMode(); else paysCopyField">
+              <app-floating-label-input
+                [label]="'Pays'"
+                [control]="get('pays')!"
+                [formGroup]="formGroup"
+                [readonly]="false">
+              </app-floating-label-input>
+            </ng-container>
+            <ng-template #paysCopyField>
+              <div class="copy-field-readonly">
+                <div class="copy-field-content">
+                  <span class="copy-field-label">Pays</span>
+                  <span class="copy-field-value">{{ getFieldDisplayValue('pays') }}</span>
+                </div>
+                <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('pays')" [disabled]="getFieldDisplayValue('pays') === '-'">
+                  {{ copyFeedbackField() === 'pays' ? 'Copié !' : '' }}
+                </button>
+              </div>
+            </ng-template>
           </div>
         </div>
 
         <div class="input-wrapper">
-          <app-floating-label-input
-            [label]="'Dénomination sociale'"
-            [control]="get('societe')!"
-            [formGroup]="formGroup"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
+          <ng-container *ngIf="isEditMode(); else societeCopyField">
+            <app-floating-label-input
+              [label]="'Dénomination sociale'"
+              [control]="get('societe')!"
+              [formGroup]="formGroup"
+              [readonly]="false">
+            </app-floating-label-input>
+          </ng-container>
+          <ng-template #societeCopyField>
+            <div class="copy-field-readonly">
+              <div class="copy-field-content">
+                <span class="copy-field-label">Dénomination sociale</span>
+                <span class="copy-field-value">{{ getFieldDisplayValue('societe') }}</span>
+              </div>
+              <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('societe')" [disabled]="getFieldDisplayValue('societe') === '-'">
+                {{ copyFeedbackField() === 'societe' ? 'Copié !' : '' }}
+              </button>
+            </div>
+          </ng-template>
         </div>
 
         <div class="input-wrapper">
-          <app-floating-label-input
-            [label]="'N° de TVA'"
-            [control]="get('tva')!"
-            [formGroup]="formGroup"
-            [readonly]="!isEditMode()">
-          </app-floating-label-input>
+          <ng-container *ngIf="isEditMode(); else tvaCopyField">
+            <app-floating-label-input
+              [label]="'N° de TVA'"
+              [control]="get('tva')!"
+              [formGroup]="formGroup"
+              [readonly]="false">
+            </app-floating-label-input>
+          </ng-container>
+          <ng-template #tvaCopyField>
+            <div class="copy-field-readonly">
+              <div class="copy-field-content">
+                <span class="copy-field-label">N° de TVA</span>
+                <span class="copy-field-value">{{ getFieldDisplayValue('tva') }}</span>
+              </div>
+              <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('tva')" [disabled]="getFieldDisplayValue('tva') === '-'">
+                {{ copyFeedbackField() === 'tva' ? 'Copié !' : '' }}
+              </button>
+            </div>
+          </ng-template>
         </div>
 
         <div class="input-wrapper">
@@ -613,22 +961,48 @@
 
       <!-- Police d'écriture -->
       <div class="input-wrapper">
-        <app-floating-label-input
-          [label]="'Police d\'écriture'"
-          [control]="get('police_ecriture')!"
-          [formGroup]="formGroup"
-          [readonly]="!isEditMode()">
-        </app-floating-label-input>
+        <ng-container *ngIf="isEditMode(); else policeCopyField">
+          <app-floating-label-input
+            [label]="'Police d\'écriture'"
+            [control]="get('police_ecriture')!"
+            [formGroup]="formGroup"
+            [readonly]="false">
+          </app-floating-label-input>
+        </ng-container>
+        <ng-template #policeCopyField>
+          <div class="copy-field-readonly">
+            <div class="copy-field-content">
+              <span class="copy-field-label">Police d'écriture</span>
+              <span class="copy-field-value">{{ getFieldDisplayValue('police_ecriture') }}</span>
+            </div>
+            <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('police_ecriture')" [disabled]="getFieldDisplayValue('police_ecriture') === '-'">
+              {{ copyFeedbackField() === 'police_ecriture' ? 'Copié !' : '' }}
+            </button>
+          </div>
+        </ng-template>
       </div>
 
       <!-- Texte de la personnalisation -->
       <div class="input-wrapper">
-        <app-floating-label-input
-          [label]="'Texte de la personnalisation'"
-          [control]="get('texte_personnalisation')"
-          [formGroup]="formGroup"
-          [readonly]="!isEditMode()">
-        </app-floating-label-input>
+        <ng-container *ngIf="isEditMode(); else textePersoCopyField">
+          <app-floating-label-input
+            [label]="'Texte de la personnalisation'"
+            [control]="get('texte_personnalisation')"
+            [formGroup]="formGroup"
+            [readonly]="false">
+          </app-floating-label-input>
+        </ng-container>
+        <ng-template #textePersoCopyField>
+          <div class="copy-field-readonly copy-field-readonly--multiline">
+            <div class="copy-field-content">
+              <span class="copy-field-label">Texte de la personnalisation</span>
+              <span class="copy-field-value">{{ getFieldDisplayValue('texte_personnalisation') }}</span>
+            </div>
+            <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('texte_personnalisation')" [disabled]="getFieldDisplayValue('texte_personnalisation') === '-'">
+              {{ copyFeedbackField() === 'texte_personnalisation' ? 'Copié !' : '' }}
+            </button>
+          </div>
+        </ng-template>
       </div>
     </section>
 

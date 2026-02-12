@@ -151,4 +151,9 @@ export class AjouterCommandePayload {
         nombre_unites?: number;
         prix_support_unitaire?: number;
     }>;
+
+    @ApiProperty({ required: false })
+    @IsOptional()
+    @IsBoolean()
+    forcer_nouveau_client?: boolean;
 }

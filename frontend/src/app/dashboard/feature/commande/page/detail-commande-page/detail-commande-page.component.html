@@ -73,7 +73,7 @@
       <!-- Les boutons sont maintenant dans la barre fixe en haut -->
     </div>
 
-    <section class="detail-duplicate-section" *ngIf="isCommandeTerminee()">
+    <section class="detail-duplicate-section" *ngIf="canDuplicateCommande()">
       <button
         type="button"
         class="btn-duplicate"

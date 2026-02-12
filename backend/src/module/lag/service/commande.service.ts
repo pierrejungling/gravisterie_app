@@ -22,9 +22,10 @@ export class CommandeService {
     async ajouterCommande(payload: AjouterCommandePayload): Promise<Commande> {
         // Créer ou récupérer le client
         let client: Client | null = null;
+        const forcerNouveauClient = payload.forcer_nouveau_client === true;
         
         // Chercher un client existant seulement si un email est fourni
-        if (payload.coordonnees_contact?.mail && payload.coordonnees_contact.mail.trim()) {
+        if (!forcerNouveauClient && payload.coordonnees_contact?.mail && payload.coordonnees_contact.mail.trim()) {
             client = await this.clientRepository.findOne({
                 where: { mail: payload.coordonnees_contact.mail.trim() }
             });
@@ -39,7 +40,7 @@ export class CommandeService {
             
             // Vérifier si un client avec cet email existe déjà (seulement si un email est fourni)
             let existingClient: Client | null = null;
-            if (mailValue) {
+            if (!forcerNouveauClient && mailValue) {
                 existingClient = await this.clientRepository.findOne({
                     where: { mail: mailValue }
                 });
@@ -391,6 +392,7 @@ export class CommandeService {
             mode_contact: commande.mode_contact ?? undefined,
             statut_initial: isVente ? StatutCommande.TERMINE : StatutCommande.EN_ATTENTE_INFORMATION,
             supports: supports as any,
+            forcer_nouveau_client: true,
         };
 
         const nouvelleCommande = await this.ajouterCommande(payload);

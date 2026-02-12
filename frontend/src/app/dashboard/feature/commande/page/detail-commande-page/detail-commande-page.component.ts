@@ -170,6 +170,12 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return produit.trimStart().startsWith(this.ventePrefix);
   }
 
+  canDuplicateCommande(): boolean {
+    const cmd = this.commande();
+    if (!cmd) return false;
+    return cmd.statut_commande !== StatutCommande.ANNULEE;
+  }
+
   private readonly detailReturnPageKey = 'detail-return-page';
 
   ngOnInit(): void {
@@ -1604,6 +1610,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   duplicateCommande(): void {
+    if (!this.canDuplicateCommande() || this.isDuplicating()) return;
     this.duplicateConfirmVisible.set(true);
   }
 
@@ -1613,7 +1620,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
   confirmDuplicate(): void {
     const cmd = this.commande();
-    if (!cmd || this.isDuplicating()) return;
+    if (!cmd || !this.canDuplicateCommande() || this.isDuplicating()) return;
     this.duplicateConfirmVisible.set(false);
     this.isDuplicating.set(true);
     this.apiService.post(COMMANDE_DUPLIQUER(cmd.id_commande), {} as Payload).subscribe({

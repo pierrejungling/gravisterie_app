@@ -470,11 +470,16 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   buildAdresseComplete(rue?: string, codePostal?: string, ville?: string, pays?: string): string | null {
+    const rueTrim = rue?.trim() ?? '';
+    const codePostalTrim = codePostal?.trim() ?? '';
+    const villeTrim = ville?.trim() ?? '';
+    const paysTrim = pays?.trim() ?? '';
+
     const parts: string[] = [];
-    if (rue?.trim()) parts.push(rue.trim());
-    if (codePostal?.trim()) parts.push(codePostal.trim());
-    if (ville?.trim()) parts.push(ville.trim());
-    if (pays?.trim()) parts.push(pays.trim());
+    if (rueTrim) parts.push(rueTrim);
+    if (codePostalTrim) parts.push(codePostalTrim);
+    if (villeTrim) parts.push(villeTrim);
+    if (paysTrim) parts.push(paysTrim);
     return parts.length > 0 ? parts.join(', ') : null;
   }
 

@@ -567,7 +567,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       rue: new FormControl({ value: this.extractAdressePart(cmd.client.adresse, 0) || '', disabled: !isEdit }),
       code_postal: new FormControl({ value: this.extractAdressePart(cmd.client.adresse, 1) || '', disabled: !isEdit }),
       ville: new FormControl({ value: this.extractAdressePart(cmd.client.adresse, 2) || '', disabled: !isEdit }),
-      pays: new FormControl({ value: this.extractAdressePart(cmd.client.adresse, 3) || 'Belgique', disabled: !isEdit }),
+      pays: new FormControl({
+        value: this.extractAdressePart(cmd.client.adresse, 3) || (this.hasAdresseDetails(cmd.client.adresse) ? 'Belgique' : ''),
+        disabled: !isEdit
+      }),
       tva: new FormControl({ value: cmd.client.tva || '', disabled: !isEdit }),
       mode_contact: new FormControl({ value: cmd.mode_contact || '', disabled: !isEdit }),
     });
@@ -620,15 +623,33 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   extractAdressePart(adresse: string | null | undefined, index: number): string {
     if (!adresse) return '';
     const parts = adresse.split(',').map(p => p.trim());
+    // Compatibilité anciennes données: "Belgique" seule => pays uniquement.
+    if (parts.length === 1 && parts[0].toLowerCase() === 'belgique') {
+      return index === 3 ? parts[0] : '';
+    }
     return parts[index] || '';
   }
 
+  hasAdresseDetails(adresse: string | null | undefined): boolean {
+    if (!adresse) return false;
+    const parts = adresse.split(',').map((p) => p.trim());
+    const rue = parts[0] || '';
+    const codePostal = parts[1] || '';
+    const ville = parts[2] || '';
+    return Boolean(rue || codePostal || ville);
+  }
+
   buildAdresseComplete(rue?: string, codePostal?: string, ville?: string, pays?: string): string | null {
+    const rueTrim = rue?.trim() ?? '';
+    const codePostalTrim = codePostal?.trim() ?? '';
+    const villeTrim = ville?.trim() ?? '';
+    const paysTrim = pays?.trim() ?? '';
+
     const parts: string[] = [];
-    if (rue?.trim()) parts.push(rue.trim());
-    if (codePostal?.trim()) parts.push(codePostal.trim());
-    if (ville?.trim()) parts.push(ville.trim());
-    if (pays?.trim()) parts.push(pays.trim());
+    if (rueTrim) parts.push(rueTrim);
+    if (codePostalTrim) parts.push(codePostalTrim);
+    if (villeTrim) parts.push(villeTrim);
+    if (paysTrim) parts.push(paysTrim);
     return parts.length > 0 ? parts.join(', ') : null;
   }
 

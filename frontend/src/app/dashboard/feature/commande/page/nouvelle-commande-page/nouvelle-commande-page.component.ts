@@ -396,6 +396,20 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     (this.formGroup.get('prix_benefice') as any)?.setValue(prixBenefice.toFixed(2), { emitEvent: false });
   }
 
+  getPrixBeneficeValue(): number {
+    if (!this.formGroup) return 0;
+    const rawValue = this.formGroup.get('prix_benefice')?.value;
+    return parseFloat(String(rawValue || 0)) || 0;
+  }
+
+  isPrixBeneficeNegatif(): boolean {
+    return this.getPrixBeneficeValue() < 0;
+  }
+
+  getPrixBeneficeDisplayValue(): number {
+    return Math.abs(this.getPrixBeneficeValue());
+  }
+
   // Recalculer le prix unitaire final à partir du prix final
   recalculatePrixUnitaireFromFinal(): void {
     if (!this.formGroup) return;

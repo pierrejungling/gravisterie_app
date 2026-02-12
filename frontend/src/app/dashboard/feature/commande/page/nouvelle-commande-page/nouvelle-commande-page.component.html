@@ -522,9 +522,11 @@
                 <span class="recap-label"><strong>Prix final de vente :</strong></span>
                 <span class="recap-value"><strong>{{ get('prix_final').value || '0.00' }} €</strong></span>
               </div>
-              <div class="recap-summary-item benefit-item">
-                <span class="recap-label"><strong>Prix bénéfice :</strong></span>
-                <span class="recap-value benefit-value"><strong>{{ get('prix_benefice').value || '0.00' }} €</strong></span>
+              <div class="recap-summary-item" [class.benefit-item]="!isPrixBeneficeNegatif()" [class.loss-item]="isPrixBeneficeNegatif()">
+                <span class="recap-label"><strong>{{ isPrixBeneficeNegatif() ? 'Perte :' : 'Bénéfice :' }}</strong></span>
+                <span class="recap-value" [class.benefit-value]="!isPrixBeneficeNegatif()" [class.loss-value]="isPrixBeneficeNegatif()">
+                  <strong>{{ getPrixBeneficeDisplayValue() | number:'1.2-2' }} €</strong>
+                </span>
               </div>
             </div>
           </div>

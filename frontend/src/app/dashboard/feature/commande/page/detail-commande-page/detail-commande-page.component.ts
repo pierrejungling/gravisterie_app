@@ -800,6 +800,20 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.formGroup.get('prix_benefice')?.setValue(prixBenefice.toFixed(2), { emitEvent: false });
   }
 
+  getPrixBeneficeValue(): number {
+    if (!this.formGroup) return 0;
+    const rawValue = this.formGroup.get('prix_benefice')?.value;
+    return parseFloat(String(rawValue || 0)) || 0;
+  }
+
+  isPrixBeneficeNegatif(): boolean {
+    return this.getPrixBeneficeValue() < 0;
+  }
+
+  getPrixBeneficeDisplayValue(): number {
+    return Math.abs(this.getPrixBeneficeValue());
+  }
+
   // Ajouter un nouveau support
   addSupport(): void {
     const supportsArray = this.formGroup.get('supports') as FormArray;

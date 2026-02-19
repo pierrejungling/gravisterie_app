@@ -552,8 +552,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         value: cmd.quantite_realisee ?? 0,
         disabled: this.isStatutFinitionCompleted()
       }),
-      prix_final: new FormControl({ value: cmd.prix_final || '', disabled: !isEdit }),
-      prix_unitaire_final: new FormControl({ value: cmd.prix_unitaire_final || (cmd.prix_final && cmd.quantité ? cmd.prix_final / cmd.quantité : ''), disabled: !isEdit }),
+      prix_final: new FormControl({ value: cmd.prix_final ?? '', disabled: !isEdit }),
+      prix_unitaire_final: new FormControl({ value: cmd.prix_unitaire_final ?? (cmd.prix_final !== null && cmd.prix_final !== undefined && cmd.quantité ? cmd.prix_final / cmd.quantité : ''), disabled: !isEdit }),
       payé: new FormControl(cmd.payé || false), // Toujours modifiable
       commentaire_paye: new FormControl({ value: cmd.commentaire_paye || '', disabled: !isEdit }),
       attente_reponse: new FormControl(cmd.attente_reponse ?? false), // Toujours modifiable
@@ -624,6 +624,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     } else if (prixUnitaire) {
       this.recalculatePrixFinalFromUnitaire();
     }
+    
+    // Toujours recalculer les supports et bénéfice à l'initialisation pour s'assurer que les valeurs sont correctes
+    // même en mode lecture et même si le prix final est 0
+    this.recalculateSupportsAndBenefice();
   }
 
   extractAdressePart(adresse: string | null | undefined, index: number): string {
@@ -780,8 +784,15 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   recalculateSupportsAndBenefice(): void {
     if (!this.formGroup) return;
     
-    const prixFinal = parseFloat(this.formGroup.get('prix_final')?.value) || 0;
-    const quantite = parseFloat(this.formGroup.get('quantité')?.value) || 1;
+    const prixFinalValue = this.formGroup.get('prix_final')?.value;
+    const quantiteValue = this.formGroup.get('quantité')?.value;
+    // Utiliser parseFloat avec gestion des valeurs null/undefined/chaînes vides
+    const prixFinal = prixFinalValue !== null && prixFinalValue !== undefined && prixFinalValue !== '' 
+      ? parseFloat(String(prixFinalValue)) || 0 
+      : 0;
+    const quantite = quantiteValue !== null && quantiteValue !== undefined && quantiteValue !== '' 
+      ? parseFloat(String(quantiteValue)) || 1 
+      : 1;
     
     // Calculer prix final des supports
     const supportsArray = this.formGroup.get('supports') as FormArray;
@@ -790,7 +801,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     
     supportsArray.controls.forEach((supportControl) => {
       const supportGroup = supportControl as FormGroup;
-      const prixSupportUnitaire = parseFloat(supportGroup.get('prix_support_unitaire')?.value) || 0;
+      const prixSupportUnitaireValue = supportGroup.get('prix_support_unitaire')?.value;
+      const prixSupportUnitaire = prixSupportUnitaireValue !== null && prixSupportUnitaireValue !== undefined && prixSupportUnitaireValue !== ''
+        ? parseFloat(String(prixSupportUnitaireValue)) || 0
+        : 0;
       prixFinalSupportsUnitaires += prixSupportUnitaire;
       prixFinalSupports += prixSupportUnitaire * quantite;
     });
@@ -809,7 +823,13 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   getPrixBeneficeValue(): number {
     if (!this.formGroup) return 0;
     const rawValue = this.formGroup.get('prix_benefice')?.value;
-    return parseFloat(String(rawValue || 0)) || 0;
+    // Gérer correctement les valeurs null, undefined, chaînes vides et valeurs négatives
+    if (rawValue === null || rawValue === undefined || rawValue === '') {
+      return 0;
+    }
+    const parsed = parseFloat(String(rawValue));
+    // parseFloat retourne NaN si la conversion échoue, on retourne 0 dans ce cas
+    return isNaN(parsed) ? 0 : parsed;
   }
 
   isPrixBeneficeNegatif(): boolean {

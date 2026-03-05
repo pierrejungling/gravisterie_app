@@ -917,7 +917,15 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   toggleEditMode(): void {
     const newEditMode = !this.isEditMode();
     this.isEditMode.set(newEditMode);
-    
+
+    // Si on quitte le mode édition via le bouton de la barre (✕ Annuler),
+    // on réinitialise complètement le formulaire avec les dernières données
+    // de la commande (qui incluent déjà les exceptions sauvegardées en live).
+    if (!newEditMode) {
+      this.initForm();
+      return;
+    }
+
     // Désactiver/activer tous les FormControls selon le mode édition
     if (this.formGroup) {
       const controlsToDisable = [

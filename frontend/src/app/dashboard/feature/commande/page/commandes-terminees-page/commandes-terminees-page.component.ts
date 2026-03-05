@@ -191,6 +191,28 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
     this.groupMode.set(mode);
   }
 
+  private getMontantFraisVente(cmd: Commande): number {
+    const prix = Number(cmd.prix_final) || 0;
+    const pourcentage = cmd.frais_pourcentage !== undefined && cmd.frais_pourcentage !== null
+      ? Number(cmd.frais_pourcentage)
+      : 0;
+    if (!this.isVente(cmd) || !prix || !pourcentage) return 0;
+    return prix * (pourcentage / 100);
+  }
+
+  getMontantNetPourTotaux(cmd: Commande): number {
+    const prix = Number(cmd.prix_final) || 0;
+    if (!this.isVente(cmd)) {
+      return prix;
+    }
+    const frais = this.getMontantFraisVente(cmd);
+    return prix - frais;
+  }
+
+  getMontantFraisAffiche(cmd: Commande): number {
+    return this.getMontantFraisVente(cmd);
+  }
+
   private groupByPeriod(commandes: Commande[]): Array<{ label: string; commandes: Commande[]; total: number }> {
     const mode = this.groupMode();
     const groups = new Map<string, { label: string; commandes: Commande[]; sortKey: string; total: number }>();
@@ -204,7 +226,7 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
         }
         const group = groups.get(key)!;
         group.commandes.push(cmd);
-        group.total += Number(cmd.prix_final) || 0;
+        group.total += this.getMontantNetPourTotaux(cmd);
         continue;
       }
 
@@ -217,7 +239,7 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
         }
         const group = groups.get(key)!;
         group.commandes.push(cmd);
-        group.total += Number(cmd.prix_final) || 0;
+        group.total += this.getMontantNetPourTotaux(cmd);
       } else {
         const key = `${year}-${String(month + 1).padStart(2, '0')}`;
         const label = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
@@ -226,7 +248,7 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
         }
         const group = groups.get(key)!;
         group.commandes.push(cmd);
-        group.total += Number(cmd.prix_final) || 0;
+        group.total += this.getMontantNetPourTotaux(cmd);
       }
     }
 

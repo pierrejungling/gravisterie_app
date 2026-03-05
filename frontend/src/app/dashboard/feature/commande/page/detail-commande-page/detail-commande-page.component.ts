@@ -554,6 +554,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       }),
       prix_final: new FormControl({ value: cmd.prix_final ?? '', disabled: !isEdit }),
       prix_unitaire_final: new FormControl({ value: cmd.prix_unitaire_final ?? (cmd.prix_final !== null && cmd.prix_final !== undefined && cmd.quantité ? cmd.prix_final / cmd.quantité : ''), disabled: !isEdit }),
+      frais_pourcentage: new FormControl({ value: cmd.frais_pourcentage ?? null, disabled: !isEdit }),
+      montant_frais: new FormControl({ value: 0, disabled: true }),
+      montant_net: new FormControl({ value: 0, disabled: true }),
       payé: new FormControl(cmd.payé || false), // Toujours modifiable
       commentaire_paye: new FormControl({ value: cmd.commentaire_paye || '', disabled: !isEdit }),
       attente_reponse: new FormControl(cmd.attente_reponse ?? false), // Toujours modifiable
@@ -607,6 +610,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       isCalculatingPU = true;
       this.recalculatePrixUnitaireFromFinal();
       isCalculatingPU = false;
+      this.updateVenteFraisComputedFields();
     });
     
     this.formGroup.get('prix_unitaire_final')?.valueChanges.subscribe(() => {
@@ -628,6 +632,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     // Toujours recalculer les supports et bénéfice à l'initialisation pour s'assurer que les valeurs sont correctes
     // même en mode lecture et même si le prix final est 0
     this.recalculateSupportsAndBenefice();
+    this.updateVenteFraisComputedFields();
   }
 
   extractAdressePart(adresse: string | null | undefined, index: number): string {
@@ -820,6 +825,45 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.formGroup.get('prix_benefice')?.setValue(prixBenefice.toFixed(2), { emitEvent: false });
   }
 
+  getFraisPourcentageValue(): number {
+    if (!this.formGroup) return 0;
+    const raw = this.formGroup.get('frais_pourcentage')?.value;
+    if (raw === null || raw === undefined || raw === '') return 0;
+    const parsed = parseFloat(String(raw));
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  getMontantFraisVente(): number {
+    if (!this.formGroup) return 0;
+    const prixFinalRaw = this.formGroup.get('prix_final')?.value;
+    const prixFinal = prixFinalRaw !== null && prixFinalRaw !== undefined && prixFinalRaw !== '' ? parseFloat(String(prixFinalRaw)) || 0 : 0;
+    const pourcentage = this.getFraisPourcentageValue();
+    return prixFinal * (pourcentage / 100);
+  }
+
+  getMontantNetVente(): number {
+    if (!this.formGroup) return 0;
+    const prixFinalRaw = this.formGroup.get('prix_final')?.value;
+    const prixFinal = prixFinalRaw !== null && prixFinalRaw !== undefined && prixFinalRaw !== '' ? parseFloat(String(prixFinalRaw)) || 0 : 0;
+    const montantFrais = this.getMontantFraisVente();
+    return prixFinal - montantFrais;
+  }
+
+  private updateVenteFraisComputedFields(): void {
+    if (!this.formGroup) return;
+    if (!this.isVente()) {
+      this.formGroup.get('montant_frais')?.setValue(0, { emitEvent: false });
+      this.formGroup.get('montant_net')?.setValue(0, { emitEvent: false });
+      return;
+    }
+
+    const montantFrais = this.getMontantFraisVente();
+    const montantNet = this.getMontantNetVente();
+
+    this.formGroup.get('montant_frais')?.setValue(montantFrais.toFixed(2), { emitEvent: false });
+    this.formGroup.get('montant_net')?.setValue(montantNet.toFixed(2), { emitEvent: false });
+  }
+
   getPrixBeneficeValue(): number {
     if (!this.formGroup) return 0;
     const rawValue = this.formGroup.get('prix_benefice')?.value;
@@ -874,6 +918,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       const controlsToDisable = [
         'nom_commande', 'date_commande', 'deadline', 'description', 'dimensions', 'quantité', 'commentaire_paye',
         'support', 'couleur', 'police_ecriture', 'texte_personnalisation', 'prix_unitaire_final', 'prix_final',
+        'frais_pourcentage',
         'prix_support', 'url_support', 'nom', 'prenom', 'telephone', 'mail',
         'rue', 'code_postal', 'ville', 'pays', 'societe', 'tva', 'mode_contact'
       ];
@@ -934,6 +979,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       mode_contact: formValue.mode_contact || null,
       prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : null,
       prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : null,
+      frais_pourcentage: formValue.frais_pourcentage !== null && formValue.frais_pourcentage !== undefined && formValue.frais_pourcentage !== '' ? parseFloat(String(formValue.frais_pourcentage)) : null,
       coordonnees_contact: {
         nom: formValue.nom,
         prenom: formValue.prenom,
@@ -988,6 +1034,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       mode_contact: formValue.mode_contact || undefined,
       prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : undefined,
       prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : undefined,
+      frais_pourcentage: formValue.frais_pourcentage !== null && formValue.frais_pourcentage !== undefined && formValue.frais_pourcentage !== '' ? parseFloat(String(formValue.frais_pourcentage)) : undefined,
       client: {
         ...currentCommande.client,
         nom: formValue.nom,

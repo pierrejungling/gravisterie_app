@@ -232,6 +232,9 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       quantité: new FormControl<number>(1, [Validators.min(1)]),
       prix_unitaire_final: new FormControl<number | null>(null),
       prix_final: new FormControl<number | null>(null),
+      frais_pourcentage: new FormControl<number | null>(null),
+      montant_frais: new FormControl({ value: 0, disabled: true }),
+      montant_net: new FormControl({ value: 0, disabled: true }),
       payé: new FormControl<boolean>(false),
       commentaire_paye: new FormControl<string>(''),
       attente_reponse: new FormControl<boolean>(false),
@@ -291,6 +294,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       this.recalculatePrixUnitaireFromFinal();
       isCalculatingPU = false;
       this.recalculateSupportsAndBenefice();
+      this.recalculateVenteFrais();
     });
     
     this.formGroup.get('prix_unitaire_final')?.valueChanges.subscribe(() => {
@@ -299,6 +303,10 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       this.recalculatePrixFinalFromUnitaire();
       isCalculatingPF = false;
       this.recalculateSupportsAndBenefice();
+    });
+
+    this.formGroup.get('frais_pourcentage')?.valueChanges.subscribe(() => {
+      this.recalculateVenteFrais();
     });
 
   }
@@ -394,6 +402,26 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     
     const prixBenefice = prixFinal - prixFinalSupports;
     (this.formGroup.get('prix_benefice') as any)?.setValue(prixBenefice.toFixed(2), { emitEvent: false });
+  }
+
+  private recalculateVenteFrais(): void {
+    if (!this.formGroup) return;
+    if (!this.isVente()) {
+      (this.formGroup.get('montant_frais') as any)?.setValue(0, { emitEvent: false });
+      (this.formGroup.get('montant_net') as any)?.setValue(0, { emitEvent: false });
+      return;
+    }
+
+    const prixFinalValue = this.formGroup.get('prix_final')?.value;
+    const fraisPctValue = this.formGroup.get('frais_pourcentage')?.value;
+    const prixFinal = parseFloat(String(prixFinalValue || 0)) || 0;
+    const pct = parseFloat(String(fraisPctValue || 0)) || 0;
+
+    const montantFrais = prixFinal * (pct / 100);
+    const montantNet = prixFinal - montantFrais;
+
+    (this.formGroup.get('montant_frais') as any)?.setValue(montantFrais.toFixed(2), { emitEvent: false });
+    (this.formGroup.get('montant_net') as any)?.setValue(montantNet.toFixed(2), { emitEvent: false });
   }
 
   getPrixBeneficeValue(): number {
@@ -664,6 +692,9 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
         mode_contact: formValue.mode_contact || null,
         prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : null,
         prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : null,
+        frais_pourcentage: isVente && formValue.frais_pourcentage !== null && formValue.frais_pourcentage !== undefined && formValue.frais_pourcentage !== ''
+          ? parseFloat(String(formValue.frais_pourcentage))
+          : null,
         ...(Object.keys(coordonneesContact).length > 0 && { coordonnees_contact: coordonneesContact }),
         supports: formValue.supports && Array.isArray(formValue.supports) 
           ? formValue.supports

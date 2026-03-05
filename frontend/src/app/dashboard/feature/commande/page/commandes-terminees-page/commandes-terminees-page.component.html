@@ -94,6 +94,14 @@
                 <p class="commande-prix" *ngIf="commande.prix_final">
                   <strong>Prix final :</strong>&nbsp;{{ commande.prix_final }} €
                 </p>
+                <p class="commande-prix" *ngIf="isVente(commande) && commande.frais_pourcentage">
+                  <strong>Frais :</strong>
+                  &nbsp;{{ commande.frais_pourcentage }} % ({{ getMontantFraisAffiche(commande) | number:'1.2-2' }} €)
+                </p>
+                <p class="commande-prix" *ngIf="isVente(commande) && commande.prix_final">
+                  <strong>Montant net :</strong>
+                  &nbsp;{{ getMontantNetPourTotaux(commande) | number:'1.2-2' }} €
+                </p>
               </div>
             </div>
           </div>
@@ -145,6 +153,14 @@
                 </p>
                 <p class="commande-prix" *ngIf="commande.prix_final">
                   <strong>Prix final :</strong>&nbsp;{{ commande.prix_final }} €
+                </p>
+                <p class="commande-prix" *ngIf="isVente(commande) && commande.frais_pourcentage">
+                  <strong>Frais :</strong>
+                  &nbsp;{{ commande.frais_pourcentage }} % ({{ getMontantFraisAffiche(commande) | number:'1.2-2' }} €)
+                </p>
+                <p class="commande-prix" *ngIf="isVente(commande) && commande.prix_final">
+                  <strong>Montant net :</strong>
+                  &nbsp;{{ getMontantNetPourTotaux(commande) | number:'1.2-2' }} €
                 </p>
               </div>
             </div>

@@ -39,9 +39,12 @@ export class Commande {
 
     @Column({type: 'decimal', nullable: true})
     prix_final: number | null;
-
+    
     @Column({type: 'decimal', nullable: true})
     prix_unitaire_final: number | null;
+
+    @Column({type: 'decimal', nullable: true})
+    frais_pourcentage: number | null;
 
     @Column({type: 'integer', nullable: true})
     quantité: number | null;

@@ -108,6 +108,7 @@ export class CommandeService {
         commande.quantité = payload.quantité ?? 1;
         commande.prix_final = payload.prix_final ?? null;
         commande.prix_unitaire_final = payload.prix_unitaire_final ?? null;
+        commande.frais_pourcentage = payload.frais_pourcentage ?? null;
         commande.payé = payload.payé ?? false;
         commande.commentaire_paye = payload.commentaire_paye?.trim() || null;
         commande.attente_reponse = payload.attente_reponse ?? false; // Par défaut false = client attend réponse (rouge)
@@ -296,6 +297,7 @@ export class CommandeService {
             statuts_actifs: commande.statuts_actifs,
             prix_final: commande.prix_final,
             prix_unitaire_final: commande.prix_unitaire_final,
+            frais_pourcentage: commande.frais_pourcentage,
             quantité: commande.quantité,
             quantite_realisee: commande.quantite_realisee ?? 0,
             payé: commande.payé,
@@ -431,6 +433,10 @@ export class CommandeService {
         if (payload.mode_contact !== undefined) commande.mode_contact = payload.mode_contact || null;
         if (payload.prix_final !== undefined) commande.prix_final = payload.prix_final !== null ? Number(payload.prix_final) : null;
         if (payload.prix_unitaire_final !== undefined) commande.prix_unitaire_final = payload.prix_unitaire_final !== null ? Number(payload.prix_unitaire_final) : null;
+        if (payload.frais_pourcentage !== undefined) {
+            const value = payload.frais_pourcentage;
+            commande.frais_pourcentage = value !== null && value !== undefined ? Number(value) : null;
+        }
 
         // Mettre à jour les coordonnées du client si fournies
         if (payload.coordonnees_contact) {
@@ -580,6 +586,7 @@ export class CommandeService {
             statuts_actifs: commandeReloaded.statuts_actifs,
             prix_final: commandeReloaded.prix_final,
             prix_unitaire_final: commandeReloaded.prix_unitaire_final,
+            frais_pourcentage: commandeReloaded.frais_pourcentage,
             quantité: commandeReloaded.quantité,
             quantite_realisee: commandeReloaded.quantite_realisee ?? 0,
             payé: commandeReloaded.payé,

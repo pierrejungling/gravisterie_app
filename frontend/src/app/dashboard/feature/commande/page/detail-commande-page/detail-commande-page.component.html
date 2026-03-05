@@ -5,6 +5,7 @@
   <div class="detail-actions-bar__container">
     <div class="detail-actions-bar__left">
       <button 
+        *ngIf="!isVente()"
         type="button" 
         class="btn-action-bar btn-toggle-prix"
         (click)="togglePrixFields()"
@@ -404,6 +405,90 @@
               </div>
             </ng-template>
           </div>
+          <div class="input-wrapper">
+            <ng-container *ngIf="isEditMode(); else fraisVenteCopyField">
+              <app-floating-label-input
+                [label]="'Frais / commission (%)'"
+                [control]="get('frais_pourcentage')"
+                [formGroup]="formGroup"
+                type="number"
+                step="0.01"
+                suffix="%"
+                [readonly]="false">
+              </app-floating-label-input>
+            </ng-container>
+            <ng-template #fraisVenteCopyField>
+              <div class="copy-field-readonly">
+                <div class="copy-field-content">
+                  <span class="copy-field-label">Frais / commission (%)</span>
+                  <span class="copy-field-value">{{ get('frais_pourcentage').value ?? '-' }}</span>
+                </div>
+                <button
+                  type="button"
+                  class="copy-field-copy-btn"
+                  (click)="copyTextValue(toCopyText(get('frais_pourcentage').value), 'frais_pourcentage')"
+                  [disabled]="get('frais_pourcentage').value === null || get('frais_pourcentage').value === undefined || get('frais_pourcentage').value === ''">
+                  {{ copyFeedbackField() === 'frais_pourcentage' ? 'Copié !' : '' }}
+                </button>
+              </div>
+            </ng-template>
+          </div>
+          <div class="input-wrapper">
+            <ng-container *ngIf="isEditMode(); else montantFraisCopyField">
+              <app-floating-label-input
+                [label]="'Montant des frais'"
+                [control]="get('montant_frais')"
+                [formGroup]="formGroup"
+                type="number"
+                step="0.01"
+                suffix="€"
+                [readonly]="true">
+              </app-floating-label-input>
+            </ng-container>
+            <ng-template #montantFraisCopyField>
+              <div class="copy-field-readonly">
+                <div class="copy-field-content">
+                  <span class="copy-field-label">Montant des frais</span>
+                  <span class="copy-field-value">{{ getFieldDisplayValue('montant_frais') }}</span>
+                </div>
+                <button
+                  type="button"
+                  class="copy-field-copy-btn"
+                  (click)="copyFieldValue('montant_frais')"
+                  [disabled]="getFieldDisplayValue('montant_frais') === '-'">
+                  {{ copyFeedbackField() === 'montant_frais' ? 'Copié !' : '' }}
+                </button>
+              </div>
+            </ng-template>
+          </div>
+          <div class="input-wrapper">
+            <ng-container *ngIf="isEditMode(); else montantNetCopyField">
+              <app-floating-label-input
+                [label]="'Montant net (après frais)'"
+                [control]="get('montant_net')"
+                [formGroup]="formGroup"
+                type="number"
+                step="0.01"
+                suffix="€"
+                [readonly]="true">
+              </app-floating-label-input>
+            </ng-container>
+            <ng-template #montantNetCopyField>
+              <div class="copy-field-readonly">
+                <div class="copy-field-content">
+                  <span class="copy-field-label">Montant net (après frais)</span>
+                  <span class="copy-field-value">{{ getFieldDisplayValue('montant_net') }}</span>
+                </div>
+                <button
+                  type="button"
+                  class="copy-field-copy-btn"
+                  (click)="copyFieldValue('montant_net')"
+                  [disabled]="getFieldDisplayValue('montant_net') === '-'">
+                  {{ copyFeedbackField() === 'montant_net' ? 'Copié !' : '' }}
+                </button>
+              </div>
+            </ng-template>
+          </div>
         </div>
 
         <div class="input-wrapper">
@@ -447,8 +532,8 @@
           </div>
         </div>
 
-        <!-- Champs de prix du support (masqués par défaut) -->
-        <div class="prix-fields" *ngIf="showPrixFields()">
+        <!-- Champs de prix du support (masqués par défaut) - uniquement pour les commandes, pas pour les ventes -->
+        <div class="prix-fields" *ngIf="showPrixFields() && !isVente()">
           <h3 class="supports-title">Support / Frais</h3>
           
           <!-- Liste des supports -->
@@ -1066,7 +1151,11 @@
   <footer class="detail-actions-footer" *ngIf="!isLoading() && commande() && formGroup">
     <div class="detail-actions-footer__buttons">
       <div class="detail-actions-footer__row">
-        <button type="button" class="btn-footer btn-footer-prix" (click)="togglePrixFields()">
+        <button 
+          *ngIf="!isVente()"
+          type="button"
+          class="btn-footer btn-footer-prix"
+          (click)="togglePrixFields()">
           {{ showPrixFields() ? '💰 Masquer frais' : '💰 Afficher frais' }}
         </button>
         <button type="button" class="btn-footer btn-footer-delete" (click)="openDeleteConfirm()">🗑️ Supprimer</button>

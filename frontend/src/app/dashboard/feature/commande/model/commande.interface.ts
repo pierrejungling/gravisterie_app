@@ -108,6 +108,7 @@ export interface Commande {
     prix_support_unitaire?: number; // Calculé automatiquement
   }>;
   prix_unitaire_final?: number; // Prix unitaire final de vente
+  frais_pourcentage?: number; // Frais/commission en % pour les ventes
   personnalisation?: {
     texte?: string;
     police?: string;

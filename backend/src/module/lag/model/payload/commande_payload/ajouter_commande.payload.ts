@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsEmail, IsArray, IsDateString, IsString, Length, IsInt, Min, IsBoolean } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsEmail, IsArray, IsDateString, IsString, Length, IsInt, Min, IsBoolean, IsNumber, Max } from 'class-validator';
 import { Couleur } from '../../entity/enum';
 
 export class CoordonneesContactPayload {
@@ -156,4 +156,11 @@ export class AjouterCommandePayload {
     @IsOptional()
     @IsBoolean()
     forcer_nouveau_client?: boolean;
+
+    @ApiProperty({ required: false, description: 'Frais/commission en pourcentage (par exemple 35 pour 35%)' })
+    @IsOptional()
+    @IsNumber()
+    @Min(0)
+    @Max(100)
+    frais_pourcentage?: number;
 }

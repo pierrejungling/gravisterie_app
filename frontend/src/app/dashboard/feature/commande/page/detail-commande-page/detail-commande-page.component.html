@@ -1114,6 +1114,21 @@
               <button type="button" class="pcs-btn pcs-btn-plus" (click)="incrementQuantiteRealisee()" title="Augmenter">+</button>
             </div>
           </div>
+          <div class="pcs-realises-add-row" *ngIf="isQuantiteRealiseeEditable()">
+            <input
+              #quantiteAjoutInput
+              type="number"
+              class="pcs-realises-add-input"
+              min="1"
+            >
+            <button
+              type="button"
+              class="pcs-btn pcs-btn-add"
+              (click)="addQuantiteFromInput(quantiteAjoutInput.valueAsNumber); quantiteAjoutInput.value = ''"
+              title="Ajouter au nombre réalisé">
+              + Ajouter
+            </button>
+          </div>
         </div>
       </div>
     </section>

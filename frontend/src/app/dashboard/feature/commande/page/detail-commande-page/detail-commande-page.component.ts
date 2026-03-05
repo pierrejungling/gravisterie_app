@@ -1148,6 +1148,21 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.onQuantiteRealiseeChange();
   }
 
+  addQuantiteFromInput(addValue: number): void {
+    if (!this.formGroup || !this.isQuantiteRealiseeEditable()) return;
+    const toAdd = Number(addValue);
+    if (!Number.isFinite(toAdd) || toAdd === 0) return;
+
+    const max = parseInt(this.formGroup.get('quantité')?.value || '1', 10) || 1;
+    const current = parseInt(this.formGroup.get('quantite_realisee')?.value || '0', 10) || 0;
+    let next = current + toAdd;
+    if (next < 0) next = 0;
+    if (next > max) next = max;
+
+    this.formGroup.get('quantite_realisee')?.setValue(next, { emitEvent: false });
+    this.onQuantiteRealiseeChange();
+  }
+
   onQuantiteRealiseeChange(): void {
     if (!this.commande()) return;
 

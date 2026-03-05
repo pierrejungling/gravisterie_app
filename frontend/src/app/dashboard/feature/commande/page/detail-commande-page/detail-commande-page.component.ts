@@ -559,7 +559,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       montant_net: new FormControl({ value: 0, disabled: true }),
       payé: new FormControl(cmd.payé || false), // Toujours modifiable
       commentaire_paye: new FormControl({ value: cmd.commentaire_paye || '', disabled: !isEdit }),
-      attente_reponse: new FormControl(cmd.attente_reponse ?? false), // Toujours modifiable
+      attente_reponse: new FormControl(cmd.attente_reponse ?? false), // Toujours modifiable (exception)
       prix_support: new FormControl({ value: cmd.support?.prix_support || '', disabled: !isEdit }),
       url_support: new FormControl({ value: cmd.support?.url_support || '', disabled: !isEdit }),
       supports: this.createSupportsFormArray(cmd, isEdit),
@@ -618,6 +618,11 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       isCalculatingPF = true;
       this.recalculatePrixFinalFromUnitaire();
       isCalculatingPF = false;
+    });
+
+    // Recalculer les montants de frais/net en cas de modification du pourcentage de frais
+    this.formGroup.get('frais_pourcentage')?.valueChanges.subscribe(() => {
+      this.updateVenteFraisComputedFields();
     });
     
     // Calcul initial : si prix_final existe, calculer PU, sinon si PU existe, calculer PF
@@ -1091,6 +1096,16 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   onCancel(): void {
+    // Recharger complètement la commande depuis l'API pour annuler
+    // TOUTES les modifications non enregistrées sur les champs "classiques".
+    const current = this.commande();
+    if (current?.id_commande) {
+      this.isEditMode.set(false);
+      this.loadCommande(current.id_commande);
+      return;
+    }
+
+    // Fallback : si aucune commande n'est chargée, on se contente de réinitialiser le formulaire.
     this.initForm();
     this.isEditMode.set(false);
   }

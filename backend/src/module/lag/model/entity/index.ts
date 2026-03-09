@@ -1,5 +1,6 @@
 export * from './client.entity';
 export * from './commande.entity';
+export * from './bon.entity';
 export * from './gravure.entity';
 export * from './personnalisation.entity';
 export * from './support.entity';

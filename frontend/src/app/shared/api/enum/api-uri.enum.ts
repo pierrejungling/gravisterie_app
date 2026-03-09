@@ -10,7 +10,17 @@ export enum ApiURI {
   GET_COMMANDE_BY_ID = 'commande',
   UPDATE_COMMANDE = 'commande',
   DELETE_COMMANDE = 'commande',
+  LISTE_BONS = 'bon/liste',
+  AJOUTER_BON = 'bon/ajouter',
+  PROCHAIN_NUMERO_BON = 'bon/prochain-numero',
+  UPDATE_BON = 'bon',
 }
+/** URL pour marquer un bon comme utilisé (remplacer :id par id_bon). */
+export const BON_MARQUER_UTILISE = (idBon: string) => `bon/${idBon}/utilise`;
+/** URL pour mettre à jour un bon (remplacer :id par id_bon). */
+export const BON_UPDATE = (idBon: string) => `bon/${idBon}`;
+/** URL pour supprimer un bon (remplacer :id par id_bon). */
+export const BON_DELETE = (idBon: string) => `bon/${idBon}`;
 
 /** URL pour l’upload d’un fichier sur une commande (remplacer :id par id_commande). */
 export const COMMANDE_FICHIERS_UPLOAD = (idCommande: string) => `commande/${idCommande}/fichiers`;

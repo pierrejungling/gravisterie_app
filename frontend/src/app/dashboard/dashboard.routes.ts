@@ -24,6 +24,10 @@ export const DashboardRoutes: Routes = [
             {
                 path: AppNode.COMMANDES,
                 loadChildren: () => import('./feature/commande/commande.routes').then(r => r.commandeRoutes)
+            },
+            {
+                path: AppNode.BONS,
+                loadChildren: () => import('./feature/bon/bon.routes').then(r => r.bonRoutes)
             }
         ]
     }

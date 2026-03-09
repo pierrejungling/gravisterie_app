@@ -6,6 +6,8 @@ import { ApiService } from '@api';
 import { ApiURI } from '@api';
 import { ApiResponse } from '@api';
 import { Commande, StatutCommande } from '../../../feature/commande/model/commande.interface';
+import { Bon } from '../../../feature/bon/model/bon.interface';
+import { BonService } from '../../../feature/bon/service/bon.service';
 
 export interface DashboardCard {
   title: string;
@@ -15,6 +17,7 @@ export interface DashboardCard {
   count?: number;
   countTerminees?: number;
   countAnnulees?: number;
+  countUnit?: 'commande' | 'bon actif';
 }
 
 @Component({
@@ -88,6 +91,14 @@ export class DashboardHomePageComponent implements OnInit {
       countTerminees: 0,
       countAnnulees: 0
     },
+    {
+      title: 'Bons cadeaux',
+      description: 'Créer et suivre vos bons cadeaux',
+      route: '/dashboard/bons',
+      icon: '🎁',
+      count: 0,
+      countUnit: 'bon actif',
+    },
   ];
 
   ngOnInit(): void {
@@ -115,6 +126,9 @@ export class DashboardHomePageComponent implements OnInit {
 
     // Charger les commandes pour mettre à jour les compteurs
     this.loadCommandesCount();
+
+    // Charger les bons pour afficher le nombre de bons actifs
+    this.loadBonsCount();
 
     // Réinitialiser le fallback quand le thème change
     effect(() => {
@@ -160,6 +174,26 @@ export class DashboardHomePageComponent implements OnInit {
       error: (error: any) => {
         console.error('Erreur lors de la récupération des commandes:', error);
       }
+    });
+  }
+
+  loadBonsCount(): void {
+    this.apiService.get(ApiURI.LISTE_BONS).subscribe({
+      next: (response: ApiResponse) => {
+        if (response.result && response.data) {
+          const bons = response.data as Bon[];
+          const bonsActifs = bons.filter(
+            (b) => !b.utilise && !BonService.isExpired(b)
+          ).length;
+          const bonsCard = this.dashboardCards.find(
+            (card) => card.route === '/dashboard/bons'
+          );
+          if (bonsCard) {
+            bonsCard.count = bonsActifs;
+          }
+        }
+      },
+      error: (err) => console.error('Erreur chargement bons:', err),
     });
   }
 

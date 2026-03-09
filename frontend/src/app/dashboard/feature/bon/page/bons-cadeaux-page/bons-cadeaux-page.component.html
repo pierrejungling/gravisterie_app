@@ -1,0 +1,380 @@
+<app-header></app-header>
+
+<div class="bons-page">
+  <div class="bons-page__header">
+    <div>
+      <h1 class="bons-page__title">Bons cadeaux</h1>
+      <p class="bons-page__subtitle">
+        Gérez ici tous les bons cadeaux créés par La Gravisterie.
+      </p>
+    </div>
+    <button type="button" class="btn-navigation" (click)="openCreateForm()">
+      + Créer un nouveau bon
+    </button>
+  </div>
+
+  <section class="form-section bons-page__creation" *ngIf="isInCreateOrEditMode">
+    <h2 class="section-title">{{ editingBonId() ? 'Modifier le bon' : 'Nouveau bon' }}</h2>
+    <form class="bons-form" [formGroup]="typedForm" (ngSubmit)="submit()">
+      <div class="bons-form__grid">
+        <div class="form-group">
+          <label for="numero">N° de bon</label>
+          <input id="numero" type="text" formControlName="numero" />
+          <small class="hint">
+            Numéro auto-généré (BG001, BG002, … — modifiable si nécessaire).
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="intitule">Intitulé du bon</label>
+          <input id="intitule" type="text" formControlName="intitule" />
+        </div>
+
+        <div class="form-group">
+          <label for="date_creation">Date de création</label>
+          <input id="date_creation" type="date" formControlName="date_creation" />
+        </div>
+
+        <div class="form-group">
+          <label for="valeur">Valeur (€)</label>
+          <input id="valeur" type="number" formControlName="valeur" min="0" step="0.01" placeholder="0,00" />
+        </div>
+
+        <div class="form-group">
+          <label for="nom">Nom (optionnel)</label>
+          <input id="nom" type="text" formControlName="nom" />
+        </div>
+
+        <div class="form-group">
+          <label for="prenom">Prénom (optionnel)</label>
+          <input id="prenom" type="text" formControlName="prenom" />
+        </div>
+
+        <div class="form-group">
+          <label>Échéance du bon</label>
+          <div class="echeance-mode">
+            <label>
+              <input type="radio" value="duree" formControlName="modeEcheance" />
+              Durée (en mois / années)
+            </label>
+            <label>
+              <input type="radio" value="date" formControlName="modeEcheance" />
+              Date précise
+            </label>
+          </div>
+
+          <ng-container *ngIf="typedForm.get('modeEcheance')?.value === 'duree'; else dateMode">
+            <select formControlName="duree_validite">
+              <option *ngFor="let d of durees" [value]="d.value">
+                {{ d.label }}
+              </option>
+            </select>
+            <small class="hint">
+              La date d'échéance sera calculée automatiquement à partir de la date de création.
+            </small>
+            <p class="preview-date" *ngIf="dateEcheancePreview">
+              <strong>Date d'échéance calculée :</strong> {{ formatDate(dateEcheancePreview) }}
+            </p>
+            <p class="preview-date preview-date--life" *ngIf="typedForm.get('duree_validite')?.value === 'LIFE'">
+              <strong>Validité :</strong> À vie
+            </p>
+          </ng-container>
+
+          <ng-template #dateMode>
+            <input type="date" formControlName="date_echeance" />
+            <small class="hint">
+              Choisissez directement une date de fin de validité.
+            </small>
+          </ng-template>
+        </div>
+      </div>
+
+      <p class="form-error" *ngIf="submitError()">{{ submitError() }}</p>
+      <div class="bons-form__actions">
+        <button type="button" class="btn-action-bar btn-cancel" (click)="editingBonId() ? cancelEdit() : cancelCreate()">
+          Annuler
+        </button>
+        <button type="submit" class="btn-action-bar btn-save">
+          {{ editingBonId() ? 'Enregistrer les modifications' : 'Enregistrer le bon' }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Popup de confirmation de suppression -->
+  <div class="delete-confirm-overlay" *ngIf="deleteConfirmBon()" (click)="cancelDelete()">
+    <div class="delete-confirm-popup" (click)="$event.stopPropagation()">
+      <div class="delete-confirm-header">
+        <h3>Confirmer la suppression</h3>
+      </div>
+      <div class="delete-confirm-body">
+        <p>Êtes-vous sûr de vouloir supprimer le bon <strong>{{ deleteConfirmBon()?.numero }}</strong> — {{ deleteConfirmBon()?.intitule }} ?</p>
+        <p class="delete-warning">Cette action est irréversible.</p>
+      </div>
+      <div class="delete-confirm-actions">
+        <button type="button" class="btn-cancel-delete" (click)="cancelDelete()">Annuler</button>
+        <button type="button" class="btn-confirm-delete" (click)="confirmDelete()">Supprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <section class="bons-page__list bons-section-collapsible" [class.bons-section--expanded]="showActifs()">
+    <button type="button" class="bons-section__header" (click)="toggleSection('actifs')" [attr.aria-expanded]="showActifs()">
+      <span class="bons-section__title">
+        <span class="bons-section__label">Bons actifs</span>
+        <span class="bons-section__count" *ngIf="bonsActifs().length > 0">({{ bonsActifs().length }})</span>
+      </span>
+      <span class="bons-section__chevron" aria-hidden="true">▼</span>
+    </button>
+    <div class="bons-section__content" *ngIf="showActifs()">
+      <p class="bons-section-empty" *ngIf="bonsActifs().length === 0">
+        Aucun bon actif pour le moment.
+      </p>
+
+      <!-- Vue desktop : tableau -->
+      <div class="bons-table-wrapper bons-view-desktop" *ngIf="bonsActifs().length > 0">
+      <table class="bons-table">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Intitulé</th>
+            <th>Valeur</th>
+            <th>Date de création</th>
+            <th>Nom</th>
+            <th>Prénom</th>
+            <th>Date d'échéance</th>
+            <th>Utilisé</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let bon of bonsActifs()">
+            <tr *ngIf="!isEditing(bon)" [class.bon--used-preview]="bon.utilise">
+              <td>{{ bon.numero }}</td>
+              <td>{{ bon.intitule }}</td>
+              <td>{{ formatValeur(bon.valeur) }}</td>
+              <td>{{ formatDate(bon.date_creation) }}</td>
+              <td>{{ bon.nom || '—' }}</td>
+              <td>{{ bon.prenom || '—' }}</td>
+              <td>
+                {{ bon.duree_validite === 'LIFE' ? 'À vie' : formatDate(bon.date_echeance) }}
+              </td>
+              <td class="bons-table__utilise">
+                <label class="checkbox-label">
+                  <input
+                    type="checkbox"
+                    [checked]="bon.utilise"
+                    (change)="onUtiliseChange(bon, $any($event.target).checked)"
+                  />
+                </label>
+              </td>
+              <td class="bons-table__actions">
+                <button type="button" class="btn-action-bar btn-edit btn-icon-sm" (click)="openEditForm(bon)" title="Modifier">✏️</button>
+                <button type="button" class="btn-action-bar btn-delete btn-icon-sm" (click)="openDeleteConfirm(bon)" title="Supprimer">🗑️</button>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+      </div>
+
+      <!-- Vue mobile : cartes -->
+      <div class="bons-cards-mobile bons-view-mobile" *ngIf="bonsActifs().length > 0">
+        <div
+          *ngFor="let bon of bonsActifs()"
+          class="bon-card"
+          [class.bon-card--editing]="isEditing(bon)">
+          <div class="bon-card__main" (click)="!isEditing(bon) && openEditForm(bon)">
+            <div class="bon-card__header">
+              <span class="bon-card__numero">{{ bon.numero }}</span>
+              <span class="bon-card__valeur">{{ formatValeur(bon.valeur) }}</span>
+            </div>
+            <p class="bon-card__intitule">{{ bon.intitule }}</p>
+            <div class="bon-card__info">
+              <span>Créé le {{ formatDate(bon.date_creation) }}</span>
+              <span>{{ bon.duree_validite === 'LIFE' ? 'À vie' : 'Échéance : ' + formatDate(bon.date_echeance) }}</span>
+              <span *ngIf="bon.nom || bon.prenom">{{ (bon.prenom ? bon.prenom + ' ' : '') + (bon.nom || '') }}</span>
+            </div>
+          </div>
+          <div class="bon-card__actions" (click)="$event.stopPropagation()">
+            <label class="checkbox-label bon-card__utilise">
+              <input type="checkbox" [checked]="bon.utilise" (change)="onUtiliseChange(bon, $any($event.target).checked)" />
+            </label>
+            <button type="button" class="btn-action-bar btn-edit btn-icon-sm" (click)="openEditForm(bon)" title="Modifier">✏️</button>
+            <button type="button" class="btn-action-bar btn-delete btn-icon-sm" (click)="openDeleteConfirm(bon)" title="Supprimer">🗑️</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bons-page__list bons-page__list--expired bons-section-collapsible" [class.bons-section--expanded]="showExpires()">
+    <button type="button" class="bons-section__header" (click)="toggleSection('expires')" [attr.aria-expanded]="showExpires()">
+      <span class="bons-section__title">
+        <span class="bons-section__label">Bons expirés</span>
+        <span class="bons-section__count" *ngIf="bonsExpires().length > 0">({{ bonsExpires().length }})</span>
+      </span>
+      <span class="bons-section__chevron" aria-hidden="true">▼</span>
+    </button>
+    <div class="bons-section__content" *ngIf="showExpires()">
+      <p class="bons-section-empty" *ngIf="bonsExpires().length === 0">
+        Aucun bon expiré pour le moment.
+      </p>
+
+      <div class="bons-table-wrapper bons-view-desktop" *ngIf="bonsExpires().length > 0">
+      <table class="bons-table bons-table--expired">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Intitulé</th>
+            <th>Valeur</th>
+            <th>Date de création</th>
+            <th>Nom</th>
+            <th>Prénom</th>
+            <th>Date d'échéance</th>
+            <th>Utilisé</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let bon of bonsExpires()">
+            <tr *ngIf="!isEditing(bon)" class="bon--expired">
+              <td>{{ bon.numero }}</td>
+              <td>{{ bon.intitule }}</td>
+              <td>{{ formatValeur(bon.valeur) }}</td>
+              <td>{{ formatDate(bon.date_creation) }}</td>
+              <td>{{ bon.nom || '—' }}</td>
+              <td>{{ bon.prenom || '—' }}</td>
+              <td>
+                {{ bon.duree_validite === 'LIFE' ? 'À vie' : formatDate(bon.date_echeance) }}
+              </td>
+              <td class="bons-table__utilise">
+                <label class="checkbox-label">
+                  <input
+                    type="checkbox"
+                    [checked]="bon.utilise"
+                    disabled
+                  />
+                </label>
+              </td>
+              <td class="bons-table__actions">
+                <button type="button" class="btn-action-bar btn-edit btn-icon-sm" (click)="openEditForm(bon)" title="Modifier">✏️</button>
+                <button type="button" class="btn-action-bar btn-delete btn-icon-sm" (click)="openDeleteConfirm(bon)" title="Supprimer">🗑️</button>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="bons-cards-mobile bons-view-mobile" *ngIf="bonsExpires().length > 0">
+        <div *ngFor="let bon of bonsExpires()" class="bon-card bon-card--expired" [class.bon-card--editing]="isEditing(bon)">
+          <div class="bon-card__main" (click)="!isEditing(bon) && openEditForm(bon)">
+            <div class="bon-card__header">
+              <span class="bon-card__numero">{{ bon.numero }}</span>
+              <span class="bon-card__valeur">{{ formatValeur(bon.valeur) }}</span>
+            </div>
+            <p class="bon-card__intitule">{{ bon.intitule }}</p>
+            <div class="bon-card__info">
+              <span>Créé le {{ formatDate(bon.date_creation) }}</span>
+              <span>{{ bon.duree_validite === 'LIFE' ? 'À vie' : 'Échéance : ' + formatDate(bon.date_echeance) }}</span>
+            </div>
+          </div>
+          <div class="bon-card__actions" (click)="$event.stopPropagation()">
+            <label class="checkbox-label bon-card__utilise"><input type="checkbox" [checked]="bon.utilise" disabled /></label>
+            <button type="button" class="btn-action-bar btn-edit btn-icon-sm" (click)="openEditForm(bon)" title="Modifier">✏️</button>
+            <button type="button" class="btn-action-bar btn-delete btn-icon-sm" (click)="openDeleteConfirm(bon)" title="Supprimer">🗑️</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="bons-page__list bons-page__list--secondary bons-section-collapsible" [class.bons-section--expanded]="showTermines()">
+    <button type="button" class="bons-section__header" (click)="toggleSection('termines')" [attr.aria-expanded]="showTermines()">
+      <span class="bons-section__title">
+        <span class="bons-section__label">Bons terminés</span>
+        <span class="bons-section__count" *ngIf="bonsTermines().length > 0">({{ bonsTermines().length }})</span>
+      </span>
+      <span class="bons-section__chevron" aria-hidden="true">▼</span>
+    </button>
+    <div class="bons-section__content" *ngIf="showTermines()">
+      <p class="bons-section-empty" *ngIf="bonsTermines().length === 0">
+        Aucun bon terminé pour le moment.
+      </p>
+
+      <div class="bons-table-wrapper bons-view-desktop" *ngIf="bonsTermines().length > 0">
+      <table class="bons-table bons-table--terminated">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Intitulé</th>
+            <th>Valeur</th>
+            <th>Date de création</th>
+            <th>Nom</th>
+            <th>Prénom</th>
+            <th>Date d'échéance</th>
+            <th>Utilisé</th>
+            <th>Date d'utilisation</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let bon of bonsTermines()">
+            <tr *ngIf="!isEditing(bon)" class="bon--used">
+              <td>{{ bon.numero }}</td>
+              <td>{{ bon.intitule }}</td>
+              <td>{{ formatValeur(bon.valeur) }}</td>
+              <td>{{ formatDate(bon.date_creation) }}</td>
+              <td>{{ bon.nom || '—' }}</td>
+              <td>{{ bon.prenom || '—' }}</td>
+              <td>
+                {{ bon.duree_validite === 'LIFE' ? 'À vie' : formatDate(bon.date_echeance) }}
+              </td>
+              <td class="bons-table__utilise">
+                <label class="checkbox-label">
+                  <input
+                    type="checkbox"
+                    [checked]="bon.utilise"
+                    (change)="onUtiliseChange(bon, $any($event.target).checked)"
+                  />
+                </label>
+              </td>
+              <td>{{ bon.utilise && bon.date_utilisation ? formatDate(bon.date_utilisation) : '—' }}</td>
+              <td class="bons-table__actions">
+                <button type="button" class="btn-action-bar btn-edit btn-icon-sm" (click)="openEditForm(bon)" title="Modifier">✏️</button>
+                <button type="button" class="btn-action-bar btn-delete btn-icon-sm" (click)="openDeleteConfirm(bon)" title="Supprimer">🗑️</button>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="bons-cards-mobile bons-view-mobile" *ngIf="bonsTermines().length > 0">
+        <div *ngFor="let bon of bonsTermines()" class="bon-card bon-card--terminated" [class.bon-card--editing]="isEditing(bon)">
+          <div class="bon-card__main" (click)="!isEditing(bon) && openEditForm(bon)">
+            <div class="bon-card__header">
+              <span class="bon-card__numero">{{ bon.numero }}</span>
+              <span class="bon-card__valeur">{{ formatValeur(bon.valeur) }}</span>
+            </div>
+            <p class="bon-card__intitule">{{ bon.intitule }}</p>
+            <div class="bon-card__info">
+              <span>Créé le {{ formatDate(bon.date_creation) }}</span>
+              <span>{{ bon.duree_validite === 'LIFE' ? 'À vie' : 'Échéance : ' + formatDate(bon.date_echeance) }}</span>
+              <span *ngIf="bon.utilise && bon.date_utilisation">Utilisé le {{ formatDate(bon.date_utilisation) }}</span>
+            </div>
+          </div>
+          <div class="bon-card__actions" (click)="$event.stopPropagation()">
+            <label class="checkbox-label bon-card__utilise">
+              <input type="checkbox" [checked]="bon.utilise" (change)="onUtiliseChange(bon, $any($event.target).checked)" />
+            </label>
+            <button type="button" class="btn-action-bar btn-edit btn-icon-sm" (click)="openEditForm(bon)" title="Modifier">✏️</button>
+            <button type="button" class="btn-action-bar btn-delete btn-icon-sm" (click)="openDeleteConfirm(bon)" title="Supprimer">🗑️</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+

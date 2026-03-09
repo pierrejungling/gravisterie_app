@@ -1,0 +1,833 @@
+.bons-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  min-height: 100vh;
+  background-color: var(--color-background-light, #f5f5f5);
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.bons-page__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+.bons-page__title {
+  margin: 0;
+  font-size: 1.6rem;
+  color: var(--color-text);
+}
+
+.bons-page__subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-light);
+  font-size: 0.95rem;
+}
+
+// Bouton création : même style que btn-navigation (commandes-en-cours)
+.btn-navigation {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+  white-space: nowrap;
+
+  &:hover {
+    background-color: #5a6268;
+  }
+
+  &:active {
+    background-color: #545b62;
+  }
+}
+
+// Section formulaire : alignée sur form-section des commandes
+.form-section.bons-page__creation {
+  background: var(--color-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 1.5rem 1.5rem 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem 0;
+  color: var(--color-text);
+  padding: 0.5rem 0;
+}
+
+// Sections repliables (style commandes-en-cours)
+.bons-section-collapsible {
+  margin-bottom: 0.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  background: var(--color-secondary);
+}
+
+.bons-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: left;
+  min-height: 48px;
+  transition: background-color 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  &:active {
+    background: rgba(0, 0, 0, 0.08);
+  }
+}
+
+.bons-section__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.bons-section__label {
+  flex: 1;
+}
+
+.bons-section__count {
+  font-weight: 500;
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+}
+
+.bons-section__chevron {
+  font-size: 0.65rem;
+  color: var(--color-text-light);
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+}
+
+.bons-section--expanded .bons-section__chevron {
+  transform: rotate(-180deg);
+}
+
+.bons-section__content {
+  padding: 1rem 1rem 1rem;
+  animation: bonsSectionOpen 0.25s ease;
+}
+
+@keyframes bonsSectionOpen {
+  from {
+    opacity: 0.6;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.bons-section-empty {
+  margin: 0.25rem 0 1rem;
+  color: var(--color-text-light);
+  font-size: 0.9rem;
+}
+
+.bons-form__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.form-group input,
+.form-group select {
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-input-border);
+  padding: 0.45rem 0.6rem;
+  font-size: 0.9rem;
+  outline: none;
+  background: var(--color-secondary);
+  color: var(--color-text);
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  border-color: var(--color-primary);
+}
+
+.hint {
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+}
+
+.preview-date {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: var(--color-success);
+}
+
+.preview-date--life {
+  color: var(--color-primary);
+}
+
+.echeance-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.echeance-mode label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-text);
+}
+
+.form-error {
+  color: var(--color-error);
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0;
+}
+
+.bons-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+// Boutons d'action formulaire : alignés sur btn-action-bar des commandes
+.btn-action-bar {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-input-border);
+  border-radius: 4px;
+  background: var(--color-secondary);
+  color: var(--color-text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  min-height: 36px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    background: var(--color-background-light);
+    border-color: var(--color-border);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.btn-cancel {
+    background: var(--btn-edit-bg);
+    border: 1px solid var(--btn-edit-border);
+    color: var(--btn-edit-color);
+
+    &:hover {
+      background: #ffe0b2;
+      border-color: #ffb74d;
+    }
+  }
+
+  &.btn-save {
+    background: var(--btn-save-bg);
+    border: 1px solid var(--btn-save-border);
+    color: var(--btn-save-color);
+    font-weight: 500;
+
+    &:hover:not(:disabled) {
+      background: #c8e6c9;
+      border-color: #388e3c;
+    }
+  }
+
+  &.btn-edit {
+    background: var(--btn-edit-bg);
+    border: 1px solid var(--btn-edit-border);
+    color: var(--btn-edit-color);
+
+    &:hover {
+      background: #ffe0b2;
+      border-color: #ffb74d;
+    }
+  }
+
+  &.btn-delete {
+    background: var(--btn-delete-bg);
+    border: 1px solid var(--btn-delete-border);
+    color: var(--btn-delete-color);
+
+    &:hover {
+      background: #ffcdd2;
+      border-color: #e57373;
+    }
+  }
+
+  &.btn-icon-sm {
+    padding: 0.25rem 0.5rem;
+    min-height: 32px;
+    font-size: 1rem;
+  }
+}
+
+.bons-table-wrapper {
+  overflow-x: hidden;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-input-border);
+  background: var(--color-secondary);
+}
+
+.bons-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.bons-table thead {
+  background: var(--color-background-light);
+}
+
+.bons-table th,
+.bons-table td {
+  padding: 0.5rem 0.4rem;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  color: var(--color-text);
+}
+
+.bons-table th {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.bons-table tr:last-child td {
+  border-bottom: none;
+}
+
+.bons-table__utilise {
+  text-align: center;
+
+  .checkbox-label {
+    justify-content: center;
+  }
+}
+
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.checkbox-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+}
+
+.bon--used-preview {
+  opacity: 0.5;
+}
+
+.bons-table--terminated .bon--used td {
+  color: var(--color-text-light);
+}
+
+.bons-page__list--expired {
+  margin-top: 2rem;
+}
+
+.bons-table--expired .bon--expired {
+  background: rgba(244, 67, 54, 0.15);
+  border-left: 3px solid rgba(244, 67, 54, 0.5);
+}
+
+.bons-table--expired .bon--expired td {
+  border-color: rgba(244, 67, 54, 0.2);
+}
+
+.bons-table--expired .bon--expired .bons-table__utilise input[type="checkbox"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.bons-page__list--secondary {
+  margin-top: 2rem;
+}
+
+.bons-table__actions {
+  white-space: nowrap;
+
+  .btn-action-bar + .btn-action-bar {
+    margin-left: 0.35rem;
+  }
+
+  .btn-action-bar {
+    padding: 0.2rem 0.35rem;
+  }
+}
+
+// Popup de confirmation de suppression : même structure que commandes
+.delete-confirm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeInOverlay 0.3s ease;
+}
+
+.delete-confirm-popup {
+  background: var(--color-secondary);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+  width: 90%;
+  overflow: hidden;
+  animation: popupSlideUp 0.4s ease;
+}
+
+.delete-confirm-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-background-light);
+
+  h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-error);
+  }
+}
+
+.delete-confirm-body {
+  padding: 1.5rem;
+  background: var(--color-secondary);
+
+  p {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: var(--color-text);
+    line-height: 1.6;
+  }
+
+  .delete-warning {
+    color: var(--color-error);
+    font-weight: 500;
+    margin-bottom: 0;
+  }
+}
+
+.delete-confirm-actions {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-input-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  background: var(--color-background-light);
+}
+
+.btn-cancel-delete,
+.btn-confirm-delete {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel-delete {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-cancel-delete:hover {
+  background: #5a6268;
+}
+
+.btn-confirm-delete {
+  background: var(--color-error);
+  color: white;
+}
+
+.btn-confirm-delete:hover {
+  background: #c82333;
+}
+
+/* Mode sombre : popup confirmation suppression */
+:root[data-theme="dark"] .delete-confirm-popup,
+[data-theme="dark"] .delete-confirm-popup {
+  background: var(--color-secondary);
+  border: 1px solid var(--color-input-border);
+}
+
+:root[data-theme="dark"] .delete-confirm-header,
+[data-theme="dark"] .delete-confirm-header {
+  background: var(--color-background-light);
+  border-bottom-color: var(--color-input-border);
+}
+
+:root[data-theme="dark"] .delete-confirm-header h3,
+[data-theme="dark"] .delete-confirm-header h3 {
+  color: #ef9a9a;
+}
+
+:root[data-theme="dark"] .delete-confirm-body,
+[data-theme="dark"] .delete-confirm-body {
+  background: var(--color-secondary);
+}
+
+:root[data-theme="dark"] .delete-confirm-body .delete-warning,
+[data-theme="dark"] .delete-confirm-body .delete-warning {
+  color: #ef9a9a;
+}
+
+:root[data-theme="dark"] .delete-confirm-actions,
+[data-theme="dark"] .delete-confirm-actions {
+  background: var(--color-background-light);
+  border-top-color: var(--color-input-border);
+}
+
+:root[data-theme="dark"] .btn-cancel-delete,
+[data-theme="dark"] .btn-cancel-delete {
+  background: #5a6268;
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .btn-cancel-delete:hover,
+[data-theme="dark"] .btn-cancel-delete:hover {
+  background: #495057;
+}
+
+:root[data-theme="dark"] .btn-confirm-delete,
+[data-theme="dark"] .btn-confirm-delete {
+  background: #c62828;
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .btn-confirm-delete:hover,
+[data-theme="dark"] .btn-confirm-delete:hover {
+  background: #b71c1c;
+}
+
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popupSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+// ——— Responsive : desktop / mobile ———
+.bons-view-mobile {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .bons-view-desktop {
+    display: none !important;
+  }
+
+  .bons-view-mobile {
+    display: block;
+  }
+}
+
+@media (min-width: 769px) {
+  .bons-view-mobile {
+    display: none !important;
+  }
+}
+
+// ——— Cartes mobile ———
+.bons-cards-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}
+
+.bon-card {
+  background: var(--color-secondary);
+  border: 1px solid var(--color-input-border);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: background 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+
+  &:active {
+    background: var(--color-background-light);
+  }
+
+  &.bon-card--expired {
+    background: rgba(244, 67, 54, 0.12);
+    border-color: rgba(244, 67, 54, 0.35);
+  }
+
+  &.bon-card--terminated {
+    opacity: 0.85;
+
+    .bon-card__intitule,
+    .bon-card__info {
+      color: var(--color-text-light);
+    }
+  }
+}
+
+.bon-card__main {
+  flex: 1;
+  min-width: 0;
+}
+
+.bon-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.bon-card__numero {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.bon-card__valeur {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--color-primary);
+}
+
+.bon-card__intitule {
+  font-size: 0.95rem;
+  color: var(--color-text);
+  margin: 0 0 0.5rem;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.bon-card__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.8rem;
+  color: var(--color-text-light);
+}
+
+.bon-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--color-border);
+  flex-wrap: wrap;
+
+  .bon-card__utilise {
+    margin-right: auto;
+  }
+
+  .btn-action-bar {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.5rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .bons-form__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .bons-page {
+    padding: 1rem 0.75rem calc(2rem + env(safe-area-inset-bottom, 0));
+    padding-top: 1rem;
+  }
+
+  .bons-page__header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .bons-page__title {
+    font-size: 1.35rem;
+  }
+
+  .bons-page__subtitle {
+    font-size: 0.875rem;
+  }
+
+  .btn-navigation {
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    min-height: 48px;
+    font-size: 1rem;
+  }
+
+  .form-section.bons-page__creation {
+    padding: 1rem 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .bons-section__header {
+    padding: 0.875rem 0.75rem;
+    min-height: 48px;
+    font-size: 0.95rem;
+  }
+
+  .bons-section__label {
+    font-size: 0.95rem;
+  }
+
+  .bons-section__content {
+    padding: 0.75rem;
+  }
+
+  .bons-form__actions {
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+
+    .btn-action-bar {
+      width: 100%;
+      min-height: 48px;
+      justify-content: center;
+    }
+  }
+
+  .bons-page__list--expired,
+  .bons-page__list--secondary {
+    margin-top: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .bons-form__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bons-page {
+    padding-inline: 0.5rem;
+  }
+
+  .delete-confirm-overlay {
+    padding: 0.5rem;
+    align-items: flex-end;
+  }
+
+  .delete-confirm-popup {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .delete-confirm-header,
+  .delete-confirm-body {
+    padding: 1.25rem 1rem;
+  }
+
+  .delete-confirm-header h3 {
+    font-size: 1.25rem;
+  }
+
+  .delete-confirm-actions {
+    flex-direction: column;
+    padding: 1rem;
+    gap: 0.5rem;
+
+    .btn-cancel-delete,
+    .btn-confirm-delete {
+      width: 100%;
+      min-height: 48px;
+      justify-content: center;
+    }
+  }
+
+  .bon-card {
+    padding: 1rem 0.875rem;
+  }
+
+  .bon-card__actions .btn-action-bar {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

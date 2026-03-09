@@ -35,7 +35,7 @@
             </span>
           </div>
           <span class="dashboard-card__count" *ngIf="card.count !== undefined && card.countTerminees === undefined && card.countAnnulees === undefined">
-            {{ card.count }} commande{{ card.count > 1 ? 's' : '' }}
+            {{ card.count }} {{ card.countUnit === 'bon actif' ? (card.count > 1 ? 'bons actifs' : 'bon actif') : (card.count > 1 ? 'commandes' : 'commande') }}
           </span>
           <span class="dashboard-card__arrow">→</span>
         </div>

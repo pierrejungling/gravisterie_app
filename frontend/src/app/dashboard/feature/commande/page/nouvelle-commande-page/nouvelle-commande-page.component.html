@@ -420,7 +420,8 @@
           <div formArrayName="supports" class="supports-list">
             <div *ngFor="let supportControl of supportsFormArray.controls; let i = index" 
                  [formGroupName]="i" 
-                 class="support-item">
+                 class="support-item"
+                 [class.support-item--inactif]="!isSupportActif($any(supportControl))">
               <ng-container [formGroup]="$any(supportControl)">
                 <!-- Nom du support -->
                 <div class="input-wrapper">

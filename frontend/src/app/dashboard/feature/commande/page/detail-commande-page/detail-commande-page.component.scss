@@ -1631,6 +1631,12 @@
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   background: #f8f9fa;
+  transition: opacity 0.2s ease, background-color 0.2s ease;
+
+  &--inactif {
+    opacity: 0.65;
+    background: #eef0f2;
+  }
 }
 
 .support-price-url-row {
@@ -2075,6 +2081,11 @@
 :host-context([data-theme="dark"]) .support-item {
   background: var(--color-secondary) !important;
   border-color: var(--color-border) !important;
+
+  &--inactif {
+    opacity: 0.6;
+    background: rgba(0, 0, 0, 0.15) !important;
+  }
 }
 
 :host-context([data-theme="dark"]) .support-prix-pour-unites {

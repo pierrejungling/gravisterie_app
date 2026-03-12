@@ -993,7 +993,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   onSave(): void {
     if (!this.formGroup.valid || !this.commande()) return;
 
-    const formValue = this.formGroup.value;
+    const formValue = this.formGroup.getRawValue();
     const payload: any = {
       produit: formValue.nom_commande,
       date_commande: formValue.date_commande || null,
@@ -1089,6 +1089,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
               prix_unitaire: s.prix_unitaire !== undefined ? Boolean(s.prix_unitaire) : true,
               nombre_unites: s.nombre_unites !== null && s.nombre_unites !== undefined && s.nombre_unites !== '' ? parseInt(String(s.nombre_unites), 10) : undefined,
               prix_support_unitaire: s.prix_support_unitaire !== null && s.prix_support_unitaire !== undefined && s.prix_support_unitaire !== '' ? parseFloat(String(s.prix_support_unitaire)) : undefined,
+              actif: s.actif !== undefined ? Boolean(s.actif) : true,
             }))
         : [],
       personnalisation: {

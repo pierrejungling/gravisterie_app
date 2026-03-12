@@ -707,6 +707,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const prixSupport = support.prix_support || 0;
     const nombreUnites = support.nombre_unites || 1;
     const prixSupportUnitaire = support.prix_support_unitaire || (prixUnitaire ? prixSupport : (nombreUnites > 0 ? prixSupport / nombreUnites : 0));
+    const actif = support.actif !== undefined ? support.actif : true;
     
     const group = new FormGroup({
       nom_support: new FormControl({ value: support.nom_support || '', disabled: !isEdit }),
@@ -714,12 +715,14 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       url_support: new FormControl({ value: support.url_support || '', disabled: !isEdit }),
       prix_unitaire: new FormControl({ value: prixUnitaire, disabled: !isEdit }),
       nombre_unites: new FormControl({ value: nombreUnites, disabled: !isEdit || prixUnitaire }),
-      prix_support_unitaire: new FormControl({ value: prixSupportUnitaire, disabled: true }) // Read-only, calculé
+      prix_support_unitaire: new FormControl({ value: prixSupportUnitaire, disabled: true }), // Read-only, calculé
+      actif: new FormControl({ value: actif, disabled: !isEdit })
     });
 
     // Écouter les changements pour recalculer
     group.get('prix_support')?.valueChanges.subscribe(() => this.recalculateSupportUnitaire(group));
     group.get('nombre_unites')?.valueChanges.subscribe(() => this.recalculateSupportUnitaire(group));
+    group.get('actif')?.valueChanges.subscribe(() => this.recalculateSupportsAndBenefice());
     group.get('prix_unitaire')?.valueChanges.subscribe(() => {
       const prixUnitaireValue = group.get('prix_unitaire')?.value;
       if (prixUnitaireValue) {
@@ -811,6 +814,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     
     supportsArray.controls.forEach((supportControl) => {
       const supportGroup = supportControl as FormGroup;
+      const actif = supportGroup.get('actif')?.value !== false;
+      if (!actif) return;
       const prixSupportUnitaireValue = supportGroup.get('prix_support_unitaire')?.value;
       const prixSupportUnitaire = prixSupportUnitaireValue !== null && prixSupportUnitaireValue !== undefined && prixSupportUnitaireValue !== ''
         ? parseFloat(String(prixSupportUnitaireValue)) || 0
@@ -914,6 +919,16 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return supportGroup.get('prix_unitaire')?.value === true;
   }
 
+  // Helper pour vérifier si le support est actif (inclus dans le tableau Détails des frais)
+  isSupportActif(supportGroup: FormGroup): boolean {
+    return supportGroup.get('actif')?.value !== false;
+  }
+
+  getSupportsActifsCount(): number {
+    if (!this.supportsFormArray) return 0;
+    return this.supportsFormArray.controls.filter((c) => this.isSupportActif(c as FormGroup)).length;
+  }
+
   toggleEditMode(): void {
     const newEditMode = !this.isEditMode();
     this.isEditMode.set(newEditMode);
@@ -940,7 +955,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       const supportsArray = this.formGroup.get('supports') as FormArray;
       supportsArray.controls.forEach((supportControl) => {
         const supportGroup = supportControl as FormGroup;
-        ['nom_support', 'prix_support', 'url_support', 'prix_unitaire', 'nombre_unites'].forEach(controlName => {
+        ['nom_support', 'prix_support', 'url_support', 'prix_unitaire', 'nombre_unites', 'actif'].forEach(controlName => {
           const control = supportGroup.get(controlName);
           if (control) {
             if (newEditMode) {
@@ -1017,6 +1032,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
               prix_unitaire: s.prix_unitaire !== undefined ? Boolean(s.prix_unitaire) : true,
               nombre_unites: s.nombre_unites !== null && s.nombre_unites !== undefined && s.nombre_unites !== '' ? parseInt(String(s.nombre_unites), 10) : undefined,
               prix_support_unitaire: s.prix_support_unitaire !== null && s.prix_support_unitaire !== undefined && s.prix_support_unitaire !== '' ? parseFloat(String(s.prix_support_unitaire)) : undefined,
+              actif: s.actif !== undefined ? Boolean(s.actif) : true,
             }))
         : [],
       personnalisation: {

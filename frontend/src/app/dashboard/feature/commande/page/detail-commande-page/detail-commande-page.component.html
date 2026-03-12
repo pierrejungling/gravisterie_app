@@ -569,6 +569,18 @@
                   </ng-template>
                 </div>
 
+                <!-- Toggle Actif : inclus dans le tableau Détails des frais -->
+                <div class="support-toggle-row">
+                  <label class="toggle-switch-small" [class.toggle-vert]="isSupportActif($any(supportControl))" [class.toggle-rouge]="!isSupportActif($any(supportControl))">
+                    <input
+                      type="checkbox"
+                      formControlName="actif"
+                      class="toggle-input">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label-small">{{ isSupportActif($any(supportControl)) ? 'Inclus dans les frais' : 'Exclu des frais' }}</span>
+                  </label>
+                </div>
+
                 <!-- Toggle Prix support unitaire (au-dessus du champ prix support) -->
                 <div class="support-toggle-row">
                   <label class="toggle-switch-small" [class.toggle-vert]="isPrixUnitaire($any(supportControl))" [class.toggle-rouge]="!isPrixUnitaire($any(supportControl))">
@@ -732,22 +744,24 @@
                 </tr>
               </thead>
               <tbody>
-                <tr *ngFor="let supportControl of supportsFormArray.controls; let i = index">
-                  <td class="support-name-cell">
-                    {{ $any(supportControl).get('nom_support')?.value || 'Support ' + (i + 1) }}
-                  </td>
-                  <td class="price-cell">
-                    {{ ($any(supportControl).get('prix_support_unitaire')?.value || 0) | number:'1.2-2' }} €
-                  </td>
-                  <td class="quantity-cell">
-                    {{ get('quantité').value || 1 }}
-                  </td>
-                  <td class="total-cell">
-                    {{ (($any(supportControl).get('prix_support_unitaire')?.value || 0) * (get('quantité').value || 1)) | number:'1.2-2' }} €
-                  </td>
-                </tr>
-                <tr *ngIf="supportsFormArray.length === 0" class="empty-row">
-                  <td colspan="4" class="empty-message">Aucun support</td>
+                <ng-container *ngFor="let supportControl of supportsFormArray.controls; let i = index">
+                  <tr *ngIf="isSupportActif($any(supportControl))">
+                    <td class="support-name-cell">
+                      {{ $any(supportControl).get('nom_support')?.value || 'Support ' + (i + 1) }}
+                    </td>
+                    <td class="price-cell">
+                      {{ ($any(supportControl).get('prix_support_unitaire')?.value || 0) | number:'1.2-2' }} €
+                    </td>
+                    <td class="quantity-cell">
+                      {{ get('quantité').value || 1 }}
+                    </td>
+                    <td class="total-cell">
+                      {{ (($any(supportControl).get('prix_support_unitaire')?.value || 0) * (get('quantité').value || 1)) | number:'1.2-2' }} €
+                    </td>
+                  </tr>
+                </ng-container>
+                <tr *ngIf="getSupportsActifsCount() === 0" class="empty-row">
+                  <td colspan="4" class="empty-message">{{ supportsFormArray.length === 0 ? 'Aucun support' : 'Aucun support / frais actif' }}</td>
                 </tr>
                 <tr class="total-row">
                   <td class="total-label"><strong>Total</strong></td>

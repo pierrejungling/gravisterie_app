@@ -28,4 +28,7 @@ export class CommandeSupport {
 
     @Column({type: 'decimal', nullable: true})
     prix_support_unitaire: number | null; // Calculé automatiquement
+
+    @Column({type: 'boolean', default: true})
+    actif: boolean; // true = inclus dans le tableau Détails des frais et dans les totaux
 }

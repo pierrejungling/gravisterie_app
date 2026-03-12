@@ -227,6 +227,7 @@ export class CommandeService {
                 commandeSupport.prix_unitaire = supportData.prix_unitaire !== undefined ? supportData.prix_unitaire : true;
                 commandeSupport.nombre_unites = supportData.nombre_unites || null;
                 commandeSupport.prix_support_unitaire = supportData.prix_support_unitaire || null;
+                commandeSupport.actif = supportData.actif !== undefined ? Boolean(supportData.actif) : true;
                 return commandeSupport;
             });
             await this.commandeSupportRepository.save(supportsToCreate);
@@ -280,7 +281,8 @@ export class CommandeService {
             url_support: cs.url_support,
             prix_unitaire: cs.prix_unitaire,
             nombre_unites: cs.nombre_unites,
-            prix_support_unitaire: cs.prix_support_unitaire
+            prix_support_unitaire: cs.prix_support_unitaire,
+            actif: cs.actif !== undefined ? cs.actif : true
         })) : [];
 
         // Retourner un objet avec les propriétés explicitement listées pour éviter les conflits de type
@@ -357,7 +359,8 @@ export class CommandeService {
             url_support: cs.url_support,
             prix_unitaire: cs.prix_unitaire,
             nombre_unites: cs.nombre_unites,
-            prix_support_unitaire: cs.prix_support_unitaire
+            prix_support_unitaire: cs.prix_support_unitaire,
+            actif: cs.actif !== undefined ? cs.actif : true
         })) : [];
 
         const originalNom = commande.produit || 'Commande sans nom';
@@ -520,6 +523,7 @@ export class CommandeService {
                     commandeSupport.prix_unitaire = supportData.prix_unitaire !== undefined ? Boolean(supportData.prix_unitaire) : true;
                     commandeSupport.nombre_unites = supportData.nombre_unites !== null && supportData.nombre_unites !== undefined && supportData.nombre_unites !== '' ? parseInt(String(supportData.nombre_unites), 10) : null;
                     commandeSupport.prix_support_unitaire = supportData.prix_support_unitaire !== null && supportData.prix_support_unitaire !== undefined && supportData.prix_support_unitaire !== '' ? Number(supportData.prix_support_unitaire) : null;
+                    commandeSupport.actif = supportData.actif !== undefined ? Boolean(supportData.actif) : true;
                     return commandeSupport;
                 });
                 await this.commandeSupportRepository.save(supportsToCreate);

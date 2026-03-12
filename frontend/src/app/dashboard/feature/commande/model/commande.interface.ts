@@ -106,6 +106,7 @@ export interface Commande {
     prix_unitaire?: boolean; // true = prix unitaire, false = prix pour X unités
     nombre_unites?: number; // X unités si prix_unitaire = false
     prix_support_unitaire?: number; // Calculé automatiquement
+    actif?: boolean; // true = inclus dans le tableau Détails des frais et dans les totaux
   }>;
   prix_unitaire_final?: number; // Prix unitaire final de vente
   frais_pourcentage?: number; // Frais/commission en % pour les ventes

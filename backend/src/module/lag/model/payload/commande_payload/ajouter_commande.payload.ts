@@ -150,6 +150,7 @@ export class AjouterCommandePayload {
         prix_unitaire?: boolean;
         nombre_unites?: number;
         prix_support_unitaire?: number;
+        actif?: boolean;
     }>;
 
     @ApiProperty({ required: false })

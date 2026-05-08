@@ -1035,6 +1035,25 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return Number.isFinite(n) && n >= 0 ? n : 0;
   }
 
+  /** Réalisé ≥ objectif (tolère les valeurs en cours de saisie tant qu’elles sont cohérentes). */
+  compteurQuantiteComplete(index: number): boolean {
+    const g = this.getCompteurGroup(index);
+    let cible = parseInt(String(g.get('quantite_cible')?.value ?? 1), 10);
+    let realise = parseInt(String(g.get('quantite_realisee')?.value ?? 0), 10);
+    if (!Number.isFinite(cible) || cible < 1) cible = 1;
+    if (!Number.isFinite(realise)) realise = 0;
+    if (realise < 0) realise = 0;
+    return realise >= cible;
+  }
+
+  /** Pourcentage 0–100 pour la barre de progression (réalisé / objectif). */
+  compteurProgressPercent(index: number): number {
+    const cible = this.compteurCibleAffiche(index);
+    const realise = Math.max(0, this.compteurRealiseAffiche(index));
+    const base = cible >= 1 ? cible : 1;
+    return Math.min(100, Math.round((realise / base) * 100));
+  }
+
   private clampCompteurFormGroup(g: FormGroup): void {
     let cible = parseInt(String(g.get('quantite_cible')?.value ?? 1), 10);
     let realise = parseInt(String(g.get('quantite_realisee')?.value ?? 0), 10);
@@ -1120,7 +1139,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   decrementCompteur(index: number): void {
-    if (!this.quantiteProduitCompteursFormArray || !this.isQuantiteRealiseeEditable() || !this.isEditMode()) return;
+    if (!this.quantiteProduitCompteursFormArray || !this.isQuantiteRealiseeEditable()) return;
     const g = this.quantiteProduitCompteursFormArray.at(index) as FormGroup;
     let current = parseInt(String(g.get('quantite_realisee')?.value || 0), 10) || 0;
     if (current > 0) {

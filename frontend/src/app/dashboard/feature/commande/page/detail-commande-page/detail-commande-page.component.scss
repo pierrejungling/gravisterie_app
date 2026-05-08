@@ -1623,8 +1623,8 @@
 }
 
 .pcs-compteur-btn-ajouter-global {
-  margin-top: 0;
-  margin-bottom: 0.75rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0;
   display: inline-flex;
 }
 
@@ -1651,12 +1651,59 @@
     border-bottom: none;
   }
 
+  &.pcs-realises-block--complet {
+    background: var(--btn-save-bg);
+    border: 1px solid var(--btn-save-border);
+    border-radius: 8px;
+    padding: 0.55rem 0.85rem 0.85rem;
+    margin-bottom: 0.85rem;
+    border-bottom: none;
+
+    &:last-child {
+      padding-bottom: 0.85rem;
+    }
+  }
+
   .pcs-realises-libelle-row {
     width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem 0.65rem;
+
+    .pcs-compteur-badge-complet {
+      margin-left: auto;
+    }
+  }
+
+  .pcs-compteur-badge-complet {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--btn-save-color);
+    background: var(--btn-save-bg);
+    border: 1px solid var(--btn-save-border);
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    flex-shrink: 0;
+    line-height: 1.2;
+
+    &__ico {
+      font-weight: 800;
+      font-size: 0.85rem;
+      line-height: 1;
+    }
   }
 
   .pcs-realises-libelle-readonly {
     display: block;
+    flex: 1;
+    min-width: 0;
     font-weight: 600;
     font-size: 0.92rem;
     color: var(--color-text);
@@ -1683,7 +1730,9 @@
   }
 
   .pcs-realises-libelle-input {
-    width: 100%;
+    flex: 1;
+    min-width: min(100%, 140px);
+    width: auto;
     box-sizing: border-box;
     padding: 0.55rem 0.75rem;
     font-size: 0.9rem;
@@ -1702,6 +1751,96 @@
       border-color: var(--color-primary);
       box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
     }
+  }
+
+  /* Mobile : barre sous la ligne nombre + « + Ajouter » ; ≥992px : barre au-dessus */
+  > .pcs-realises-libelle-row {
+    order: 1;
+  }
+
+  > .pcs-realises-input-row {
+    order: 2;
+  }
+
+  > .pcs-realises-add-row--compteur {
+    order: 3;
+  }
+
+  > .pcs-compteur-progress {
+    order: 4;
+  }
+
+  > .pcs-compteur-btn-supprimer {
+    order: 5;
+  }
+
+  @media (min-width: 992px) {
+    > .pcs-compteur-progress {
+      order: 3;
+    }
+
+    > .pcs-realises-add-row--compteur {
+      order: 4;
+    }
+  }
+}
+
+/* Barre de progression par compteur (toutes largeurs d’écran) */
+.pcs-compteur-progress {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 0.35rem;
+  box-sizing: border-box;
+}
+
+.pcs-compteur-progress__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-background-light);
+  border: 1.5px solid var(--color-input-border);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.pcs-compteur-progress__fill {
+  height: 100%;
+  min-width: 0;
+  border-radius: 999px;
+  background: var(--btn-toggle-prix-color);
+  transition: width 0.22s ease;
+}
+
+.pcs-realises-block--row.pcs-realises-block--complet .pcs-compteur-progress__fill {
+  background: var(--color-success);
+}
+
+:host-context([data-theme="dark"]) {
+  .pcs-compteur-progress__track {
+    background: var(--color-secondary);
+    border-color: color-mix(in srgb, var(--color-text-light) 50%, var(--color-input-border));
+  }
+
+  .pcs-compteur-progress__fill {
+    background: var(--btn-toggle-prix-bg);
+  }
+
+  .pcs-realises-block--row.pcs-realises-block--complet .pcs-compteur-progress__fill {
+    background: var(--color-success);
+  }
+}
+
+/* Mode sombre : même encadrement que les statuts « terminés » (bordure verte tout autour) */
+:host-context([data-theme="dark"]) .pcs-realises-block--row.pcs-realises-block--complet {
+  background: var(--color-background-light);
+  border: 1px solid var(--color-success);
+  border-radius: 6px;
+
+  .pcs-compteur-badge-complet {
+    color: var(--color-success);
+    background: transparent;
+    border-color: var(--color-success);
+    font-weight: 600;
   }
 }
 
@@ -1994,6 +2133,19 @@
   &:hover:not(:disabled) {
     background: #dc3545;
     color: white;
+  }
+}
+
+/* Rouge plein comme le bouton Supprimer de la barre (mode sombre) */
+:host-context([data-theme="dark"]) .btn-remove-support:not(:disabled) {
+  background: var(--btn-delete-bg) !important;
+  border: 1px solid var(--btn-delete-border) !important;
+  color: var(--btn-delete-color) !important;
+
+  &:hover {
+    background: #b71c1c !important;
+    border-color: #d32f2f !important;
+    color: #ffffff !important;
   }
 }
 

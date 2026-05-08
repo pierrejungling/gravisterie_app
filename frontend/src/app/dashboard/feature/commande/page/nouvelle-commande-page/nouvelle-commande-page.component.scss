@@ -1198,6 +1198,18 @@
   }
 }
 
+:host-context([data-theme="dark"]) .btn-remove-support:not(:disabled) {
+  background: var(--btn-delete-bg) !important;
+  border: 1px solid var(--btn-delete-border) !important;
+  color: var(--btn-delete-color) !important;
+
+  &:hover {
+    background: #b71c1c !important;
+    border-color: #d32f2f !important;
+    color: #ffffff !important;
+  }
+}
+
 .prix-recapitulatif {
   margin-top: 1.5rem;
   padding: 1rem;

@@ -1115,19 +1115,12 @@
         class="pcs-realises-wrapper"
         [formGroup]="formGroup"
         [class.pcs-realises-disabled]="!isQuantiteRealiseeEditable()">
-        <button
-          type="button"
-          class="btn-add-support pcs-compteur-btn-ajouter-global"
-          (click)="ajouterCompteurQuantiteProduit()"
-          [disabled]="!isEditMode()"
-          *ngIf="isQuantiteRealiseeEditable() && isEditMode()">
-          + Ajouter un compteur
-        </button>
         <div formArrayName="quantite_produit_compteurs">
           <div
             class="pcs-realises-block pcs-realises-block--row"
             *ngFor="let _ of quantiteProduitCompteursFormArray.controls; let i = index"
-            [formGroupName]="i">
+            [formGroupName]="i"
+            [class.pcs-realises-block--complet]="compteurQuantiteComplete(i)">
             <div class="pcs-realises-libelle-row">
               <input
                 *ngIf="isEditMode()"
@@ -1137,6 +1130,10 @@
                 placeholder="Libellé (ex. Socle, Pieds)"
                 (blur)="onCompteurLibelleBlur()" />
               <span *ngIf="!isEditMode()" class="pcs-realises-libelle-readonly">{{ compteurLibelleLectureText(i) }}</span>
+              <span *ngIf="compteurQuantiteComplete(i)" class="pcs-compteur-badge-complet">
+                <span class="pcs-compteur-badge-complet__ico" aria-hidden="true">✓</span>
+                Terminé
+              </span>
             </div>
             <div class="pcs-realises-input-row">
               <input
@@ -1161,7 +1158,6 @@
                 <button
                   type="button"
                   class="pcs-btn pcs-btn-minus"
-                  *ngIf="isEditMode()"
                   (click)="decrementCompteur(i)"
                   title="Diminuer">−</button>
                 <button
@@ -1169,6 +1165,25 @@
                   class="pcs-btn pcs-btn-plus"
                   (click)="incrementCompteur(i)"
                   title="Augmenter">+</button>
+              </div>
+            </div>
+            <!-- Barre de progression (réalisé / objectif) -->
+            <div
+              class="pcs-compteur-progress"
+              role="progressbar"
+              [attr.aria-valuenow]="compteurRealiseAffiche(i)"
+              aria-valuemin="0"
+              [attr.aria-valuemax]="compteurCibleAffiche(i)"
+              [attr.aria-label]="
+                'Avancement : ' +
+                compteurRealiseAffiche(i) +
+                ' sur ' +
+                compteurCibleAffiche(i)
+              ">
+              <div class="pcs-compteur-progress__track">
+                <div
+                  class="pcs-compteur-progress__fill"
+                  [style.width.%]="compteurProgressPercent(i)"></div>
               </div>
             </div>
             <div class="pcs-realises-add-row pcs-realises-add-row--compteur" *ngIf="isQuantiteRealiseeEditable()">
@@ -1196,6 +1211,14 @@
             </button>
           </div>
         </div>
+        <button
+          type="button"
+          class="btn-add-support pcs-compteur-btn-ajouter-global"
+          (click)="ajouterCompteurQuantiteProduit()"
+          [disabled]="!isEditMode()"
+          *ngIf="isQuantiteRealiseeEditable() && isEditMode()">
+          + Ajouter un compteur
+        </button>
       </div>
     </section>
 

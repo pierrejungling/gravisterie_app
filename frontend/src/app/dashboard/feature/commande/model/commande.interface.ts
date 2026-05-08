@@ -66,6 +66,14 @@ export enum ModeContact {
   META = 'meta'
 }
 
+/** Un bloc « realise / objectif » étiquetable (ex. Socle × 50 unités). */
+export interface QuantiteProduitCompteur {
+  id: string;
+  libelle: string;
+  quantite_cible: number;
+  quantite_realisee: number;
+}
+
 export interface Client {
   id_client: string;
   nom?: string;
@@ -89,6 +97,7 @@ export interface Commande {
   prix_final?: number;
   quantité?: number;
   quantite_realisee?: number;
+  quantite_produit_compteurs?: QuantiteProduitCompteur[] | null;
   payé?: boolean;
   commentaire_paye?: string;
   attente_reponse?: boolean; // false = client attend réponse, true = moi qui attends réponse

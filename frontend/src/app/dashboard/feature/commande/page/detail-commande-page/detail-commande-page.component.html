@@ -1109,39 +1109,90 @@
     </section>
 
     <!-- PCs réalisés -->
-    <section class="form-section pcs-realises-section" *ngIf="!isVente()">
+    <section class="form-section pcs-realises-section" *ngIf="!isVente() && formGroup">
       <h2 class="section-title">Quantité produite</h2>
-      <div class="pcs-realises-wrapper" [class.pcs-realises-disabled]="!isQuantiteRealiseeEditable()">
-        <div class="pcs-realises-block">
-          <div class="pcs-realises-input-row">
-            <input
-              type="number"
-              class="pcs-realises-input"
-              [formControl]="get('quantite_realisee')"
-              (change)="onQuantiteRealiseeChange()"
-              [min]="0"
-              [max]="get('quantité').value || 1"
-              placeholder="0">
-            <span class="pcs-realises-separator">/</span>
-            <span class="pcs-realises-total">{{ get('quantité').value || 1 }}</span>
-            <div class="pcs-realises-buttons" *ngIf="isQuantiteRealiseeEditable()">
-              <button type="button" class="pcs-btn pcs-btn-minus" (click)="decrementQuantiteRealisee()" title="Diminuer">−</button>
-              <button type="button" class="pcs-btn pcs-btn-plus" (click)="incrementQuantiteRealisee()" title="Augmenter">+</button>
+      <div
+        class="pcs-realises-wrapper"
+        [formGroup]="formGroup"
+        [class.pcs-realises-disabled]="!isQuantiteRealiseeEditable()">
+        <button
+          type="button"
+          class="btn-add-support pcs-compteur-btn-ajouter-global"
+          (click)="ajouterCompteurQuantiteProduit()"
+          [disabled]="!isEditMode()"
+          *ngIf="isQuantiteRealiseeEditable() && isEditMode()">
+          + Ajouter un compteur
+        </button>
+        <div formArrayName="quantite_produit_compteurs">
+          <div
+            class="pcs-realises-block pcs-realises-block--row"
+            *ngFor="let _ of quantiteProduitCompteursFormArray.controls; let i = index"
+            [formGroupName]="i">
+            <div class="pcs-realises-libelle-row">
+              <input
+                *ngIf="isEditMode()"
+                type="text"
+                class="pcs-realises-libelle-input"
+                formControlName="libelle"
+                placeholder="Libellé (ex. Socle, Pieds)"
+                (blur)="onCompteurLibelleBlur()" />
+              <span *ngIf="!isEditMode()" class="pcs-realises-libelle-readonly">{{ compteurLibelleLectureText(i) }}</span>
             </div>
-          </div>
-          <div class="pcs-realises-add-row" *ngIf="isQuantiteRealiseeEditable()">
-            <input
-              #quantiteAjoutInput
-              type="number"
-              class="pcs-realises-add-input"
-              min="1"
-            >
+            <div class="pcs-realises-input-row">
+              <input
+                *ngIf="isEditMode()"
+                type="number"
+                class="pcs-realises-input"
+                formControlName="quantite_realisee"
+                (change)="onCompteurRealiseOuCibleInputChange()"
+                [min]="0"
+                placeholder="0">
+              <span *ngIf="!isEditMode()" class="pcs-realises-realise-readonly">{{ compteurRealiseAffiche(i) }}</span>
+              <span class="pcs-realises-separator">/</span>
+              <input
+                *ngIf="isEditMode()"
+                type="number"
+                class="pcs-realises-input pcs-realises-cible-input"
+                formControlName="quantite_cible"
+                [min]="1"
+                (change)="onCompteurRealiseOuCibleInputChange()" />
+              <span *ngIf="!isEditMode()" class="pcs-realises-total pcs-realises-cible-readonly">{{ compteurCibleAffiche(i) }}</span>
+              <div class="pcs-realises-buttons" *ngIf="isQuantiteRealiseeEditable()">
+                <button
+                  type="button"
+                  class="pcs-btn pcs-btn-minus"
+                  *ngIf="isEditMode()"
+                  (click)="decrementCompteur(i)"
+                  title="Diminuer">−</button>
+                <button
+                  type="button"
+                  class="pcs-btn pcs-btn-plus"
+                  (click)="incrementCompteur(i)"
+                  title="Augmenter">+</button>
+              </div>
+            </div>
+            <div class="pcs-realises-add-row pcs-realises-add-row--compteur" *ngIf="isQuantiteRealiseeEditable()">
+              <input
+                #quantiteAjoutBloc
+                type="number"
+                class="pcs-realises-add-input"
+                min="1"
+              >
+              <button
+                type="button"
+                class="btn-add-support btn-add-support--compteur-ligne"
+                (click)="addCompteurFromInput(i, quantiteAjoutBloc.valueAsNumber); quantiteAjoutBloc.value = ''"
+                title="Ajouter au nombre réalisé pour ce libellé">
+                + Ajouter
+              </button>
+            </div>
             <button
               type="button"
-              class="pcs-btn pcs-btn-add"
-              (click)="addQuantiteFromInput(quantiteAjoutInput.valueAsNumber); quantiteAjoutInput.value = ''"
-              title="Ajouter au nombre réalisé">
-              + Ajouter
+              class="btn-remove-support pcs-compteur-btn-supprimer"
+              (click)="supprimerCompteurQuantiteProduit(i)"
+              [disabled]="!isEditMode() || quantiteProduitCompteursFormArray.length <= 1"
+              *ngIf="isEditMode() && quantiteProduitCompteursFormArray.length > 1">
+              Supprimer
             </button>
           </div>
         </div>

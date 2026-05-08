@@ -52,6 +52,10 @@ export class Commande {
     @Column({type: 'integer', nullable: true, default: 0})
     quantite_realisee: number | null;
 
+    /** Compteurs étiquetés (JSON) pour la quantité produite ; null = ancien comportement uniquement avec quantité / quantite_realisee. */
+    @Column({type: 'text', nullable: true})
+    quantite_produit_compteurs: string | null;
+
     @OneToMany(() => CommandeSupport, (commandeSupport) => commandeSupport.commande, { cascade: true })
     supports: CommandeSupport[];
 

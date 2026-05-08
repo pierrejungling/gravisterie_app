@@ -6,7 +6,7 @@ import { HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, Safe
 import { ApiService } from '@api';
 import { ApiURI, COMMANDE_FICHIERS_LIST, COMMANDE_FICHIERS_UPLOAD, COMMANDE_FICHIER_DOWNLOAD, COMMANDE_DUPLIQUER } from '@api';
 import { forkJoin, Subscription } from 'rxjs';
-import { Commande, CommandeFichier, StatutCommande, ModeContact, Couleur } from '../../model/commande.interface';
+import { Commande, CommandeFichier, StatutCommande, ModeContact, Couleur, QuantiteProduitCompteur } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 import { renderAsync } from 'docx-preview';
 
@@ -548,10 +548,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       police_ecriture: new FormControl({ value: cmd.personnalisation?.police || '', disabled: !isEdit }),
       texte_personnalisation: new FormControl({ value: cmd.personnalisation?.texte || '', disabled: !isEdit }),
       quantité: new FormControl({ value: cmd.quantité || 1, disabled: !isEdit }),
-      quantite_realisee: new FormControl({
-        value: cmd.quantite_realisee ?? 0,
-        disabled: this.isStatutFinitionCompleted()
-      }),
+      quantite_produit_compteurs: this.buildQuantiteProduitCompteursFormArray(cmd),
       prix_final: new FormControl({ value: cmd.prix_final ?? '', disabled: !isEdit }),
       prix_unitaire_final: new FormControl({ value: cmd.prix_unitaire_final ?? (cmd.prix_final !== null && cmd.prix_final !== undefined && cmd.quantité ? cmd.prix_final / cmd.quantité : ''), disabled: !isEdit }),
       frais_pourcentage: new FormControl({ value: cmd.frais_pourcentage ?? null, disabled: !isEdit }),
@@ -592,13 +589,13 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.formGroup.get('quantité')?.valueChanges.subscribe(() => {
       if (isCalculatingPF || isCalculatingPU) return;
       // Si prix final existe, recalculer PU. Sinon, si PU existe, recalculer PF
-      const prixFinal = this.formGroup.get('prix_final')?.value;
-      const prixUnitaire = this.formGroup.get('prix_unitaire_final')?.value;
-      if (prixFinal) {
+      const prixFinalV = this.formGroup.get('prix_final')?.value;
+      const prixUnitaireV = this.formGroup.get('prix_unitaire_final')?.value;
+      if (prixFinalV) {
         isCalculatingPU = true;
         this.recalculatePrixUnitaireFromFinal();
         isCalculatingPU = false;
-      } else if (prixUnitaire) {
+      } else if (prixUnitaireV) {
         isCalculatingPF = true;
         this.recalculatePrixFinalFromUnitaire();
         isCalculatingPF = false;
@@ -627,10 +624,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     
     // Calcul initial : si prix_final existe, calculer PU, sinon si PU existe, calculer PF
     const prixFinal = this.formGroup.get('prix_final')?.value;
-    const prixUnitaire = this.formGroup.get('prix_unitaire_final')?.value;
+    const prixUnitaireInit = this.formGroup.get('prix_unitaire_final')?.value;
     if (prixFinal) {
       this.recalculatePrixUnitaireFromFinal();
-    } else if (prixUnitaire) {
+    } else if (prixUnitaireInit) {
       this.recalculatePrixFinalFromUnitaire();
     }
     
@@ -638,6 +635,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     // même en mode lecture et même si le prix final est 0
     this.recalculateSupportsAndBenefice();
     this.updateVenteFraisComputedFields();
+    this.refreshQuantiteProduitCompteursStructureControls();
   }
 
   extractAdressePart(adresse: string | null | undefined, index: number): string {
@@ -929,6 +927,260 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return this.supportsFormArray.controls.filter((c) => this.isSupportActif(c as FormGroup)).length;
   }
 
+  private newCompteurClientId(): string {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    }
+  }
+
+  /** Lignes de compteurs depuis la commande API (toujours au moins une ligne pour l’UI). */
+  denormaliserCompteursDepuisCmd(cmd: Commande): QuantiteProduitCompteur[] {
+    const stored = cmd.quantite_produit_compteurs;
+    if (Array.isArray(stored) && stored.length > 0) {
+      return stored.map((s) => {
+        let cible = parseInt(String(s.quantite_cible ?? 1), 10);
+        let realise = parseInt(String(s.quantite_realisee ?? 0), 10);
+        if (!Number.isFinite(cible) || cible < 1) cible = 1;
+        if (!Number.isFinite(realise)) realise = 0;
+        if (realise < 0) realise = 0;
+        if (realise > cible) realise = cible;
+        return {
+          id: typeof s.id === 'string' && s.id.trim() ? s.id : this.newCompteurClientId(),
+          libelle: typeof s.libelle === 'string' ? s.libelle : '',
+          quantite_cible: cible,
+          quantite_realisee: realise,
+        };
+      });
+    }
+    const qGlobale = Math.max(1, cmd.quantité ?? 1);
+    let realise = parseInt(String(cmd.quantite_realisee ?? 0), 10);
+    if (!Number.isFinite(realise)) realise = 0;
+    if (realise < 0) realise = 0;
+    if (realise > qGlobale) realise = qGlobale;
+    return [
+      {
+        id: this.newCompteurClientId(),
+        libelle: '',
+        quantite_cible: qGlobale,
+        quantite_realisee: realise,
+      },
+    ];
+  }
+
+  createCompteurFormGroup(row: QuantiteProduitCompteur): FormGroup {
+    const finitionLocked = this.isStatutFinitionCompleted();
+    const structureLocked = finitionLocked || !this.isEditMode();
+
+    return new FormGroup({
+      id: new FormControl(row.id),
+      libelle: new FormControl({ value: row.libelle, disabled: structureLocked }),
+      quantite_cible: new FormControl({ value: row.quantite_cible, disabled: structureLocked }),
+      quantite_realisee: new FormControl({ value: row.quantite_realisee, disabled: finitionLocked }),
+    });
+  }
+
+  buildQuantiteProduitCompteursFormArray(cmd: Commande): FormArray<FormGroup> {
+    const rows = this.denormaliserCompteursDepuisCmd(cmd);
+    return new FormArray<FormGroup>(rows.map((r) => this.createCompteurFormGroup(r)));
+  }
+
+  /**
+   * Après création du form ou entrée en mode édition : libellé/objectif suivent le mode édition ;
+   * réalisé reste pilotable hors édition (sauf finition terminée).
+   */
+  refreshQuantiteProduitCompteursStructureControls(): void {
+    const finitionLocked = this.isStatutFinitionCompleted();
+    const structureLocked = finitionLocked || !this.isEditMode();
+    const fa = this.formGroup?.get('quantite_produit_compteurs') as FormArray<FormGroup>;
+    if (!fa) return;
+    fa.controls.forEach((ctrl) => {
+      const g = ctrl as FormGroup;
+      ['libelle', 'quantite_cible'].forEach((key) => {
+        const c = g.get(key);
+        if (!c) return;
+        if (structureLocked) c.disable({ emitEvent: false });
+        else c.enable({ emitEvent: false });
+      });
+      const r = g.get('quantite_realisee');
+      if (!r) return;
+      if (finitionLocked) r.disable({ emitEvent: false });
+      else r.enable({ emitEvent: false });
+    });
+  }
+  get quantiteProduitCompteursFormArray(): FormArray<FormGroup> {
+    return this.formGroup.get('quantite_produit_compteurs') as FormArray<FormGroup>;
+  }
+
+  getCompteurGroup(index: number): FormGroup {
+    return this.quantiteProduitCompteursFormArray.at(index) as FormGroup;
+  }
+
+  compteurLibelleLectureText(index: number): string {
+    const raw = this.getCompteurGroup(index).get('libelle')?.value;
+    const t = typeof raw === 'string' ? raw.trim() : '';
+    return t.length ? t : 'Sans libellé';
+  }
+
+  compteurCibleAffiche(index: number): number {
+    const raw = this.getCompteurGroup(index).get('quantite_cible')?.value;
+    const n = parseInt(String(raw ?? 1), 10);
+    return Number.isFinite(n) && n >= 1 ? n : 1;
+  }
+
+  compteurRealiseAffiche(index: number): number {
+    const raw = this.getCompteurGroup(index).get('quantite_realisee')?.value;
+    const n = parseInt(String(raw ?? 0), 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  }
+
+  private clampCompteurFormGroup(g: FormGroup): void {
+    let cible = parseInt(String(g.get('quantite_cible')?.value ?? 1), 10);
+    let realise = parseInt(String(g.get('quantite_realisee')?.value ?? 0), 10);
+    if (!Number.isFinite(cible) || cible < 1) cible = 1;
+    if (!Number.isFinite(realise)) realise = 0;
+    if (realise < 0) realise = 0;
+    if (realise > cible) realise = cible;
+    g.patchValue({ quantite_cible: cible, quantite_realisee: realise }, { emitEvent: false });
+  }
+
+  private clampAllCompteursForm(): void {
+    const fa = this.quantiteProduitCompteursFormArray;
+    if (!fa) return;
+    fa.controls.forEach((c) => this.clampCompteurFormGroup(c as FormGroup));
+  }
+
+  /** Serialisation pour l’API (getRawValue pour inclure id). */
+  private serializeCompteursPourApi(): QuantiteProduitCompteur[] {
+    const fa = this.quantiteProduitCompteursFormArray;
+    if (!fa) return [];
+    return fa.getRawValue().map((raw: Record<string, unknown>) => ({
+      id: typeof raw['id'] === 'string' && String(raw['id']).trim() ? String(raw['id']).trim() : this.newCompteurClientId(),
+      libelle: typeof raw['libelle'] === 'string' ? raw['libelle'] : '',
+      quantite_cible: Math.max(1, parseInt(String(raw['quantite_cible'] ?? 1), 10) || 1),
+      quantite_realisee: Math.max(0, parseInt(String(raw['quantite_realisee'] ?? 0), 10) || 0),
+    })).map((row) => {
+      const capped = Math.min(row.quantite_realisee, row.quantite_cible);
+      return { ...row, quantite_realisee: capped };
+    });
+  }
+
+  private deriveQuantiteRealiseeSomme(rows: QuantiteProduitCompteur[]): number {
+    return rows.reduce((acc, r) => acc + Math.max(0, r.quantite_realisee), 0);
+  }
+
+  persistQuantiteProduitCompteurs(): void {
+    if (!this.commande() || !this.formGroup || !this.isQuantiteRealiseeEditable()) return;
+
+    const id = this.commande()!.id_commande;
+    const currentCmd = this.commande()!;
+    const prevCompteurs = currentCmd.quantite_produit_compteurs;
+    const prevQte = currentCmd.quantite_realisee ?? 0;
+
+    this.clampAllCompteursForm();
+    const rows = this.serializeCompteursPourApi();
+    const sumRealise = this.deriveQuantiteRealiseeSomme(rows);
+
+    this.commande.set({
+      ...currentCmd,
+      quantite_produit_compteurs: rows,
+      quantite_realisee: sumRealise,
+    });
+
+    const payload: Record<string, unknown> = {
+      quantite_produit_compteurs: rows.length > 0 ? rows : null,
+      quantite_realisee: sumRealise,
+    };
+
+    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${id}`, payload).subscribe({
+      next: () => {},
+      error: (error: unknown) => {
+        console.error('Erreur lors de la mise à jour des compteurs quantité produite:', error);
+        this.commande.set({
+          ...currentCmd,
+          quantite_produit_compteurs: prevCompteurs ?? null,
+          quantite_realisee: prevQte,
+        });
+        this.initForm();
+      },
+    });
+  }
+
+  incrementCompteur(index: number): void {
+    if (!this.quantiteProduitCompteursFormArray || !this.isQuantiteRealiseeEditable()) return;
+    const g = this.quantiteProduitCompteursFormArray.at(index) as FormGroup;
+    const cible = Math.max(1, parseInt(String(g.get('quantite_cible')?.value || 1), 10) || 1);
+    let current = parseInt(String(g.get('quantite_realisee')?.value || 0), 10) || 0;
+    if (current < cible) {
+      current += 1;
+      g.get('quantite_realisee')?.setValue(current, { emitEvent: false });
+    }
+    this.persistQuantiteProduitCompteurs();
+  }
+
+  decrementCompteur(index: number): void {
+    if (!this.quantiteProduitCompteursFormArray || !this.isQuantiteRealiseeEditable() || !this.isEditMode()) return;
+    const g = this.quantiteProduitCompteursFormArray.at(index) as FormGroup;
+    let current = parseInt(String(g.get('quantite_realisee')?.value || 0), 10) || 0;
+    if (current > 0) {
+      current -= 1;
+      g.get('quantite_realisee')?.setValue(current, { emitEvent: false });
+    }
+    this.persistQuantiteProduitCompteurs();
+  }
+
+  addCompteurFromInput(index: number, addValue: number): void {
+    if (!this.formGroup || !this.isQuantiteRealiseeEditable() || !this.quantiteProduitCompteursFormArray) return;
+    const g = this.quantiteProduitCompteursFormArray.at(index) as FormGroup;
+    const toAdd = Number(addValue);
+    if (!Number.isFinite(toAdd) || toAdd === 0) return;
+
+    const cible = Math.max(1, parseInt(String(g.get('quantite_cible')?.value ?? 1), 10) || 1);
+    let current = parseInt(String(g.get('quantite_realisee')?.value ?? 0), 10) || 0;
+    let next = current + toAdd;
+    if (next < 0) next = 0;
+    if (next > cible) next = cible;
+    g.get('quantite_realisee')?.setValue(next, { emitEvent: false });
+    this.persistQuantiteProduitCompteurs();
+  }
+
+  onCompteurRealiseOuCibleInputChange(): void {
+    if (!this.isQuantiteRealiseeEditable()) return;
+    this.persistQuantiteProduitCompteurs();
+  }
+
+  onCompteurLibelleBlur(): void {
+    if (!this.isQuantiteRealiseeEditable() || !this.isEditMode()) return;
+    this.persistQuantiteProduitCompteurs();
+  }
+
+  ajouterCompteurQuantiteProduit(): void {
+    if (!this.quantiteProduitCompteursFormArray || !this.isQuantiteRealiseeEditable() || !this.isEditMode()) return;
+    const row: QuantiteProduitCompteur = {
+      id: this.newCompteurClientId(),
+      libelle: '',
+      quantite_cible: 1,
+      quantite_realisee: 0,
+    };
+    const g = this.createCompteurFormGroup(row);
+    this.quantiteProduitCompteursFormArray.push(g);
+    this.persistQuantiteProduitCompteurs();
+  }
+
+  supprimerCompteurQuantiteProduit(index: number): void {
+    if (
+      !this.quantiteProduitCompteursFormArray ||
+      this.quantiteProduitCompteursFormArray.length < 2 ||
+      !this.isQuantiteRealiseeEditable() ||
+      !this.isEditMode()
+    ) {
+      return;
+    }
+    this.quantiteProduitCompteursFormArray.removeAt(index);
+    this.persistQuantiteProduitCompteurs();
+  }
+
   toggleEditMode(): void {
     const newEditMode = !this.isEditMode();
     this.isEditMode.set(newEditMode);
@@ -982,6 +1234,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       if (newEditMode) {
         this.formGroup.get('prix_final')?.enable();
         this.formGroup.get('prix_unitaire_final')?.enable();
+        this.refreshQuantiteProduitCompteursStructureControls();
       }
     }
   }
@@ -993,6 +1246,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   onSave(): void {
     if (!this.formGroup.valid || !this.commande()) return;
 
+    this.clampAllCompteursForm();
+    const compteursSerialises = this.serializeCompteursPourApi();
+    const quantiteRealiseeSomme = this.deriveQuantiteRealiseeSomme(compteursSerialises);
+
     const formValue = this.formGroup.getRawValue();
     const payload: any = {
       produit: formValue.nom_commande,
@@ -1000,7 +1257,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       deadline: formValue.deadline || null,
       description: formValue.description,
       quantité: formValue.quantité ? parseInt(formValue.quantité, 10) : null,
-      quantite_realisee: formValue.quantite_realisee !== null && formValue.quantite_realisee !== undefined && formValue.quantite_realisee !== '' ? parseInt(String(formValue.quantite_realisee), 10) : 0,
+      quantite_realisee: quantiteRealiseeSomme,
+      quantite_produit_compteurs: compteursSerialises.length > 0 ? compteursSerialises : null,
       payé: formValue.payé || false,
       commentaire_paye: formValue.commentaire_paye || null,
       attente_reponse: formValue.attente_reponse ?? false,
@@ -1056,7 +1314,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       deadline: formValue.deadline || undefined,
       description: formValue.description,
       quantité: formValue.quantité ? parseInt(formValue.quantité, 10) : undefined,
-      quantite_realisee: formValue.quantite_realisee !== null && formValue.quantite_realisee !== undefined && formValue.quantite_realisee !== '' ? parseInt(String(formValue.quantite_realisee), 10) : 0,
+      quantite_realisee: quantiteRealiseeSomme,
+      quantite_produit_compteurs: compteursSerialises.length > 0 ? compteursSerialises : null,
       payé: formValue.payé || false,
       commentaire_paye: formValue.commentaire_paye || undefined,
       attente_reponse: formValue.attente_reponse ?? false,
@@ -1173,74 +1432,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     });
   }
 
-  incrementQuantiteRealisee(): void {
-    const max = parseInt(this.formGroup.get('quantité')?.value || '1', 10) || 1;
-    const current = parseInt(this.formGroup.get('quantite_realisee')?.value || '0', 10) || 0;
-    const next = Math.min(current + 1, max);
-    this.formGroup.get('quantite_realisee')?.setValue(next, { emitEvent: false });
-    this.onQuantiteRealiseeChange();
-  }
-
-  decrementQuantiteRealisee(): void {
-    const current = parseInt(this.formGroup.get('quantite_realisee')?.value || '0', 10) || 0;
-    const next = Math.max(current - 1, 0);
-    this.formGroup.get('quantite_realisee')?.setValue(next, { emitEvent: false });
-    this.onQuantiteRealiseeChange();
-  }
-
-  addQuantiteFromInput(addValue: number): void {
-    if (!this.formGroup || !this.isQuantiteRealiseeEditable()) return;
-    const toAdd = Number(addValue);
-    if (!Number.isFinite(toAdd) || toAdd === 0) return;
-
-    const max = parseInt(this.formGroup.get('quantité')?.value || '1', 10) || 1;
-    const current = parseInt(this.formGroup.get('quantite_realisee')?.value || '0', 10) || 0;
-    let next = current + toAdd;
-    if (next < 0) next = 0;
-    if (next > max) next = max;
-
-    this.formGroup.get('quantite_realisee')?.setValue(next, { emitEvent: false });
-    this.onQuantiteRealiseeChange();
-  }
-
-  onQuantiteRealiseeChange(): void {
-    if (!this.commande()) return;
-
-    const id = this.commande()!.id_commande;
-    const raw = this.formGroup.get('quantite_realisee')?.value;
-    const quantiteTotale = parseInt(this.formGroup.get('quantité')?.value || '1', 10) || 1;
-    let val = raw !== null && raw !== undefined && raw !== '' ? parseInt(String(raw), 10) : 0;
-    if (isNaN(val) || val < 0) val = 0;
-    if (val > quantiteTotale) val = quantiteTotale;
-
-    // Mettre à jour localement immédiatement
-    const currentCommande = this.commande()!;
-    this.commande.set({
-      ...currentCommande,
-      quantite_realisee: val
-    });
-
-    const payload: any = {
-      quantite_realisee: val,
-    };
-
-    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${id}`, payload).subscribe({
-      next: () => {
-        // Mise à jour réussie, les données locales sont déjà à jour
-      },
-      error: (error) => {
-        console.error('Erreur lors de la mise à jour des PCs réalisés:', error);
-        // En cas d'erreur, restaurer la valeur précédente
-        this.commande.set({
-          ...currentCommande,
-          quantite_realisee: currentCommande.quantite_realisee ?? 0
-        });
-        this.formGroup.get('quantite_realisee')?.setValue(currentCommande.quantite_realisee ?? 0, { emitEvent: false });
-      }
-    });
-  }
-
   onAttenteReponseChange(): void {
+
     if (!this.commande()) return;
 
     const id = this.commande()!.id_commande;
@@ -1662,28 +1855,50 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         statut: statut
       }).subscribe({
         next: () => {
-          // Si on a fini la finition : compléter automatiquement le compteur quantité réalisée au max
+          // Si on a fini la finition : compléter automatiquement tous les compteurs « quantité produite » à leur objectif
           if (statut === StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE) {
-            const qteTotale = cmd.quantité ?? 1;
-            const updatedCommande = this.commande()!;
-            updateLocalCommande({
-              quantite_realisee: qteTotale
-            });
-            
-            this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${cmd.id_commande}`, {
-              quantite_realisee: qteTotale
-            }).subscribe({
-              next: () => {
-                // Mise à jour réussie, les données locales sont déjà à jour
-              },
-              error: (err) => {
-                console.error('Erreur mise à jour quantité réalisée:', err);
-                // Restaurer la quantité précédente
-                updateLocalCommande({
-                  quantite_realisee: cmd.quantite_realisee ?? 0
-                });
-              }
-            });
+            const baseCmd = this.commande()!;
+            const lignesExist = baseCmd.quantite_produit_compteurs && baseCmd.quantite_produit_compteurs.length > 0;
+            if (lignesExist) {
+              const newCompteurs = (baseCmd.quantite_produit_compteurs as QuantiteProduitCompteur[]).map((c) => ({
+                ...c,
+                quantite_realisee: Math.max(0, c.quantite_cible ?? 1),
+              }));
+              const sommeRealise = this.deriveQuantiteRealiseeSomme(newCompteurs);
+              updateLocalCommande({
+                quantite_produit_compteurs: newCompteurs,
+                quantite_realisee: sommeRealise,
+              });
+              this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${cmd.id_commande}`, {
+                quantite_produit_compteurs: newCompteurs,
+                quantite_realisee: sommeRealise,
+              }).subscribe({
+                next: () => {},
+                error: (err: unknown) => {
+                  console.error('Erreur mise à jour quantité produite (finition):', err);
+                  updateLocalCommande({
+                    quantite_produit_compteurs: baseCmd.quantite_produit_compteurs,
+                    quantite_realisee: baseCmd.quantite_realisee ?? 0,
+                  });
+                },
+              });
+            } else {
+              const qteTotale = cmd.quantité ?? 1;
+              updateLocalCommande({
+                quantite_realisee: qteTotale,
+              });
+              this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${cmd.id_commande}`, {
+                quantite_realisee: qteTotale,
+              }).subscribe({
+                next: () => {},
+                error: (err: unknown) => {
+                  console.error('Erreur mise à jour quantité réalisée:', err);
+                  updateLocalCommande({
+                    quantite_realisee: cmd.quantite_realisee ?? 0,
+                  });
+                },
+              });
+            }
           }
         },
         error: (error) => {

@@ -19,6 +19,62 @@ export class CommandeService {
         private readonly commandeFichierService: CommandeFichierService,
     ) {}
 
+    /** Lit la colonne JSON et renvoie un tableau sécurisé ou null si rien à stocker */
+    parseQuantiteProduitCompteursJson(raw: string | null): Array<{ id: string; libelle: string; quantite_cible: number; quantite_realisee: number }> | null {
+        if (!raw || !raw.trim()) {
+            return null;
+        }
+        try {
+            const parsed = JSON.parse(raw) as unknown;
+            if (!Array.isArray(parsed) || parsed.length === 0) {
+                return null;
+            }
+            const out: Array<{ id: string; libelle: string; quantite_cible: number; quantite_realisee: number }> = [];
+            for (const item of parsed) {
+                if (typeof item !== 'object' || item === null) continue;
+                const o = item as Record<string, unknown>;
+                let idStr = typeof o.id === 'string' && o.id.trim() ? o.id.trim() : ulid();
+                const libelle = typeof o.libelle === 'string' ? o.libelle : '';
+                let cible = parseInt(String(o.quantite_cible ?? 1), 10);
+                let realise = parseInt(String(o.quantite_realisee ?? 0), 10);
+                if (!Number.isFinite(cible)) cible = 1;
+                if (cible < 1) cible = 1;
+                if (!Number.isFinite(realise)) realise = 0;
+                if (realise < 0) realise = 0;
+                if (realise > cible) realise = cible;
+                out.push({ id: idStr, libelle, quantite_cible: cible, quantite_realisee: realise });
+            }
+            return out.length === 0 ? null : out;
+        } catch {
+            return null;
+        }
+    }
+
+    /** Sérialise le payload API en JSON stockable en base ; null vide la colonne */
+    normalizeQuantiteProduitCompteursForStorage(input: unknown): string | null {
+        if (input === null) return null;
+        if (!Array.isArray(input)) {
+            throw new Error('quantite_produit_compteurs invalide');
+        }
+        if (input.length === 0) return null;
+        const out: Array<{ id: string; libelle: string; quantite_cible: number; quantite_realisee: number }> = [];
+        for (const item of input) {
+            if (typeof item !== 'object' || item === null) continue;
+            const o = item as Record<string, unknown>;
+            const idStr = typeof o.id === 'string' && o.id.trim() ? o.id.trim() : ulid();
+            const libelle = typeof o.libelle === 'string' ? o.libelle : '';
+            let cible = parseInt(String(o.quantite_cible ?? 1), 10);
+            let realise = parseInt(String(o.quantite_realisee ?? 0), 10);
+            if (!Number.isFinite(cible)) cible = 1;
+            if (cible < 1) cible = 1;
+            if (!Number.isFinite(realise)) realise = 0;
+            if (realise < 0) realise = 0;
+            if (realise > cible) realise = cible;
+            out.push({ id: idStr, libelle, quantite_cible: cible, quantite_realisee: realise });
+        }
+        return out.length === 0 ? null : JSON.stringify(out);
+    }
+
     async ajouterCommande(payload: AjouterCommandePayload): Promise<Commande> {
         // Créer ou récupérer le client
         let client: Client | null = null;
@@ -302,6 +358,7 @@ export class CommandeService {
             frais_pourcentage: commande.frais_pourcentage,
             quantité: commande.quantité,
             quantite_realisee: commande.quantite_realisee ?? 0,
+            quantite_produit_compteurs: this.parseQuantiteProduitCompteursJson(commande.quantite_produit_compteurs),
             payé: commande.payé,
             commentaire_paye: commande.commentaire_paye,
             attente_reponse: commande.attente_reponse,
@@ -406,6 +463,7 @@ export class CommandeService {
             prix_final: commande.prix_final ?? null,
             prix_unitaire_final: commande.prix_unitaire_final ?? null,
             quantite_realisee: 0,
+            quantite_produit_compteurs: null,
         });
 
         await this.commandeFichierService.duplicateForCommande(idCommande, nouvelleCommande.id_commande);
@@ -430,6 +488,13 @@ export class CommandeService {
         if (payload.description !== undefined) commande.description = payload.description;
         if (payload.quantité !== undefined) commande.quantité = payload.quantité;
         if (payload.quantite_realisee !== undefined) commande.quantite_realisee = payload.quantite_realisee !== null ? parseInt(String(payload.quantite_realisee), 10) : 0;
+        if (payload.quantite_produit_compteurs !== undefined) {
+            if (payload.quantite_produit_compteurs === null) {
+                commande.quantite_produit_compteurs = null;
+            } else {
+                commande.quantite_produit_compteurs = this.normalizeQuantiteProduitCompteursForStorage(payload.quantite_produit_compteurs);
+            }
+        }
         if (payload.payé !== undefined) commande.payé = payload.payé;
         if (payload.commentaire_paye !== undefined) commande.commentaire_paye = payload.commentaire_paye?.trim() || null;
         if (payload.attente_reponse !== undefined) commande.attente_reponse = payload.attente_reponse;
@@ -593,6 +658,7 @@ export class CommandeService {
             frais_pourcentage: commandeReloaded.frais_pourcentage,
             quantité: commandeReloaded.quantité,
             quantite_realisee: commandeReloaded.quantite_realisee ?? 0,
+            quantite_produit_compteurs: this.parseQuantiteProduitCompteursJson(commandeReloaded.quantite_produit_compteurs),
             payé: commandeReloaded.payé,
             commentaire_paye: commandeReloaded.commentaire_paye,
             attente_reponse: commandeReloaded.attente_reponse,

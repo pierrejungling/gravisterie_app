@@ -945,7 +945,6 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         if (!Number.isFinite(cible) || cible < 1) cible = 1;
         if (!Number.isFinite(realise)) realise = 0;
         if (realise < 0) realise = 0;
-        if (realise > cible) realise = cible;
         return {
           id: typeof s.id === 'string' && s.id.trim() ? s.id : this.newCompteurClientId(),
           libelle: typeof s.libelle === 'string' ? s.libelle : '',
@@ -958,7 +957,6 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     let realise = parseInt(String(cmd.quantite_realisee ?? 0), 10);
     if (!Number.isFinite(realise)) realise = 0;
     if (realise < 0) realise = 0;
-    if (realise > qGlobale) realise = qGlobale;
     return [
       {
         id: this.newCompteurClientId(),
@@ -1054,13 +1052,17 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return Math.min(100, Math.round((realise / base) * 100));
   }
 
+  /** Valuemax ARIA réaliste lorsque réalisé > objectif (ex. 55 / 50). */
+  compteurProgressAriaMax(index: number): number {
+    return Math.max(this.compteurRealiseAffiche(index), this.compteurCibleAffiche(index));
+  }
+
   private clampCompteurFormGroup(g: FormGroup): void {
     let cible = parseInt(String(g.get('quantite_cible')?.value ?? 1), 10);
     let realise = parseInt(String(g.get('quantite_realisee')?.value ?? 0), 10);
     if (!Number.isFinite(cible) || cible < 1) cible = 1;
     if (!Number.isFinite(realise)) realise = 0;
     if (realise < 0) realise = 0;
-    if (realise > cible) realise = cible;
     g.patchValue({ quantite_cible: cible, quantite_realisee: realise }, { emitEvent: false });
   }
 
@@ -1079,10 +1081,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       libelle: typeof raw['libelle'] === 'string' ? raw['libelle'] : '',
       quantite_cible: Math.max(1, parseInt(String(raw['quantite_cible'] ?? 1), 10) || 1),
       quantite_realisee: Math.max(0, parseInt(String(raw['quantite_realisee'] ?? 0), 10) || 0),
-    })).map((row) => {
-      const capped = Math.min(row.quantite_realisee, row.quantite_cible);
-      return { ...row, quantite_realisee: capped };
-    });
+    }));
   }
 
   private deriveQuantiteRealiseeSomme(rows: QuantiteProduitCompteur[]): number {
@@ -1129,12 +1128,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   incrementCompteur(index: number): void {
     if (!this.quantiteProduitCompteursFormArray || !this.isQuantiteRealiseeEditable()) return;
     const g = this.quantiteProduitCompteursFormArray.at(index) as FormGroup;
-    const cible = Math.max(1, parseInt(String(g.get('quantite_cible')?.value || 1), 10) || 1);
     let current = parseInt(String(g.get('quantite_realisee')?.value || 0), 10) || 0;
-    if (current < cible) {
-      current += 1;
-      g.get('quantite_realisee')?.setValue(current, { emitEvent: false });
-    }
+    current += 1;
+    g.get('quantite_realisee')?.setValue(current, { emitEvent: false });
     this.persistQuantiteProduitCompteurs();
   }
 
@@ -1155,11 +1151,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const toAdd = Number(addValue);
     if (!Number.isFinite(toAdd) || toAdd === 0) return;
 
-    const cible = Math.max(1, parseInt(String(g.get('quantite_cible')?.value ?? 1), 10) || 1);
     let current = parseInt(String(g.get('quantite_realisee')?.value ?? 0), 10) || 0;
     let next = current + toAdd;
     if (next < 0) next = 0;
-    if (next > cible) next = cible;
     g.get('quantite_realisee')?.setValue(next, { emitEvent: false });
     this.persistQuantiteProduitCompteurs();
   }
@@ -1874,34 +1868,14 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         statut: statut
       }).subscribe({
         next: () => {
-          // Si on a fini la finition : compléter automatiquement tous les compteurs « quantité produite » à leur objectif
+          /**
+           * Anciennement : à la finition, les compteurs étaient poussés à l’objectif.
+           * On conserve le réel saisi (ex. 55 / 50) : pas de synchro automatique lorsque les lignes compteurs existent.
+           */
           if (statut === StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE) {
             const baseCmd = this.commande()!;
             const lignesExist = baseCmd.quantite_produit_compteurs && baseCmd.quantite_produit_compteurs.length > 0;
-            if (lignesExist) {
-              const newCompteurs = (baseCmd.quantite_produit_compteurs as QuantiteProduitCompteur[]).map((c) => ({
-                ...c,
-                quantite_realisee: Math.max(0, c.quantite_cible ?? 1),
-              }));
-              const sommeRealise = this.deriveQuantiteRealiseeSomme(newCompteurs);
-              updateLocalCommande({
-                quantite_produit_compteurs: newCompteurs,
-                quantite_realisee: sommeRealise,
-              });
-              this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${cmd.id_commande}`, {
-                quantite_produit_compteurs: newCompteurs,
-                quantite_realisee: sommeRealise,
-              }).subscribe({
-                next: () => {},
-                error: (err: unknown) => {
-                  console.error('Erreur mise à jour quantité produite (finition):', err);
-                  updateLocalCommande({
-                    quantite_produit_compteurs: baseCmd.quantite_produit_compteurs,
-                    quantite_realisee: baseCmd.quantite_realisee ?? 0,
-                  });
-                },
-              });
-            } else {
+            if (!lignesExist) {
               const qteTotale = cmd.quantité ?? 1;
               updateLocalCommande({
                 quantite_realisee: qteTotale,

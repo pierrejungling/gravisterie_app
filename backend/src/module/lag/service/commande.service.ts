@@ -41,7 +41,6 @@ export class CommandeService {
                 if (cible < 1) cible = 1;
                 if (!Number.isFinite(realise)) realise = 0;
                 if (realise < 0) realise = 0;
-                if (realise > cible) realise = cible;
                 out.push({ id: idStr, libelle, quantite_cible: cible, quantite_realisee: realise });
             }
             return out.length === 0 ? null : out;
@@ -69,7 +68,6 @@ export class CommandeService {
             if (cible < 1) cible = 1;
             if (!Number.isFinite(realise)) realise = 0;
             if (realise < 0) realise = 0;
-            if (realise > cible) realise = cible;
             out.push({ id: idStr, libelle, quantite_cible: cible, quantite_realisee: realise });
         }
         return out.length === 0 ? null : JSON.stringify(out);

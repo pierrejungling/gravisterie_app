@@ -1869,13 +1869,43 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       }).subscribe({
         next: () => {
           /**
-           * Anciennement : à la finition, les compteurs étaient poussés à l’objectif.
-           * On conserve le réel saisi (ex. 55 / 50) : pas de synchro automatique lorsque les lignes compteurs existent.
+           * À la validation de la finition : harmoniser les compteurs avec l’objectif
+           * si encore en retard, sans jamais baisser un déjà dépassé (ex. 55/50 inchangé).
            */
           if (statut === StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE) {
             const baseCmd = this.commande()!;
             const lignesExist = baseCmd.quantite_produit_compteurs && baseCmd.quantite_produit_compteurs.length > 0;
-            if (!lignesExist) {
+            if (lignesExist) {
+              const newCompteurs = (baseCmd.quantite_produit_compteurs as QuantiteProduitCompteur[]).map((c) => {
+                let cible = parseInt(String(c.quantite_cible ?? 1), 10);
+                let realise = parseInt(String(c.quantite_realisee ?? 0), 10);
+                if (!Number.isFinite(cible) || cible < 1) cible = 1;
+                if (!Number.isFinite(realise)) realise = 0;
+                if (realise < 0) realise = 0;
+                return {
+                  ...c,
+                  quantite_realisee: Math.max(realise, cible),
+                };
+              });
+              const sommeRealise = this.deriveQuantiteRealiseeSomme(newCompteurs);
+              updateLocalCommande({
+                quantite_produit_compteurs: newCompteurs,
+                quantite_realisee: sommeRealise,
+              });
+              this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${cmd.id_commande}`, {
+                quantite_produit_compteurs: newCompteurs,
+                quantite_realisee: sommeRealise,
+              }).subscribe({
+                next: () => {},
+                error: (err: unknown) => {
+                  console.error('Erreur mise à jour quantité produite (finition):', err);
+                  updateLocalCommande({
+                    quantite_produit_compteurs: baseCmd.quantite_produit_compteurs,
+                    quantite_realisee: baseCmd.quantite_realisee ?? 0,
+                  });
+                },
+              });
+            } else {
               const qteTotale = cmd.quantité ?? 1;
               updateLocalCommande({
                 quantite_realisee: qteTotale,

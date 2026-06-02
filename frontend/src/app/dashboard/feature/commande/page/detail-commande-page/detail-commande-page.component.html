@@ -220,53 +220,112 @@
           <p class="fichiers-hint" *ngIf="commandeFichiersSorted().length === 0">Aucun fichier pour cette {{ isVente() ? 'vente' : 'commande' }}.</p>
           <ul class="fichiers-list" *ngIf="commandeFichiersSorted().length > 0">
             <li *ngFor="let fichier of commandeFichiersSorted()" class="fichiers-list-item">
+              <div class="fichiers-thumb-wrap" *ngIf="isPreviewableImageFichier(fichier) && fichierPreviewUrls()[fichier.id_fichier]">
+                <span
+                  class="ext-badge"
+                  [ngClass]="getFichierExtensionClass(fichier)">{{ getFichierExtensionLabel(fichier) }}</span>
+                <button
+                  type="button"
+                  class="fichiers-list-thumb-btn"
+                  (click)="openPreviewForFichier(fichier)"
+                  title="Voir en grand">
+                  <img
+                    [src]="fichierPreviewUrls()[fichier.id_fichier]"
+                    [alt]="fichier.nom_fichier"
+                    class="fichiers-list-thumb">
+                </button>
+              </div>
               <button
-                *ngIf="isPreviewableImageFichier(fichier) && fichierPreviewUrls()[fichier.id_fichier] && !isSvgFichier(fichier)"
-                type="button"
-                class="fichiers-list-thumb-btn"
-                (click)="openPreviewForFichier(fichier)"
-                title="Voir en grand">
-                <img
-                  [src]="fichierPreviewUrls()[fichier.id_fichier]"
-                  [alt]="fichier.nom_fichier"
-                  class="fichiers-list-thumb">
-              </button>
-              <button
-                *ngIf="isSvgFichier(fichier)"
+                *ngIf="isSvgFichier(fichier) && !fichierPreviewUrls()[fichier.id_fichier]"
                 type="button"
                 class="fichiers-list-thumb-btn fichiers-list-badge-btn fichiers-list-badge-btn--svg"
                 (click)="openPreviewForFichier(fichier)"
                 title="Prévisualiser (SVG)">SVG</button>
-              <button
-                *ngIf="isPdfFichier(fichier)"
-                type="button"
-                class="fichiers-list-thumb-btn fichiers-list-pdf-btn"
-                (click)="openPreviewForFichier(fichier)"
-                title="Prévisualiser le PDF">
-                <span class="fichiers-list-pdf-icon">📄</span>
-              </button>
+              <div class="fichiers-thumb-wrap" *ngIf="isPdfFichier(fichier)">
+                <ng-container *ngIf="pdfThumbUrls()[fichier.id_fichier]">
+                  <span class="ext-badge ext-badge--pdf">PDF</span>
+                </ng-container>
+                <button
+                  type="button"
+                  class="fichiers-list-thumb-btn fichiers-list-pdf-btn"
+                  (click)="openPreviewForFichier(fichier)"
+                  title="Prévisualiser le PDF">
+                  <ng-container *ngIf="pdfThumbUrls()[fichier.id_fichier]; else pdfIcon">
+                    <img
+                      [src]="pdfThumbUrls()[fichier.id_fichier]"
+                      [alt]="fichier.nom_fichier"
+                      class="fichiers-list-thumb">
+                  </ng-container>
+                  <ng-template #pdfIcon>
+                    <span class="fichiers-list-badge fichiers-list-badge--pdf">PDF</span>
+                  </ng-template>
+                </button>
+              </div>
               <button
                 *ngIf="isDocxFichier(fichier)"
                 type="button"
-                class="fichiers-list-thumb-btn fichiers-list-docx-btn"
+                class="fichiers-list-thumb-btn fichiers-list-badge-btn fichiers-list-badge-btn--docx"
                 (click)="openPreviewForFichier(fichier)"
-                title="Prévisualiser le document Word">
-                <span class="fichiers-list-docx-icon">📝</span>
-              </button>
+                title="Prévisualiser (DOCX)">DOCX</button>
               <button
-                *ngIf="isStlFichier(fichier)"
+                *ngIf="isDocFichier(fichier)"
+                type="button"
+                class="fichiers-list-thumb-btn fichiers-list-badge-btn fichiers-list-badge-btn--doc"
+                (click)="downloadFichier(fichier)"
+                title="Télécharger (DOC)">DOC</button>
+              <div class="fichiers-thumb-wrap" *ngIf="isStlFichier(fichier) && modelThumbUrls()[fichier.id_fichier]">
+                <span class="ext-badge ext-badge--stl">STL</span>
+                <button
+                  type="button"
+                  class="fichiers-list-thumb-btn fichiers-list-pdf-btn"
+                  (click)="openPreviewForFichier(fichier)"
+                  title="Prévisualiser (STL)">
+                  <img
+                    [src]="modelThumbUrls()[fichier.id_fichier]"
+                    [alt]="fichier.nom_fichier"
+                    class="fichiers-list-thumb">
+                </button>
+              </div>
+              <button
+                *ngIf="isStlFichier(fichier) && !modelThumbUrls()[fichier.id_fichier]"
                 type="button"
                 class="fichiers-list-thumb-btn fichiers-list-badge-btn fichiers-list-badge-btn--stl"
                 (click)="openPreviewForFichier(fichier)"
                 title="Prévisualiser (STL)">STL</button>
+              <div class="fichiers-thumb-wrap" *ngIf="!isStlFichier(fichier) && is3mfFichier(fichier) && modelThumbUrls()[fichier.id_fichier]">
+                <span class="ext-badge ext-badge--3mf">3MF</span>
+                <button
+                  type="button"
+                  class="fichiers-list-thumb-btn fichiers-list-pdf-btn"
+                  (click)="openPreviewForFichier(fichier)"
+                  title="Prévisualiser (3MF)">
+                  <img
+                    [src]="modelThumbUrls()[fichier.id_fichier]"
+                    [alt]="fichier.nom_fichier"
+                    class="fichiers-list-thumb">
+                </button>
+              </div>
               <button
-                *ngIf="!isStlFichier(fichier) && is3mfFichier(fichier)"
+                *ngIf="!isStlFichier(fichier) && is3mfFichier(fichier) && !modelThumbUrls()[fichier.id_fichier]"
                 type="button"
                 class="fichiers-list-thumb-btn fichiers-list-badge-btn fichiers-list-badge-btn--3mf"
                 (click)="openPreviewForFichier(fichier)"
                 title="Prévisualiser (3MF)">3MF</button>
+              <div class="fichiers-thumb-wrap" *ngIf="!is3dFichier(fichier) && isAiFichier(fichier) && aiThumbUrls()[fichier.id_fichier]">
+                <span class="ext-badge ext-badge--ai">AI</span>
+                <button
+                  type="button"
+                  class="fichiers-list-thumb-btn fichiers-list-pdf-btn"
+                  (click)="openPreviewForFichier(fichier)"
+                  title="Prévisualiser (AI)">
+                  <img
+                    [src]="aiThumbUrls()[fichier.id_fichier]"
+                    [alt]="fichier.nom_fichier"
+                    class="fichiers-list-thumb">
+                </button>
+              </div>
               <button
-                *ngIf="!is3dFichier(fichier) && isAiFichier(fichier)"
+                *ngIf="!is3dFichier(fichier) && isAiFichier(fichier) && !aiThumbUrls()[fichier.id_fichier]"
                 type="button"
                 class="fichiers-list-thumb-btn fichiers-list-badge-btn fichiers-list-badge-btn--ai"
                 (click)="openPreviewForFichier(fichier)"

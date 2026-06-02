@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 @Component({
   selector: 'app-detail-commande-page',
@@ -37,17 +38,41 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
   /** Fichiers joints à la commande (métadonnées). */
   commandeFichiers: WritableSignal<CommandeFichier[]> = signal([]);
-  /** Fichiers triés : images d'abord, puis PDF, puis le reste. */
+  /** Fichiers triés : Images -> 2D (PDF/AI/SVG) -> DOC/DOCX -> 3D -> reste. */
   commandeFichiersSorted = computed(() => {
     const list = this.commandeFichiers();
     return [...list].sort((a, b) => {
-      const order = (f: CommandeFichier) =>
-        this.isPreviewableImageFichier(f) ? 0 : this.isPdfFichier(f) ? 1 : 2;
-      return order(a) - order(b);
+      const order = (f: CommandeFichier) => {
+        // 0) Images (bitmap) en premier
+        if (this.isImageFichier(f) && !this.isSvgFichier(f)) return 0;
+        // 1) Fichiers 2D (PDF / AI / SVG)
+        if (this.isPdfFichier(f) || this.isAiFichier(f) || this.isSvgFichier(f)) return 1;
+        // 2) Documents Word
+        if (this.isDocxFichier(f) || this.isDocFichier(f)) return 2;
+        // 3) 3D (STL / 3MF)
+        if (this.is3dFichier(f)) return 3;
+        // 4) le reste
+        return 4;
+      };
+
+      const oa = order(a);
+      const ob = order(b);
+      if (oa !== ob) return oa - ob;
+
+      // Tri secondaire: nom de fichier (stable / lisible)
+      const na = (a.nom_fichier || '').toLowerCase();
+      const nb = (b.nom_fichier || '').toLowerCase();
+      return na.localeCompare(nb, 'fr', { sensitivity: 'base' });
     });
   });
   /** URLs d'aperçu pour les images (id_fichier -> blob URL). */
   fichierPreviewUrls: WritableSignal<Record<string, string>> = signal({});
+  /** Thumbnails PDF (id_fichier -> data URL). */
+  pdfThumbUrls: WritableSignal<Record<string, string>> = signal({});
+  /** Thumbnails IA (AI pdf-compatible) (id_fichier -> data URL). */
+  aiThumbUrls: WritableSignal<Record<string, string>> = signal({});
+  /** Thumbnails 3D (id_fichier -> data URL). */
+  modelThumbUrls: WritableSignal<Record<string, string>> = signal({});
   /** Upload en cours. */
   fichierUploading: WritableSignal<boolean> = signal(false);
   /** Drag over la zone d'upload. */
@@ -107,6 +132,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private scrollKey: string = '';
   private routeSubscription?: Subscription;
+  private pdfJsWorkerConfigured = false;
 
   formGroup!: FormGroup;
 
@@ -201,6 +227,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private readonly detailReturnPageKey = 'detail-return-page';
 
   ngOnInit(): void {
+    this.configurePdfJsWorker();
     try {
       const stored = sessionStorage.getItem(this.detailReturnPageKey);
       this.returnPage = stored === 'terminees' ? 'terminees' : 'en-cours';
@@ -347,6 +374,22 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     });
   }
 
+  private configurePdfJsWorker(): void {
+    if (this.pdfJsWorkerConfigured) return;
+    try {
+      // Angular bundlera le worker via cette URL (pas besoin de copier dans /assets).
+      (pdfjsLib as any).GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/legacy/build/pdf.worker.min.mjs',
+        import.meta.url
+      ).toString();
+      this.pdfJsWorkerConfigured = true;
+    } catch (e) {
+      // fallback: pas bloquant, on tentera sans worker
+      this.pdfJsWorkerConfigured = false;
+      console.warn('PDF.js worker config failed, fallback without worker', e);
+    }
+  }
+
   loadFichiers(idCommande: string): void {
     this.apiService.get(COMMANDE_FICHIERS_LIST(idCommande)).subscribe({
       next: (response) => {
@@ -356,6 +399,15 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
           (response.data as CommandeFichier[]).forEach((f) => {
             if (f.type_mime?.startsWith('image/') || this.isSvgFichier(f)) {
               this.loadFichierPreview(idCommande, f);
+            }
+            if (this.isPdfFichier(f)) {
+              this.loadPdfThumb(idCommande, f);
+            }
+            if (this.isAiFichier(f)) {
+              this.loadAiThumb(idCommande, f);
+            }
+            if (this.is3dFichier(f)) {
+              this.load3dThumb(idCommande, f);
             }
           });
         } else {
@@ -370,6 +422,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const urls = this.fichierPreviewUrls();
     Object.values(urls).forEach((url) => URL.revokeObjectURL(url));
     this.fichierPreviewUrls.set({});
+    this.pdfThumbUrls.set({});
+    this.aiThumbUrls.set({});
+    this.modelThumbUrls.set({});
   }
 
   private loadFichierPreview(idCommande: string, fichier: CommandeFichier): void {
@@ -380,6 +435,150 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       },
       error: () => {}
     });
+  }
+
+  private loadPdfThumb(idCommande: string, fichier: CommandeFichier): void {
+    // éviter de recalculer
+    if (this.pdfThumbUrls()[fichier.id_fichier]) return;
+    this.apiService.getBlob(COMMANDE_FICHIER_DOWNLOAD(idCommande, fichier.id_fichier)).subscribe({
+      next: async (blob) => {
+        try {
+          const dataUrl = await this.renderPdfThumbFromBlob(blob);
+          if (!dataUrl) return;
+          this.pdfThumbUrls.update((m) => ({ ...m, [fichier.id_fichier]: dataUrl }));
+        } catch (e) {
+          console.warn('PDF thumbnail render failed', { fichier, e });
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  private async renderPdfThumbFromBlob(blob: Blob): Promise<string | null> {
+    try {
+      const buffer = await blob.arrayBuffer();
+      const data = new Uint8Array(buffer);
+      const pdf = await (pdfjsLib.getDocument as any)({
+        data,
+        ...(this.pdfJsWorkerConfigured ? {} : { disableWorker: true }),
+      }).promise;
+      const page = await pdf.getPage(1);
+      const viewport = page.getViewport({ scale: 1 });
+      const max = 88;
+      const scale = Math.min(max / viewport.width, max / viewport.height);
+      const scaledViewport = page.getViewport({ scale });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.floor(scaledViewport.width));
+      canvas.height = Math.max(1, Math.floor(scaledViewport.height));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      await page.render({ canvasContext: ctx as any, viewport: scaledViewport, intent: 'display' as any }).promise;
+      const dataUrl = canvas.toDataURL('image/png');
+      try { page.cleanup(); } catch {}
+      try { pdf.cleanup(); } catch {}
+      try { pdf.destroy(); } catch {}
+      return dataUrl;
+    } catch {
+      return null;
+    }
+  }
+
+  private loadAiThumb(idCommande: string, fichier: CommandeFichier): void {
+    if (this.aiThumbUrls()[fichier.id_fichier]) return;
+    this.apiService.getBlob(COMMANDE_FICHIER_DOWNLOAD(idCommande, fichier.id_fichier)).subscribe({
+      next: async (blob) => {
+        try {
+          const isPdf = await this.isPdfCompatibleBlob(blob);
+          if (!isPdf) return; // pas de miniature pour AI non PDF-compatible
+          const pdfBlob = blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
+          const dataUrl = await this.renderPdfThumbFromBlob(pdfBlob);
+          if (!dataUrl) return;
+          this.aiThumbUrls.update((m) => ({ ...m, [fichier.id_fichier]: dataUrl }));
+        } catch {
+          // ignore
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  private load3dThumb(idCommande: string, fichier: CommandeFichier): void {
+    if (this.modelThumbUrls()[fichier.id_fichier]) return;
+    const type: 'stl' | '3mf' | null = this.isStlFichier(fichier) ? 'stl' : this.is3mfFichier(fichier) ? '3mf' : null;
+    if (!type) return;
+    this.apiService.getBlob(COMMANDE_FICHIER_DOWNLOAD(idCommande, fichier.id_fichier)).subscribe({
+      next: async (blob) => {
+        try {
+          const buffer = await blob.arrayBuffer();
+          const dataUrl = await this.render3dThumb(buffer, type);
+          if (!dataUrl) return;
+          this.modelThumbUrls.update((m) => ({ ...m, [fichier.id_fichier]: dataUrl }));
+        } catch {
+          // ignore
+        }
+      },
+      error: () => {}
+    });
+  }
+
+  private async render3dThumb(buffer: ArrayBuffer, type: 'stl' | '3mf'): Promise<string | null> {
+    // Snapshot rapide 88x88 (pas de viewer interactif ici)
+    try {
+      let object: THREE.Object3D | null = null;
+      if (type === 'stl') {
+        const geom = new STLLoader().parse(buffer);
+        geom.computeVertexNormals();
+        const mat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.08, roughness: 0.6 });
+        object = new THREE.Mesh(geom, mat);
+      } else {
+        object = new ThreeMFLoader().parse(buffer);
+      }
+      if (!object) return null;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0f172a);
+      const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 1000);
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
+      renderer.setSize(88, 88);
+      renderer.setPixelRatio(1);
+
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x334155, 1.0));
+      const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+      dir.position.set(2, 3, 4);
+      scene.add(dir);
+
+      // Centrage + cadrage
+      scene.add(object);
+      const box = new THREE.Box3().setFromObject(object);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      object.position.sub(center);
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
+      const dist = maxDim * 1.7;
+      camera.position.set(dist, dist, dist);
+      camera.lookAt(0, 0, 0);
+
+      renderer.render(scene, camera);
+      const dataUrl = renderer.domElement.toDataURL('image/png');
+
+      // dispose
+      object.traverse((child: any) => {
+        if (child?.isMesh) {
+          child.geometry?.dispose?.();
+          const m = child.material;
+          if (Array.isArray(m)) m.forEach((x) => x?.dispose?.());
+          else m?.dispose?.();
+        }
+      });
+      renderer.dispose();
+      return dataUrl;
+    } catch {
+      return null;
+    }
   }
 
   downloadFichier(fichier: CommandeFichier): void {
@@ -501,7 +700,49 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   isPdfFichier(fichier: CommandeFichier): boolean {
-    return fichier.type_mime === 'application/pdf';
+    const t = fichier.type_mime?.toLowerCase();
+    const nRaw = fichier.nom_fichier || '';
+    const n = nRaw.toLowerCase().trim();
+    // Certains backends renvoient un nom avec espaces / suffixes, donc on accepte ".pdf" n'importe où.
+    const nameLooksPdf = /\.pdf(\b|$)/i.test(nRaw) || n.includes('.pdf');
+    return t === 'application/pdf' || (t?.includes('pdf') ?? false) || nameLooksPdf;
+  }
+
+  getFichierExtensionLabel(fichier: CommandeFichier): string {
+    const raw = (fichier.nom_fichier || '').trim();
+    const m = raw.match(/\.([a-z0-9]+)(?:\s|$)/i);
+    const ext = (m?.[1] || '').toLowerCase();
+    if (ext) return ext.toUpperCase();
+
+    // Fallback: dériver depuis le mime
+    const t = fichier.type_mime?.toLowerCase() || '';
+    if (t.includes('pdf')) return 'PDF';
+    if (t.includes('svg')) return 'SVG';
+    if (t.startsWith('image/')) return t.slice('image/'.length).toUpperCase();
+    if (t.includes('wordprocessingml')) return 'DOCX';
+    if (t === 'application/msword') return 'DOC';
+    if (t.includes('stl')) return 'STL';
+    if (t.includes('3mf') || t.includes('3dmanufacturing')) return '3MF';
+    if (t.includes('postscript') || t.includes('illustrator')) return 'AI';
+    return 'FICHIER';
+  }
+
+  getFichierExtensionClass(fichier: CommandeFichier): string {
+    const label = this.getFichierExtensionLabel(fichier).toLowerCase();
+    // Normalisations
+    if (label === 'jpg') return 'ext-badge--jpeg';
+    if (label === 'jpeg') return 'ext-badge--jpeg';
+    if (label === 'png') return 'ext-badge--png';
+    if (label === 'webp') return 'ext-badge--webp';
+    if (label === 'gif') return 'ext-badge--gif';
+    if (label === 'svg') return 'ext-badge--svg';
+    if (label === 'pdf') return 'ext-badge--pdf';
+    if (label === 'ai') return 'ext-badge--ai';
+    if (label === 'stl') return 'ext-badge--stl';
+    if (label === '3mf') return 'ext-badge--3mf';
+    if (label === 'docx') return 'ext-badge--docx';
+    if (label === 'doc') return 'ext-badge--doc';
+    return 'ext-badge--default';
   }
 
   isAiFichier(fichier: CommandeFichier): boolean {

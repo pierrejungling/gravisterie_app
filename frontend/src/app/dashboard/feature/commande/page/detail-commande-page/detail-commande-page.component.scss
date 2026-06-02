@@ -139,6 +139,13 @@
   overflow: hidden;
 }
 
+.fichiers-thumb-wrap {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  overflow: visible; /* autorise le badge à déborder */
+}
+
 .fichiers-list-thumb-btn {
   padding: 0;
   border: none;
@@ -170,6 +177,58 @@
     outline: 2px solid #2196f3;
     outline-offset: 2px;
   }
+}
+
+.ext-badge {
+  position: absolute;
+  top: 2px;
+  right: -6px;
+  z-index: 2;
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111827;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+  pointer-events: none;
+  line-height: 1;
+}
+
+.ext-badge--pdf { background: #fef9c3; border-color: #fde047; color: #a16207; }
+.ext-badge--ai { background: #ffedd5; border-color: #fdba74; color: #c2410c; }
+.ext-badge--stl { background: #dbeafe; border-color: #93c5fd; color: #1d4ed8; }
+.ext-badge--3mf { background: #dcfce7; border-color: #86efac; color: #15803d; }
+.ext-badge--svg { background: #fee2e2; border-color: #fca5a5; color: #b91c1c; }
+.ext-badge--docx { background: #ede9fe; border-color: #c4b5fd; color: #5b21b6; }
+.ext-badge--doc { background: #e0f2fe; border-color: #7dd3fc; color: #075985; }
+.ext-badge--png { background: #ccfbf1; border-color: #99f6e4; color: #0f766e; }
+.ext-badge--jpeg { background: #e0e7ff; border-color: #a5b4fc; color: #3730a3; }
+.ext-badge--webp { background: #cffafe; border-color: #67e8f9; color: #155e75; }
+.ext-badge--gif { background: #fce7f3; border-color: #f9a8d4; color: #9d174d; }
+.ext-badge--default { background: #f1f5f9; border-color: #cbd5e1; color: #0f172a; }
+
+:host-context([data-theme="dark"]) {
+  .ext-badge {
+    background: rgba(15, 23, 42, 0.92);
+    border-color: rgba(148, 163, 184, 0.4);
+    color: #ffffff;
+  }
+  .ext-badge--pdf { background: #facc15; border-color: #eab308; color: #1f2937; }
+  .ext-badge--ai { background: #e65100; border-color: #bf360c; color: #ffffff; }
+  .ext-badge--stl { background: #1565c0; border-color: #0d47a1; color: #ffffff; }
+  .ext-badge--3mf { background: #2e7d32; border-color: #1b5e20; color: #ffffff; }
+  .ext-badge--svg { background: #c62828; border-color: #b71c1c; color: #ffffff; }
+  .ext-badge--docx { background: #6d28d9; border-color: #4c1d95; color: #ffffff; }
+  .ext-badge--doc { background: #0284c7; border-color: #075985; color: #ffffff; }
+  .ext-badge--png { background: #0f766e; border-color: #0d9488; color: #ffffff; }
+  .ext-badge--jpeg { background: #4338ca; border-color: #312e81; color: #ffffff; }
+  .ext-badge--webp { background: #0e7490; border-color: #155e75; color: #ffffff; }
+  .ext-badge--gif { background: #be185d; border-color: #9d174d; color: #ffffff; }
+  .ext-badge--default { background: #334155; border-color: #475569; color: #ffffff; }
 }
 
 .fichiers-list-thumb {
@@ -250,6 +309,41 @@
   color: #b91c1c;
 }
 
+.fichiers-list-badge-btn--docx {
+  background: #ede9fe;
+  border: 1px solid #c4b5fd;
+  color: #5b21b6;
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
+}
+
+.fichiers-list-badge-btn--doc {
+  background: #e0f2fe;
+  border: 1px solid #7dd3fc;
+  color: #075985;
+  font-size: 1.15rem;
+  letter-spacing: 0.05em;
+}
+
+.fichiers-list-badge {
+  width: 88px;
+  height: 88px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fichiers-list-badge--pdf {
+  background: #fef9c3; /* jaune pastel */
+  border: 1px solid #fde047;
+  color: #a16207;
+}
+
 /* Mode sombre : badges en couleurs pleines */
 :host-context([data-theme="dark"]) {
   .fichiers-list-badge-btn--stl {
@@ -274,6 +368,24 @@
     background: #c62828;
     border-color: #b71c1c;
     color: #ffffff;
+  }
+
+  .fichiers-list-badge-btn--docx {
+    background: #6d28d9;
+    border-color: #4c1d95;
+    color: #ffffff;
+  }
+
+  .fichiers-list-badge-btn--doc {
+    background: #0284c7;
+    border-color: #075985;
+    color: #ffffff;
+  }
+
+  .fichiers-list-badge--pdf {
+    background: #facc15; /* jaune plein */
+    border-color: #eab308;
+    color: #1f2937;
   }
 }
 

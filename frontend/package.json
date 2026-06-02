@@ -26,6 +26,7 @@
     "@ngx-translate/http-loader": "^17.0.0",
     "docx-preview": "^0.3.7",
     "express": "^4.18.2",
+    "pdfjs-dist": "^4.10.38",
     "rxjs": "~7.8.0",
     "three": "^0.180.0",
     "tslib": "^2.3.0",

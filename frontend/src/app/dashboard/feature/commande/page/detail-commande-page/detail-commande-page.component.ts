@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, HostListener, inject, signal, WritableSignal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, HostListener, inject, signal, WritableSignal, computed, ElementRef } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -130,6 +130,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private readonly apiService: ApiService = inject(ApiService);
   private readonly router: Router = inject(Router);
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
+  private readonly hostEl: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
   private scrollKey: string = '';
   private routeSubscription?: Subscription;
   private pdfJsWorkerConfigured = false;
@@ -363,6 +364,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
             // ignorer
           }
           this.initForm();
+          // Auto-grow textarea (description / paiement) dès que le formulaire est en place
+          setTimeout(() => this.growAllTextareas(), 0);
           this.loadFichiers(id);
         }
         this.isLoading.set(false);
@@ -1215,6 +1218,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.recalculateSupportsAndBenefice();
     this.updateVenteFraisComputedFields();
     this.refreshQuantiteProduitCompteursStructureControls();
+
+    // Auto-grow textarea en lecture/édition (au cas où le contenu est long)
+    setTimeout(() => this.growAllTextareas(), 0);
   }
 
   extractAdressePart(adresse: string | null | undefined, index: number): string {
@@ -1829,6 +1835,31 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         this.refreshQuantiteProduitCompteursStructureControls();
       }
     }
+
+    if (newEditMode) {
+      // Une fois les textareas affichés dans le DOM, ajuster leur hauteur au contenu existant
+      setTimeout(() => this.growAllTextareas(), 0);
+    }
+  }
+
+  autoGrowTextarea(event: Event): void {
+    const el = event.target as HTMLTextAreaElement | null;
+    if (!el) return;
+    this.growTextarea(el);
+  }
+
+  private growAllTextareas(): void {
+    const root = this.hostEl?.nativeElement;
+    if (!root) return;
+    const nodes = root.querySelectorAll<HTMLTextAreaElement>(
+      'textarea.description-textarea, textarea.paye-commentaire-input'
+    );
+    nodes.forEach((el) => this.growTextarea(el));
+  }
+
+  private growTextarea(el: HTMLTextAreaElement): void {
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight + 2}px`;
   }
 
   togglePrixFields(): void {

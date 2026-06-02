@@ -151,6 +151,7 @@
               formControlName="description"
               [readonly]="false"
               [disabled]="false"
+              (input)="autoGrowTextarea($event)"
               rows="4"
               placeholder=" "></textarea>
             <label class="textarea-label" [class.fixed-label]="get('description').value && get('description').value.length > 0">
@@ -626,7 +627,8 @@
                   placeholder="Commentaire..."
                   rows="3"
                   [readonly]="false"
-                  [disabled]="false">
+                  [disabled]="false"
+                  (input)="autoGrowTextarea($event)">
                 </textarea>
               </ng-container>
               <ng-template #commentairePayeCopyField>

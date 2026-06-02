@@ -128,6 +128,7 @@
             <textarea
               class="description-textarea"
               formControlName="description_projet"
+              (input)="autoGrowTextarea($event)"
               rows="4"
               placeholder=" "></textarea>
             <label class="textarea-label" [class.fixed-label]="get('description_projet').value && get('description_projet').value.length > 0">
@@ -405,6 +406,7 @@
               <textarea
                 class="paye-commentaire-input"
                 formControlName="commentaire_paye"
+                (input)="autoGrowTextarea($event)"
                 placeholder="Commentaire..."
                 rows="3">
               </textarea>

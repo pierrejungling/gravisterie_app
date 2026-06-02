@@ -323,6 +323,9 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   ngAfterViewInit(): void {
+    // Auto-grow textarea (description / paiement) dès le rendu
+    setTimeout(() => this.growAllTextareas(), 0);
+
     // Ajouter un listener focus sur l'input support après l'initialisation de la vue
     setTimeout(() => {
       if (this.supportInputRef?.nativeElement) {
@@ -337,6 +340,26 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
         }
       }
     }, 100);
+  }
+
+  autoGrowTextarea(event: Event): void {
+    const el = event.target as HTMLTextAreaElement | null;
+    if (!el) return;
+    this.growTextarea(el);
+  }
+
+  private growAllTextareas(): void {
+    const nodes = document.querySelectorAll<HTMLTextAreaElement>(
+      'textarea.description-textarea, textarea.paye-commentaire-input'
+    );
+    nodes.forEach((el) => this.growTextarea(el));
+  }
+
+  private growTextarea(el: HTMLTextAreaElement): void {
+    // Reset puis ajuste à la hauteur du contenu
+    el.style.height = 'auto';
+    // 2px pour éviter un “jitter” lié aux bordures
+    el.style.height = `${el.scrollHeight + 2}px`;
   }
 
   // Créer un FormGroup pour un support

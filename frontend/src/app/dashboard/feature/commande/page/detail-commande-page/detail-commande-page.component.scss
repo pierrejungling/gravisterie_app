@@ -1577,6 +1577,7 @@
       resize: vertical;
       min-height: 100px;
       line-height: 1.5;
+      overflow: hidden;
 
       &:focus {
         outline: none;
@@ -1782,6 +1783,7 @@
     background: var(--color-secondary);
     color: var(--color-text);
     transition: all 0.3s ease;
+    overflow: hidden;
 
     &:focus {
       outline: none;

@@ -22,6 +22,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   errors: WritableSignal<FormError[]> = signal([]);
   submitted = false;
   showSuccessPopup: WritableSignal<boolean> = signal(false);
+  lastCreatedCommandeId: WritableSignal<string | null> = signal(null);
   uploadedFiles: File[] = [];
   supportInputFocus: boolean = false;
   isDragOver: boolean = false;
@@ -749,6 +750,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
             return;
           }
           const idCommande = response.data?.id_commande as string | undefined;
+          this.lastCreatedCommandeId.set(idCommande || null);
           const filesToUpload = [...this.uploadedFiles];
 
           if (!idCommande || filesToUpload.length === 0) {
@@ -817,6 +819,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
   onCreateNewCommande(): void {
     this.showSuccessPopup.set(false);
+    this.lastCreatedCommandeId.set(null);
     this.formGroup.reset();
     
     // Réinitialiser les valeurs par défaut
@@ -842,6 +845,16 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   onViewCommandes(): void {
     this.showSuccessPopup.set(false);
     if (!this.isVente()) {
+      const id = this.lastCreatedCommandeId();
+      if (id) {
+        try {
+          // Pour que le bouton retour du détail revienne sur "en-cours"
+          sessionStorage.setItem('detail-return-page', 'en-cours');
+        } catch {}
+        this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'detail', id]);
+        return;
+      }
+      // Fallback (si l'API ne renvoie pas l'id, ou si l'état a été reset)
       try {
         sessionStorage.setItem(this.entryFromKey, 'nouvelle');
       } catch {}

@@ -159,7 +159,7 @@
         <!-- Fichiers joints -->
         <div class="input-wrapper fichiers-joints-wrapper">
           <label class="label">Fichiers joints</label>
-          <p class="fichiers-hint">Images (JPG, PNG, etc.), PDF, DOC/DOCX. Ils seront envoyés sur le stockage après la création de la {{ isVente() ? 'vente' : 'commande' }}.</p>
+          <p class="fichiers-hint">Images (JPG, PNG, etc.), PDF, DOC/DOCX, SVG, AI, STL, 3MF. Ils seront envoyés sur le stockage après la création de la {{ isVente() ? 'vente' : 'commande' }}.</p>
           <div
             class="fichiers-drop-zone"
             [class.drag-over]="isDragOver"
@@ -172,7 +172,7 @@
               type="file"
               class="fichiers-input-hidden"
               multiple
-              accept="image/*,.pdf,.doc,.docx"
+              accept="image/*,.pdf,.doc,.docx,.svg,.ai,.stl,.3mf"
               (change)="onFileSelected($event)"
               (click)="$event.stopPropagation()">
             <span class="fichiers-drop-text">Glissez des images ou des fichiers ici, ou cliquez pour parcourir</span>

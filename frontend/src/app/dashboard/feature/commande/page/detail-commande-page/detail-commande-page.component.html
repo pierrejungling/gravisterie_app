@@ -221,10 +221,10 @@
           <ul class="fichiers-list" *ngIf="commandeFichiersSorted().length > 0">
             <li *ngFor="let fichier of commandeFichiersSorted()" class="fichiers-list-item">
               <button
-                *ngIf="isPreviewableImageFichier(fichier) && fichierPreviewUrls()[fichier.id_fichier]"
+                *ngIf="isPreviewableImageFichier(fichier) && fichierPreviewUrls()[fichier.id_fichier] && !isSvgFichier(fichier)"
                 type="button"
                 class="fichiers-list-thumb-btn"
-                (click)="openPreview(fichier)"
+                (click)="openPreviewForFichier(fichier)"
                 title="Voir en grand">
                 <img
                   [src]="fichierPreviewUrls()[fichier.id_fichier]"
@@ -232,10 +232,16 @@
                   class="fichiers-list-thumb">
               </button>
               <button
+                *ngIf="isSvgFichier(fichier)"
+                type="button"
+                class="fichiers-list-thumb-btn fichiers-list-badge-btn fichiers-list-badge-btn--svg"
+                (click)="openPreviewForFichier(fichier)"
+                title="Prévisualiser (SVG)">SVG</button>
+              <button
                 *ngIf="isPdfFichier(fichier)"
                 type="button"
                 class="fichiers-list-thumb-btn fichiers-list-pdf-btn"
-                (click)="openPreviewPdf(fichier)"
+                (click)="openPreviewForFichier(fichier)"
                 title="Prévisualiser le PDF">
                 <span class="fichiers-list-pdf-icon">📄</span>
               </button>
@@ -243,15 +249,41 @@
                 *ngIf="isDocxFichier(fichier)"
                 type="button"
                 class="fichiers-list-thumb-btn fichiers-list-docx-btn"
-                (click)="openPreviewDocx(fichier)"
+                (click)="openPreviewForFichier(fichier)"
                 title="Prévisualiser le document Word">
                 <span class="fichiers-list-docx-icon">📝</span>
               </button>
-              <span class="fichiers-list-icon" *ngIf="!isPreviewableImageFichier(fichier) && !isPdfFichier(fichier) && !isDocxFichier(fichier)">📄</span>
+              <button
+                *ngIf="isStlFichier(fichier)"
+                type="button"
+                class="fichiers-list-thumb-btn fichiers-list-badge-btn fichiers-list-badge-btn--stl"
+                (click)="openPreviewForFichier(fichier)"
+                title="Prévisualiser (STL)">STL</button>
+              <button
+                *ngIf="!isStlFichier(fichier) && is3mfFichier(fichier)"
+                type="button"
+                class="fichiers-list-thumb-btn fichiers-list-badge-btn fichiers-list-badge-btn--3mf"
+                (click)="openPreviewForFichier(fichier)"
+                title="Prévisualiser (3MF)">3MF</button>
+              <button
+                *ngIf="!is3dFichier(fichier) && isAiFichier(fichier)"
+                type="button"
+                class="fichiers-list-thumb-btn fichiers-list-badge-btn fichiers-list-badge-btn--ai"
+                (click)="openPreviewForFichier(fichier)"
+                title="Prévisualiser (AI)">AI</button>
+              <span
+                class="fichiers-list-icon"
+                *ngIf="!isPreviewableImageFichier(fichier) && !isPdfFichier(fichier) && !isDocxFichier(fichier) && !is3dFichier(fichier) && !isAiFichier(fichier)">📄</span>
               <span class="fichiers-list-placeholder" *ngIf="isPreviewableImageFichier(fichier) && !fichierPreviewUrls()[fichier.id_fichier]">🖼</span>
               <span class="fichiers-list-name" [title]="fichier.nom_fichier">{{ fichier.nom_fichier }}</span>
               <span class="fichiers-list-size" *ngIf="fichier.taille_octets">{{ (fichier.taille_octets / 1024) | number:'1.0-0' }} Ko</span>
               <div class="fichiers-list-actions">
+                <button
+                  *ngIf="isPreviewableFichier(fichier)"
+                  type="button"
+                  class="btn-fichier btn-preview btn-preview-eye btn-icon"
+                  (click)="openPreviewForFichier(fichier)"
+                  title="Prévisualiser">👁</button>
                 <button type="button" class="btn-fichier btn-download btn-icon" (click)="downloadFichier(fichier)" title="Télécharger">⬇</button>
                 <button type="button" class="btn-fichier btn-delete btn-icon" (click)="deleteFichier(fichier.id_fichier)" title="Supprimer">🗑</button>
               </div>
@@ -259,7 +291,7 @@
           </ul>
           <div class="input-wrapper fichiers-add-wrapper">
             <label class="label">Ajouter un fichier</label>
-            <p class="fichiers-add-hint">Images, SVG, PDF, DOC/DOCX. Plusieurs fichiers possibles.</p>
+            <p class="fichiers-add-hint">Images, SVG, PDF, DOC/DOCX, AI, STL, 3MF. Plusieurs fichiers possibles.</p>
             <div
               class="fichiers-drop-zone"
               [class.drag-over]="isDragOver()"
@@ -273,7 +305,7 @@
                 type="file"
                 class="fichiers-input-hidden"
                 multiple
-                accept="image/*,.pdf,.doc,.docx,.svg"
+                accept="image/*,.pdf,.doc,.docx,.svg,.ai,.stl,.3mf"
                 [disabled]="fichierUploading()"
                 (change)="onFichierSelected($event)"
                 (click)="$event.stopPropagation()">
@@ -287,16 +319,30 @@
       <!-- Modal prévisualisation image, PDF ou DOCX -->
       <div
         class="preview-overlay"
-        *ngIf="previewImageUrl() || previewPdfUrl() || previewDocxBlob()"
+        *ngIf="previewImageUrl() || previewPdfUrl() || previewDocxBlob() || previewAiUrl() || previewAiMessage() || preview3dVisible()"
         (click)="closePreview()"
         role="button"
         tabindex="0"
         aria-label="Fermer l'aperçu">
         <button type="button" class="preview-close" (click)="closePreview(); $event.stopPropagation()" title="Fermer">✕</button>
-        <div class="preview-content" [class.preview-content--pdf]="previewPdfUrl()" [class.preview-content--docx]="previewDocxBlob()" (click)="$event.stopPropagation()">
+        <div
+          class="preview-content"
+          [class.preview-content--pdf]="previewPdfUrl()"
+          [class.preview-content--docx]="previewDocxBlob()"
+          [class.preview-content--ai]="previewAiUrl()"
+          [class.preview-content--3d]="preview3dVisible()"
+          (click)="$event.stopPropagation()">
           <img *ngIf="previewImageUrl()" [src]="previewImageUrl() | safeUrl" alt="Aperçu" class="preview-image">
           <iframe *ngIf="previewPdfUrl()" [src]="previewPdfUrl() | safeResourceUrl" class="preview-pdf" title="Aperçu PDF"></iframe>
           <div *ngIf="previewDocxBlob()" id="docx-preview-container" class="preview-docx"></div>
+          <div class="preview-ai-wrap" *ngIf="previewAiUrl()">
+            <iframe [src]="previewAiUrl() | safeResourceUrl" class="preview-ai" title="Aperçu AI"></iframe>
+          </div>
+          <div class="preview-ai-message" *ngIf="previewAiMessage()">
+            <div class="preview-ai-message__title">Aperçu indisponible</div>
+            <div class="preview-ai-message__text">{{ previewAiMessage() }}</div>
+          </div>
+          <div *ngIf="preview3dVisible()" id="model-3d-preview-container" class="preview-3d"></div>
         </div>
       </div>
 

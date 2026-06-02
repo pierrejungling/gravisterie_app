@@ -37,6 +37,16 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   private readonly scrollKey = 'nouvelle-commande-scroll';
   private readonly clearScrollKey = 'nouvelle-commande-clear-scroll';
 
+  private readonly allowedFileExtensions = new Set([
+    '.pdf',
+    '.doc',
+    '.docx',
+    '.svg',
+    '.ai',
+    '.stl',
+    '.3mf',
+  ]);
+
   // Options disponibles
   couleursDisponibles: Couleur[] = [
     Couleur.NOIR,
@@ -595,12 +605,11 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       const fileArray = Array.from(files);
       // Filtrer les fichiers selon les types acceptés
       const acceptedFiles = fileArray.filter(file => {
-        const fileType = file.type.toLowerCase();
-        const fileName = file.name.toLowerCase();
-        return fileType.startsWith('image/') ||
-               fileName.endsWith('.pdf') ||
-               fileName.endsWith('.doc') ||
-               fileName.endsWith('.docx');
+        const fileType = (file.type || '').toLowerCase();
+        const fileName = (file.name || '').toLowerCase();
+        if (fileType.startsWith('image/')) return true;
+        // Fallback extension (Safari / certains fichiers 3D renvoient type vide)
+        return Array.from(this.allowedFileExtensions).some((ext) => fileName.endsWith(ext));
       });
       
       if (acceptedFiles.length > 0) {

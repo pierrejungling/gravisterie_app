@@ -9,6 +9,10 @@ import { forkJoin, Subscription } from 'rxjs';
 import { Commande, CommandeFichier, StatutCommande, ModeContact, Couleur, QuantiteProduitCompteur } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 import { renderAsync } from 'docx-preview';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
+import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js';
 
 @Component({
   selector: 'app-detail-commande-page',
@@ -54,7 +58,25 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   previewPdfUrl: WritableSignal<string | null> = signal(null);
   /** Blob du DOCX en prévisualisation (null = modal fermée). */
   previewDocxBlob: WritableSignal<Blob | null> = signal(null);
+  /** URL (blob) du fichier AI en prévisualisation (si support navigateur). */
+  previewAiUrl: WritableSignal<string | null> = signal(null);
+  /** Message quand un .ai n'est pas prévisualisable. */
+  previewAiMessage: WritableSignal<string | null> = signal(null);
+  /** Modale 3D ouverte. */
+  preview3dVisible: WritableSignal<boolean> = signal(false);
+  /** Type 3D courant. */
+  preview3dType: WritableSignal<'stl' | '3mf' | null> = signal(null);
   copyFeedbackField: WritableSignal<string | null> = signal(null);
+
+  private readonly allowedUploadExtensions = new Set([
+    '.pdf',
+    '.doc',
+    '.docx',
+    '.svg',
+    '.ai',
+    '.stl',
+    '.3mf',
+  ]);
 
   // Exposer StatutCommande et ModeContact pour l'utiliser dans le template
   readonly StatutCommande = StatutCommande;
@@ -279,6 +301,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.revokeFichierPreviewUrls();
     const pdfUrl = this.previewPdfUrl();
     if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    const aiUrl = this.previewAiUrl();
+    if (aiUrl) URL.revokeObjectURL(aiUrl);
+    this.dispose3d();
   }
 
   private saveScrollPosition = (): void => {
@@ -415,9 +440,18 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const accepted = Array.from(files).filter((file) => {
       const t = file.type?.toLowerCase();
       const n = file.name?.toLowerCase() ?? '';
-      return t?.startsWith('image/') || t?.includes('svg') || t === 'application/pdf' ||
-        t === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || t === 'application/msword' ||
-        n.endsWith('.pdf') || n.endsWith('.doc') || n.endsWith('.docx') || n.endsWith('.svg');
+      if (t?.startsWith('image/')) return true;
+      // Mimes "classiques"
+      if (t?.includes('svg')) return true;
+      if (t === 'application/pdf') return true;
+      if (t === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return true;
+      if (t === 'application/msword') return true;
+      // Mimes fréquents pour AI / fichiers 3D (selon navigateur / OS)
+      if (t === 'application/postscript' || t === 'application/illustrator') return true; // .ai
+      if (t === 'model/stl' || t === 'application/sla' || t === 'application/vnd.ms-pki.stl') return true; // .stl
+      if (t === 'model/3mf' || t === 'application/vnd.ms-package.3dmanufacturing-3dmodel+xml') return true; // .3mf
+      // Fallback extension (type vide sur Safari / certains fichiers)
+      return Array.from(this.allowedUploadExtensions).some((ext) => n.endsWith(ext));
     });
     if (accepted.length > 0) this.uploadFiles(accepted);
   }
@@ -458,8 +492,38 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return this.isImageFichier(fichier) || this.isSvgFichier(fichier);
   }
 
+  isPreviewableFichier(fichier: CommandeFichier): boolean {
+    return this.isPreviewableImageFichier(fichier) ||
+      this.isPdfFichier(fichier) ||
+      this.isDocxFichier(fichier) ||
+      this.is3dFichier(fichier) ||
+      this.isAiFichier(fichier);
+  }
+
   isPdfFichier(fichier: CommandeFichier): boolean {
     return fichier.type_mime === 'application/pdf';
+  }
+
+  isAiFichier(fichier: CommandeFichier): boolean {
+    const n = (fichier.nom_fichier || '').toLowerCase();
+    const t = fichier.type_mime?.toLowerCase();
+    return n.endsWith('.ai') || t === 'application/illustrator' || t === 'application/postscript';
+  }
+
+  isStlFichier(fichier: CommandeFichier): boolean {
+    const n = (fichier.nom_fichier || '').toLowerCase();
+    const t = fichier.type_mime?.toLowerCase();
+    return n.endsWith('.stl') || t === 'model/stl' || t === 'application/sla' || t === 'application/vnd.ms-pki.stl';
+  }
+
+  is3mfFichier(fichier: CommandeFichier): boolean {
+    const n = (fichier.nom_fichier || '').toLowerCase();
+    const t = fichier.type_mime?.toLowerCase();
+    return n.endsWith('.3mf') || t === 'model/3mf' || t === 'application/vnd.ms-package.3dmanufacturing-3dmodel+xml';
+  }
+
+  is3dFichier(fichier: CommandeFichier): boolean {
+    return this.isStlFichier(fichier) || this.is3mfFichier(fichier);
   }
 
   /** DOCX (Word récent) : prévisualisation via docx-preview. */
@@ -477,6 +541,29 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     if (!this.isPreviewableImageFichier(fichier)) return;
     const url = this.fichierPreviewUrls()[fichier.id_fichier];
     if (url) this.previewImageUrl.set(url);
+  }
+
+  openPreviewForFichier(fichier: CommandeFichier): void {
+    if (this.isPreviewableImageFichier(fichier)) {
+      this.openPreview(fichier);
+      return;
+    }
+    if (this.isPdfFichier(fichier)) {
+      this.openPreviewPdf(fichier);
+      return;
+    }
+    if (this.isDocxFichier(fichier)) {
+      this.openPreviewDocx(fichier);
+      return;
+    }
+    if (this.is3dFichier(fichier)) {
+      this.openPreview3d(fichier);
+      return;
+    }
+    if (this.isAiFichier(fichier)) {
+      this.openPreviewAi(fichier);
+      return;
+    }
   }
 
   openPreviewPdf(fichier: CommandeFichier): void {
@@ -516,19 +603,254 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     renderAsync(blob, el).catch((err) => console.error('Erreur rendu DOCX:', err));
   }
 
-  closePreview(): void {
-    const pdfUrl = this.previewPdfUrl();
-    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+  openPreviewAi(fichier: CommandeFichier): void {
+    const id = this.commande()?.id_commande;
+    if (!id || !this.isAiFichier(fichier)) return;
+
+    const currentAi = this.previewAiUrl();
+    if (currentAi) URL.revokeObjectURL(currentAi);
+    const currentPdf = this.previewPdfUrl();
+    if (currentPdf) URL.revokeObjectURL(currentPdf);
+
     this.previewImageUrl.set(null);
     this.previewPdfUrl.set(null);
     this.previewDocxBlob.set(null);
+    this.preview3dVisible.set(false);
+    this.preview3dType.set(null);
+    this.dispose3d();
+    this.previewAiUrl.set(null);
+    this.previewAiMessage.set(null);
+    this.apiService.getBlob(COMMANDE_FICHIER_DOWNLOAD(id, fichier.id_fichier)).subscribe({
+      next: (blob) => {
+        this.isPdfCompatibleBlob(blob).then((isPdf) => {
+          // Beaucoup de .ai sont “PDF-compatible” → on les affiche comme PDF (beaucoup plus fiable)
+          if (isPdf) {
+            const pdfBlob = blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
+            const url = URL.createObjectURL(pdfBlob);
+            this.previewPdfUrl.set(url);
+            this.previewAiUrl.set(null);
+            this.previewAiMessage.set(null);
+          } else {
+            /**
+             * Un .ai non PDF-compatible n'est pas fiable en preview navigateur (souvent page blanche ou téléchargement).
+             * On n'essaie donc PAS d'iframe: on affiche un message.
+             */
+            this.previewAiUrl.set(null);
+            this.previewAiMessage.set('Aperçu non disponible pour ce fichier .ai. Exporte-le en PDF ou SVG pour le prévisualiser.');
+          }
+        }).catch((err) => {
+          console.error('Erreur analyse AI:', err);
+          this.previewAiUrl.set(null);
+          this.previewAiMessage.set('Aperçu non disponible pour ce fichier .ai. Exporte-le en PDF ou SVG pour le prévisualiser.');
+        });
+      },
+      error: (err) => console.error('Erreur chargement AI:', err)
+    });
+  }
+
+  private async isPdfCompatibleBlob(blob: Blob): Promise<boolean> {
+    try {
+      const header = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
+      // "%PDF-"
+      return header[0] === 0x25 && header[1] === 0x50 && header[2] === 0x44 && header[3] === 0x46 && header[4] === 0x2d;
+    } catch {
+      return false;
+    }
+  }
+
+  openPreview3d(fichier: CommandeFichier): void {
+    const id = this.commande()?.id_commande;
+    if (!id || !this.is3dFichier(fichier)) return;
+
+    this.previewImageUrl.set(null);
+    this.previewPdfUrl.set(null);
+    this.previewDocxBlob.set(null);
+    const currentAi = this.previewAiUrl();
+    if (currentAi) URL.revokeObjectURL(currentAi);
+    this.previewAiUrl.set(null);
+
+    this.preview3dVisible.set(true);
+    this.preview3dType.set(this.isStlFichier(fichier) ? 'stl' : '3mf');
+
+    this.apiService.getBlob(COMMANDE_FICHIER_DOWNLOAD(id, fichier.id_fichier)).subscribe({
+      next: (blob) => {
+        blob.arrayBuffer().then((buffer) => {
+          this.render3d(buffer, this.preview3dType());
+        }).catch((err) => console.error('Erreur lecture fichier 3D:', err));
+      },
+      error: (err) => console.error('Erreur chargement fichier 3D:', err)
+    });
+  }
+
+  closePreview(): void {
+    const pdfUrl = this.previewPdfUrl();
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    const aiUrl = this.previewAiUrl();
+    if (aiUrl) URL.revokeObjectURL(aiUrl);
+    this.previewImageUrl.set(null);
+    this.previewPdfUrl.set(null);
+    this.previewDocxBlob.set(null);
+    this.previewAiUrl.set(null);
+    this.previewAiMessage.set(null);
+    this.preview3dVisible.set(false);
+    this.preview3dType.set(null);
+    this.dispose3d();
   }
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    if (this.previewImageUrl() || this.previewPdfUrl() || this.previewDocxBlob()) {
+    if (this.previewImageUrl() || this.previewPdfUrl() || this.previewDocxBlob() || this.previewAiUrl() || this.previewAiMessage() || this.preview3dVisible()) {
       this.closePreview();
     }
+  }
+
+  private threeRenderer: THREE.WebGLRenderer | null = null;
+  private threeScene: THREE.Scene | null = null;
+  private threeCamera: THREE.PerspectiveCamera | null = null;
+  private threeControls: OrbitControls | null = null;
+  private threeAnimId: number | null = null;
+  private threeObject: THREE.Object3D | null = null;
+
+  private dispose3d(): void {
+    if (this.threeAnimId != null) {
+      cancelAnimationFrame(this.threeAnimId);
+      this.threeAnimId = null;
+    }
+    this.threeControls?.dispose();
+    this.threeControls = null;
+
+    if (this.threeScene && this.threeObject) {
+      this.threeScene.remove(this.threeObject);
+    }
+
+    const disposeMesh = (obj: THREE.Object3D) => {
+      obj.traverse((child: any) => {
+        if (child && child.isMesh) {
+          if (child.geometry) child.geometry.dispose?.();
+          const m = child.material;
+          if (Array.isArray(m)) m.forEach((x) => x?.dispose?.());
+          else m?.dispose?.();
+        }
+      });
+    };
+    if (this.threeObject) disposeMesh(this.threeObject);
+    this.threeObject = null;
+
+    if (this.threeRenderer) {
+      try {
+        this.threeRenderer.dispose();
+      } catch {}
+      const canvas = this.threeRenderer.domElement;
+      if (canvas && canvas.parentElement) canvas.parentElement.removeChild(canvas);
+    }
+
+    this.threeRenderer = null;
+    this.threeScene = null;
+    this.threeCamera = null;
+  }
+
+  private render3d(buffer: ArrayBuffer, type: 'stl' | '3mf' | null): void {
+    if (!type) return;
+    // Attendre que le container existe (Angular *ngIf)
+    setTimeout(() => {
+      const container = document.getElementById('model-3d-preview-container');
+      if (!container) return;
+
+      this.dispose3d();
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0f172a); // bleu très foncé
+
+      const width = container.clientWidth || 800;
+      const height = container.clientHeight || 600;
+
+      const camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000);
+      camera.position.set(0.8, 0.8, 0.8);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setSize(width, height);
+      container.innerHTML = '';
+      container.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+
+      // Lumières
+      const hemi = new THREE.HemisphereLight(0xffffff, 0x334155, 1.0);
+      scene.add(hemi);
+      const dir = new THREE.DirectionalLight(0xffffff, 1.1);
+      dir.position.set(2, 3, 4);
+      scene.add(dir);
+
+      let object: THREE.Object3D | null = null;
+      try {
+        if (type === 'stl') {
+          const geom = new STLLoader().parse(buffer);
+          geom.computeVertexNormals();
+          const mat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.1, roughness: 0.6 });
+          const mesh = new THREE.Mesh(geom, mat);
+          object = mesh;
+        } else {
+          object = new ThreeMFLoader().parse(buffer);
+        }
+      } catch (e) {
+        console.error('Erreur parse 3D:', e);
+        return;
+      }
+      if (!object) return;
+
+      // Centrer & cadrer
+      const box = new THREE.Box3().setFromObject(object);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      object.position.sub(center);
+      scene.add(object);
+
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
+      const dist = maxDim * 1.6;
+      camera.position.set(dist, dist, dist);
+      camera.lookAt(0, 0, 0);
+      controls.target.set(0, 0, 0);
+      controls.update();
+
+      const animate = () => {
+        this.threeAnimId = requestAnimationFrame(animate);
+        controls.update();
+        renderer.render(scene, camera);
+      };
+      animate();
+
+      // Persist refs pour dispose/fermeture
+      this.threeScene = scene;
+      this.threeCamera = camera;
+      this.threeRenderer = renderer;
+      this.threeControls = controls;
+      this.threeObject = object;
+
+      // Resize
+      const onResize = () => {
+        const c = document.getElementById('model-3d-preview-container');
+        if (!c || !this.threeRenderer || !this.threeCamera) return;
+        const w = c.clientWidth || 800;
+        const h = c.clientHeight || 600;
+        this.threeCamera.aspect = w / h;
+        this.threeCamera.updateProjectionMatrix();
+        this.threeRenderer.setSize(w, h);
+      };
+      window.addEventListener('resize', onResize, { passive: true });
+      // Petit cleanup quand on ferme: on supprime le listener via dispose3d en recréant renderer (OK),
+      // mais pour éviter les leaks, on enlève le listener dès fermeture via closePreview (dispose3d).
+      // Ici on garde le handler capturé; on le retire explicitement lors du prochain dispose.
+      const prevDispose = this.dispose3d.bind(this);
+      this.dispose3d = () => {
+        window.removeEventListener('resize', onResize as any);
+        prevDispose();
+      };
+    }, 0);
   }
 
   initForm(): void {

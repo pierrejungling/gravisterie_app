@@ -220,20 +220,27 @@
           <p class="fichiers-hint" *ngIf="commandeFichiersSorted().length === 0">Aucun fichier pour cette {{ isVente() ? 'vente' : 'commande' }}.</p>
           <ul class="fichiers-list" *ngIf="commandeFichiersSorted().length > 0">
             <li *ngFor="let fichier of commandeFichiersSorted()" class="fichiers-list-item">
-              <div class="fichiers-thumb-wrap" *ngIf="isPreviewableImageFichier(fichier) && fichierPreviewUrls()[fichier.id_fichier]">
-                <span
-                  class="ext-badge"
-                  [ngClass]="getFichierExtensionClass(fichier)">{{ getFichierExtensionLabel(fichier) }}</span>
-                <button
-                  type="button"
-                  class="fichiers-list-thumb-btn"
-                  (click)="openPreviewForFichier(fichier)"
-                  title="Voir en grand">
-                  <img
-                    [src]="fichierPreviewUrls()[fichier.id_fichier]"
-                    [alt]="fichier.nom_fichier"
-                    class="fichiers-list-thumb">
-                </button>
+              <div class="fichiers-thumb-wrap" *ngIf="isPreviewableImageFichier(fichier)">
+                <ng-container *ngIf="fichierPreviewUrls()[fichier.id_fichier]; else imageLoadingBadge">
+                  <span
+                    class="ext-badge"
+                    [ngClass]="getFichierExtensionClass(fichier)">{{ getFichierExtensionLabel(fichier) }}</span>
+                  <button
+                    type="button"
+                    class="fichiers-list-thumb-btn"
+                    (click)="openPreviewForFichier(fichier)"
+                    title="Voir en grand">
+                    <img
+                      [src]="fichierPreviewUrls()[fichier.id_fichier]"
+                      [alt]="fichier.nom_fichier"
+                      class="fichiers-list-thumb">
+                  </button>
+                </ng-container>
+                <ng-template #imageLoadingBadge>
+                  <div class="fichiers-list-badge-btn" [ngClass]="getFichierThumbBadgeClass(fichier)">
+                    {{ getFichierExtensionLabel(fichier) }}
+                  </div>
+                </ng-template>
               </div>
               <button
                 *ngIf="isSvgFichier(fichier) && !fichierPreviewUrls()[fichier.id_fichier]"
@@ -333,7 +340,7 @@
               <span
                 class="fichiers-list-icon"
                 *ngIf="!isPreviewableImageFichier(fichier) && !isPdfFichier(fichier) && !isDocxFichier(fichier) && !is3dFichier(fichier) && !isAiFichier(fichier)">📄</span>
-              <span class="fichiers-list-placeholder" *ngIf="isPreviewableImageFichier(fichier) && !fichierPreviewUrls()[fichier.id_fichier]">🖼</span>
+              <!-- plus de placeholder 🖼 : remplacé par badge extension ci-dessus -->
               <span class="fichiers-list-name" [title]="fichier.nom_fichier">{{ fichier.nom_fichier }}</span>
               <span class="fichiers-list-size" *ngIf="fichier.taille_octets">{{ (fichier.taille_octets / 1024) | number:'1.0-0' }} Ko</span>
               <div class="fichiers-list-actions">

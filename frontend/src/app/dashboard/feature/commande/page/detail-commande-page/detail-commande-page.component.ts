@@ -745,6 +745,22 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return 'ext-badge--default';
   }
 
+  getFichierThumbBadgeClass(fichier: CommandeFichier): string {
+    const label = this.getFichierExtensionLabel(fichier).toLowerCase();
+    if (label === 'jpg' || label === 'jpeg') return 'fichiers-list-badge-btn--jpeg';
+    if (label === 'png') return 'fichiers-list-badge-btn--png';
+    if (label === 'webp') return 'fichiers-list-badge-btn--webp';
+    if (label === 'gif') return 'fichiers-list-badge-btn--gif';
+    if (label === 'svg') return 'fichiers-list-badge-btn--svg';
+    if (label === 'pdf') return 'fichiers-list-badge-btn--pdf';
+    if (label === 'ai') return 'fichiers-list-badge-btn--ai';
+    if (label === 'stl') return 'fichiers-list-badge-btn--stl';
+    if (label === '3mf') return 'fichiers-list-badge-btn--3mf';
+    if (label === 'docx') return 'fichiers-list-badge-btn--docx';
+    if (label === 'doc') return 'fichiers-list-badge-btn--doc';
+    return 'fichiers-list-badge-btn--default';
+  }
+
   isAiFichier(fichier: CommandeFichier): boolean {
     const n = (fichier.nom_fichier || '').toLowerCase();
     const t = fichier.type_mime?.toLowerCase();

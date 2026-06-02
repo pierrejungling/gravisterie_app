@@ -2,6 +2,10 @@
   "name": "app",
   "version": "0.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20 <23",
+    "npm": ">=10"
+  },
   "scripts": {
     "start": "cd frontend && npm start",
     "start:api": "cd backend && npm run start:dev",

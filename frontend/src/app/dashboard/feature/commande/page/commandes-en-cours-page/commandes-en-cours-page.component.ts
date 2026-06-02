@@ -648,9 +648,35 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     return commande.id_commande;
   }
 
+  private isLivraisonTerminee(commande: Commande): boolean {
+    if (!commande) return false;
+    if (commande.statut_commande === StatutCommande.TERMINE) return true;
+    if (commande.statut_commande === StatutCommande.ANNULEE) return true;
+
+    // Dans le workflow, à partir du moment où on passe aux "statuts finaux",
+    // `statuts_actifs` contient les étapes restantes (non terminées).
+    // Donc si `A_LIVRER` n'est plus dedans, la livraison est faite.
+    if (Array.isArray(commande.statuts_actifs)) {
+      return !commande.statuts_actifs.includes(StatutCommande.A_LIVRER);
+    }
+
+    // Fallback: si pour une raison quelconque `statuts_actifs` est absent mais que le statut
+    // principal est déjà après "Livraison", on considère la livraison terminée.
+    return [
+      StatutCommande.A_METTRE_EN_LIGNE,
+      StatutCommande.A_FACTURER,
+      StatutCommande.DEMANDE_AVIS,
+    ].includes(commande.statut_commande);
+  }
+
   // Calculer le statut de la deadline pour la coloration
   getDeadlineStatus(commande: Commande): 'warning' | 'danger' | null {
     if (!commande || !commande.deadline) {
+      return null;
+    }
+
+    // Si la livraison est déjà terminée, ne plus mettre en évidence la deadline.
+    if (this.isLivraisonTerminee(commande)) {
       return null;
     }
 

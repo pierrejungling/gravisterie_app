@@ -493,7 +493,7 @@
           </div>
         </div>
 
-        <div class="prix-quantity-group" *ngIf="isVente()">
+        <div class="prix-quantity-group prix-quantity-group--vente" *ngIf="isVente()">
           <div class="input-wrapper">
             <ng-container *ngIf="isEditMode(); else prixFinalVenteCopyField">
               <app-floating-label-input
@@ -518,30 +518,29 @@
               </div>
             </ng-template>
           </div>
-          <div class="input-wrapper">
+          <div class="input-wrapper frais-commission-wrapper">
             <ng-container *ngIf="isEditMode(); else fraisVenteCopyField">
-              <app-floating-label-input
-                [label]="'Frais / commission (%)'"
-                [control]="get('frais_pourcentage')"
+              <app-frais-commission-picker
+                *ngIf="commande()?.id_commande"
                 [formGroup]="formGroup"
-                type="number"
-                step="0.01"
-                suffix="%"
-                [readonly]="false">
-              </app-floating-label-input>
+                [selectionControl]="get('frais_commission_selection')"
+                [idControl]="get('frais_commission_id')"
+                [libelleControl]="get('frais_commission_libelle')"
+                [pourcentageControl]="get('frais_pourcentage')">
+              </app-frais-commission-picker>
             </ng-container>
             <ng-template #fraisVenteCopyField>
               <div class="copy-field-readonly">
                 <div class="copy-field-content">
-                  <span class="copy-field-label">Frais / commission (%)</span>
-                  <span class="copy-field-value">{{ get('frais_pourcentage').value ?? '-' }}</span>
+                  <span class="copy-field-label">Frais / commission</span>
+                  <span class="copy-field-value">{{ getFraisCommissionDisplayValue() }}</span>
                 </div>
                 <button
                   type="button"
                   class="copy-field-copy-btn"
-                  (click)="copyTextValue(toCopyText(get('frais_pourcentage').value), 'frais_pourcentage')"
-                  [disabled]="get('frais_pourcentage').value === null || get('frais_pourcentage').value === undefined || get('frais_pourcentage').value === ''">
-                  {{ copyFeedbackField() === 'frais_pourcentage' ? 'Copié !' : '' }}
+                  (click)="copyTextValue(getFraisCommissionDisplayValue(), 'frais_commission')"
+                  [disabled]="getFraisCommissionDisplayValue() === '-'">
+                  {{ copyFeedbackField() === 'frais_commission' ? 'Copié !' : '' }}
                 </button>
               </div>
             </ng-template>

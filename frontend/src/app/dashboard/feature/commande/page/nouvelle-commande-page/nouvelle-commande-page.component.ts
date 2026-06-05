@@ -9,11 +9,12 @@ import { forkJoin } from 'rxjs';
 import { NouvelleCommandeForm, CoordonneesContactForm } from '../../data/form/nouvelle-commande.form';
 import { Couleur, StatutCommande, ModeContact } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
+import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
 
 @Component({
   selector: 'app-nouvelle-commande-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent],
+  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent],
   templateUrl: './nouvelle-commande-page.component.html',
   styleUrl: './nouvelle-commande-page.component.scss'
 })
@@ -243,6 +244,9 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       quantité: new FormControl<number>(1, [Validators.min(1)]),
       prix_unitaire_final: new FormControl<number | null>(null),
       prix_final: new FormControl<number | null>(null),
+      frais_commission_selection: new FormControl<string | null>(null),
+      frais_commission_id: new FormControl<string | null>(null),
+      frais_commission_libelle: new FormControl<string | null>(null),
       frais_pourcentage: new FormControl<number | null>(null),
       montant_frais: new FormControl({ value: 0, disabled: true }),
       montant_net: new FormControl({ value: 0, disabled: true }),
@@ -743,6 +747,8 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
         frais_pourcentage: isVente && formValue.frais_pourcentage !== null && formValue.frais_pourcentage !== undefined && formValue.frais_pourcentage !== ''
           ? parseFloat(String(formValue.frais_pourcentage))
           : null,
+        frais_commission_id: isVente ? (formValue.frais_commission_id || null) : null,
+        frais_commission_libelle: isVente ? (formValue.frais_commission_libelle?.trim() || null) : null,
         ...(Object.keys(coordonneesContact).length > 0 && { coordonnees_contact: coordonneesContact }),
         supports: formValue.supports && Array.isArray(formValue.supports) 
           ? formValue.supports
@@ -867,24 +873,27 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
   onViewCommandes(): void {
     this.showSuccessPopup.set(false);
-    if (!this.isVente()) {
-      const id = this.lastCreatedCommandeId();
-      if (id) {
-        try {
-          // Pour que le bouton retour du détail revienne sur "en-cours"
-          sessionStorage.setItem('detail-return-page', 'en-cours');
-        } catch {}
-        this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'detail', id]);
-        return;
-      }
-      // Fallback (si l'API ne renvoie pas l'id, ou si l'état a été reset)
+    const id = this.lastCreatedCommandeId();
+    if (id) {
       try {
-        sessionStorage.setItem(this.entryFromKey, 'nouvelle');
+        sessionStorage.setItem(
+          'detail-return-page',
+          this.isVente() ? 'terminees' : 'en-cours'
+        );
       } catch {}
-      this.router.navigate([AppRoutes.COMMANDES_EN_COURS]);
+      this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'detail', id]);
       return;
     }
-    this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'terminees']);
+
+    if (this.isVente()) {
+      this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'terminees']);
+      return;
+    }
+
+    try {
+      sessionStorage.setItem(this.entryFromKey, 'nouvelle');
+    } catch {}
+    this.router.navigate([AppRoutes.COMMANDES_EN_COURS]);
   }
 
   private getTodayDate(): string {

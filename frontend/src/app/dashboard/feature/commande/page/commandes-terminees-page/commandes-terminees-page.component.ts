@@ -213,6 +213,16 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
     return this.getMontantFraisVente(cmd);
   }
 
+  getFraisCommissionLabel(cmd: Commande): string {
+    if (cmd.frais_commission_libelle) {
+      return cmd.frais_commission_libelle;
+    }
+    if (cmd.frais_pourcentage !== undefined && cmd.frais_pourcentage !== null) {
+      return `${cmd.frais_pourcentage} %`;
+    }
+    return '';
+  }
+
   private groupByPeriod(commandes: Commande[]): Array<{ label: string; commandes: Commande[]; total: number }> {
     const mode = this.groupMode();
     const groups = new Map<string, { label: string; commandes: Commande[]; sortKey: string; total: number }>();

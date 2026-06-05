@@ -8,6 +8,8 @@ import { ApiURI, COMMANDE_FICHIERS_LIST, COMMANDE_FICHIERS_UPLOAD, COMMANDE_FICH
 import { forkJoin, Subscription } from 'rxjs';
 import { Commande, CommandeFichier, StatutCommande, ModeContact, Couleur, QuantiteProduitCompteur } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
+import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
+import { FRAIS_COMMISSION_LIBRE } from '../../model/frais-commission.interface';
 import { renderAsync } from 'docx-preview';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -18,7 +20,7 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 @Component({
   selector: 'app-detail-commande-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe],
+  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, FraisCommissionPickerComponent],
   templateUrl: './detail-commande-page.component.html',
   styleUrl: './detail-commande-page.component.scss'
 })
@@ -1133,6 +1135,12 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       quantite_produit_compteurs: this.buildQuantiteProduitCompteursFormArray(cmd),
       prix_final: new FormControl({ value: cmd.prix_final ?? '', disabled: !isEdit }),
       prix_unitaire_final: new FormControl({ value: cmd.prix_unitaire_final ?? (cmd.prix_final !== null && cmd.prix_final !== undefined && cmd.quantité ? cmd.prix_final / cmd.quantité : ''), disabled: !isEdit }),
+      frais_commission_selection: new FormControl({
+        value: cmd.frais_commission_id || (cmd.frais_commission_libelle || cmd.frais_pourcentage != null ? FRAIS_COMMISSION_LIBRE : null),
+        disabled: !isEdit,
+      }),
+      frais_commission_id: new FormControl({ value: cmd.frais_commission_id ?? null, disabled: !isEdit }),
+      frais_commission_libelle: new FormControl({ value: cmd.frais_commission_libelle ?? null, disabled: !isEdit }),
       frais_pourcentage: new FormControl({ value: cmd.frais_pourcentage ?? null, disabled: !isEdit }),
       montant_frais: new FormControl({ value: 0, disabled: true }),
       montant_net: new FormControl({ value: 0, disabled: true }),
@@ -1424,6 +1432,20 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     if (raw === null || raw === undefined || raw === '') return 0;
     const parsed = parseFloat(String(raw));
     return isNaN(parsed) ? 0 : parsed;
+  }
+
+  getFraisCommissionDisplayValue(): string {
+    if (!this.formGroup) return '-';
+    const libelle = this.formGroup.get('frais_commission_libelle')?.value;
+    const pourcentage = this.formGroup.get('frais_pourcentage')?.value;
+    if (!libelle && (pourcentage === null || pourcentage === undefined || pourcentage === '')) {
+      return '-';
+    }
+    const pct = pourcentage !== null && pourcentage !== undefined && pourcentage !== ''
+      ? `${pourcentage} %`
+      : '';
+    if (libelle && pct) return `${libelle} (${pct})`;
+    return libelle || pct || '-';
   }
 
   getMontantFraisVente(): number {
@@ -1796,7 +1818,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       const controlsToDisable = [
         'nom_commande', 'date_commande', 'deadline', 'description', 'dimensions', 'quantité', 'commentaire_paye',
         'support', 'couleur', 'police_ecriture', 'texte_personnalisation', 'prix_unitaire_final', 'prix_final',
-        'frais_pourcentage',
+        'frais_commission_selection', 'frais_commission_id', 'frais_commission_libelle', 'frais_pourcentage',
         'prix_support', 'url_support', 'nom', 'prenom', 'telephone', 'mail',
         'rue', 'code_postal', 'ville', 'pays', 'societe', 'tva', 'mode_contact'
       ];
@@ -1889,6 +1911,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : null,
       prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : null,
       frais_pourcentage: formValue.frais_pourcentage !== null && formValue.frais_pourcentage !== undefined && formValue.frais_pourcentage !== '' ? parseFloat(String(formValue.frais_pourcentage)) : null,
+      frais_commission_id: formValue.frais_commission_id || null,
+      frais_commission_libelle: formValue.frais_commission_libelle?.trim() || null,
       coordonnees_contact: {
         nom: formValue.nom,
         prenom: formValue.prenom,
@@ -1946,6 +1970,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : undefined,
       prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : undefined,
       frais_pourcentage: formValue.frais_pourcentage !== null && formValue.frais_pourcentage !== undefined && formValue.frais_pourcentage !== '' ? parseFloat(String(formValue.frais_pourcentage)) : undefined,
+      frais_commission_id: formValue.frais_commission_id || null,
+      frais_commission_libelle: formValue.frais_commission_libelle?.trim() || undefined,
       client: {
         ...currentCommande.client,
         nom: formValue.nom,

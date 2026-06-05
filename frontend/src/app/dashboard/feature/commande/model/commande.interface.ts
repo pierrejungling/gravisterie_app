@@ -119,6 +119,8 @@ export interface Commande {
   }>;
   prix_unitaire_final?: number; // Prix unitaire final de vente
   frais_pourcentage?: number; // Frais/commission en % pour les ventes
+  frais_commission_id?: string | null;
+  frais_commission_libelle?: string | null;
   personnalisation?: {
     texte?: string;
     police?: string;

@@ -46,6 +46,12 @@ export class Commande {
     @Column({type: 'decimal', nullable: true})
     frais_pourcentage: number | null;
 
+    @Column({type: 'varchar', nullable: true})
+    frais_commission_id: string | null;
+
+    @Column({type: 'varchar', nullable: true})
+    frais_commission_libelle: string | null;
+
     @Column({type: 'integer', nullable: true})
     quantité: number | null;
 

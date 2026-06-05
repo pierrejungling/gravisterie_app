@@ -163,6 +163,8 @@ export class CommandeService {
         commande.prix_final = payload.prix_final ?? null;
         commande.prix_unitaire_final = payload.prix_unitaire_final ?? null;
         commande.frais_pourcentage = payload.frais_pourcentage ?? null;
+        commande.frais_commission_id = payload.frais_commission_id?.trim() || null;
+        commande.frais_commission_libelle = payload.frais_commission_libelle?.trim() || null;
         commande.payé = payload.payé ?? false;
         commande.commentaire_paye = payload.commentaire_paye?.trim() || null;
         commande.attente_reponse = payload.attente_reponse ?? false; // Par défaut false = client attend réponse (rouge)
@@ -354,6 +356,8 @@ export class CommandeService {
             prix_final: commande.prix_final,
             prix_unitaire_final: commande.prix_unitaire_final,
             frais_pourcentage: commande.frais_pourcentage,
+            frais_commission_id: commande.frais_commission_id,
+            frais_commission_libelle: commande.frais_commission_libelle,
             quantité: commande.quantité,
             quantite_realisee: commande.quantite_realisee ?? 0,
             quantite_produit_compteurs: this.parseQuantiteProduitCompteursJson(commande.quantite_produit_compteurs),
@@ -453,6 +457,11 @@ export class CommandeService {
             statut_initial: isVente ? StatutCommande.TERMINE : StatutCommande.EN_ATTENTE_INFORMATION,
             supports: supports as any,
             forcer_nouveau_client: true,
+            prix_final: isVente ? (commande.prix_final ?? undefined) : undefined,
+            prix_unitaire_final: isVente ? (commande.prix_unitaire_final ?? undefined) : undefined,
+            frais_pourcentage: isVente ? (commande.frais_pourcentage ?? undefined) : undefined,
+            frais_commission_id: isVente ? (commande.frais_commission_id ?? undefined) : undefined,
+            frais_commission_libelle: isVente ? (commande.frais_commission_libelle ?? undefined) : undefined,
         };
 
         const nouvelleCommande = await this.ajouterCommande(payload);
@@ -460,6 +469,9 @@ export class CommandeService {
         await this.updateCommande(nouvelleCommande.id_commande, {
             prix_final: commande.prix_final ?? null,
             prix_unitaire_final: commande.prix_unitaire_final ?? null,
+            frais_pourcentage: commande.frais_pourcentage ?? null,
+            frais_commission_id: commande.frais_commission_id ?? null,
+            frais_commission_libelle: commande.frais_commission_libelle ?? null,
             quantite_realisee: 0,
             quantite_produit_compteurs: null,
         });
@@ -502,6 +514,12 @@ export class CommandeService {
         if (payload.frais_pourcentage !== undefined) {
             const value = payload.frais_pourcentage;
             commande.frais_pourcentage = value !== null && value !== undefined ? Number(value) : null;
+        }
+        if (payload.frais_commission_id !== undefined) {
+            commande.frais_commission_id = payload.frais_commission_id?.trim() || null;
+        }
+        if (payload.frais_commission_libelle !== undefined) {
+            commande.frais_commission_libelle = payload.frais_commission_libelle?.trim() || null;
         }
 
         // Mettre à jour les coordonnées du client si fournies
@@ -654,6 +672,8 @@ export class CommandeService {
             prix_final: commandeReloaded.prix_final,
             prix_unitaire_final: commandeReloaded.prix_unitaire_final,
             frais_pourcentage: commandeReloaded.frais_pourcentage,
+            frais_commission_id: commandeReloaded.frais_commission_id,
+            frais_commission_libelle: commandeReloaded.frais_commission_libelle,
             quantité: commandeReloaded.quantité,
             quantite_realisee: commandeReloaded.quantite_realisee ?? 0,
             quantite_produit_compteurs: this.parseQuantiteProduitCompteursJson(commandeReloaded.quantite_produit_compteurs),

@@ -14,6 +14,8 @@ export enum ApiURI {
   AJOUTER_BON = 'bon/ajouter',
   PROCHAIN_NUMERO_BON = 'bon/prochain-numero',
   UPDATE_BON = 'bon',
+  LISTE_FRAIS_COMMISSIONS = 'frais-commission/liste',
+  AJOUTER_FRAIS_COMMISSION = 'frais-commission/ajouter',
 }
 /** URL pour marquer un bon comme utilisé (remplacer :id par id_bon). */
 export const BON_MARQUER_UTILISE = (idBon: string) => `bon/${idBon}/utilise`;

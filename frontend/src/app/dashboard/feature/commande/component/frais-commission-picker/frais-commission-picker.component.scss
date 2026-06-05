@@ -1,0 +1,235 @@
+.frais-commission-picker {
+  width: 100%;
+
+  .input {
+    position: relative;
+    width: 100%;
+  }
+
+  .floating-input,
+  .floating-select {
+    width: 100%;
+    padding: 0.875rem 2.25rem 0.875rem 0.75rem;
+    min-height: 48px;
+    border: 1px solid var(--color-input-border);
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-family: inherit;
+    background: var(--color-secondary);
+    color: var(--color-text);
+    transition: var(--transition);
+    box-sizing: border-box;
+    display: block;
+
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+    }
+
+    &:disabled {
+      background: var(--color-background-light) !important;
+      color: var(--color-text) !important;
+      cursor: not-allowed !important;
+      opacity: 0.95;
+      border-color: var(--color-border);
+    }
+  }
+
+  .floating-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+
+    &::-ms-expand {
+      display: none;
+    }
+
+    option {
+      background: var(--color-secondary);
+      color: var(--color-text);
+    }
+  }
+
+  .floating-label {
+    position: absolute;
+    left: 0.75rem;
+    top: 0.875rem;
+    font-size: 1rem;
+    color: var(--color-text-light);
+    pointer-events: none;
+    transition: var(--transition);
+    background: var(--color-secondary);
+    padding: 0 0.25rem;
+    transform-origin: left top;
+    z-index: 1;
+    max-width: calc(100% - 2.5rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .floating-label.fixed-label {
+    transform: translateY(-1.5rem) scale(0.85);
+    color: var(--color-text);
+  }
+
+  .select-chevron {
+    position: absolute;
+    right: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 0.55rem;
+    height: 0.55rem;
+    border-right: 2px solid var(--color-text-light);
+    border-bottom: 2px solid var(--color-text-light);
+    transform: translateY(-65%) rotate(45deg);
+    pointer-events: none;
+  }
+
+  .input.disabled {
+    .floating-select {
+      background: var(--color-background-light) !important;
+      color: var(--color-text-light) !important;
+      cursor: not-allowed !important;
+      opacity: 0.7;
+      border-color: var(--color-border);
+    }
+
+    .floating-label {
+      color: var(--color-text-light) !important;
+      opacity: 0.95;
+    }
+
+    .select-chevron {
+      opacity: 0.5;
+    }
+  }
+
+  &__hint {
+    margin: 0.35rem 0 0;
+    font-size: 0.85rem;
+    color: var(--color-text-light);
+  }
+
+  &__panel {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed var(--color-border);
+
+    &--nouveau {
+      padding-bottom: 0.25rem;
+    }
+  }
+
+  &__error {
+    margin: 0;
+    color: #dc3545;
+    font-size: 0.9rem;
+  }
+
+  &__save-btn {
+    justify-self: start;
+    margin-top: 0.25rem;
+    padding: 0.55rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-background-light);
+    color: var(--color-text);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+
+    &:hover:not(:disabled) {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
+
+  &__readonly-value {
+    font-size: 1rem;
+    color: var(--color-text);
+  }
+
+  &--readonly {
+    padding-top: 0.25rem;
+  }
+}
+
+:host-context([data-theme='dark']) .frais-commission-picker {
+  .floating-select {
+    background: var(--color-secondary);
+    color: var(--color-text);
+    border-color: var(--color-input-border);
+
+    &:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
+    }
+
+    &:disabled {
+      background: var(--color-background-light) !important;
+      color: var(--color-text-light) !important;
+      border-color: var(--color-border) !important;
+    }
+
+    option {
+      background: var(--color-secondary);
+      color: var(--color-text);
+    }
+  }
+
+  .floating-label {
+    background: var(--color-secondary);
+    color: var(--color-text-light);
+  }
+
+  .floating-label.fixed-label {
+    color: var(--color-text);
+  }
+
+  .select-chevron {
+    border-color: var(--color-text-light);
+  }
+
+  .input.disabled .floating-label {
+    background: transparent;
+  }
+
+  &__save-btn {
+    background: var(--color-background-light);
+    border-color: var(--color-border);
+    color: var(--color-text);
+
+    &:hover:not(:disabled) {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .frais-commission-picker {
+    .floating-select {
+      font-size: 16px;
+      padding: 0.75rem 2.25rem 0.75rem 0.875rem;
+    }
+
+    .floating-label {
+      font-size: 16px;
+    }
+
+    &__panel {
+      gap: 0.5rem;
+    }
+  }
+}

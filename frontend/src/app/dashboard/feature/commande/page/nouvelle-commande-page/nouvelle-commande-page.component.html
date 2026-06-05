@@ -348,7 +348,7 @@
           </div>
         </div>
 
-        <div class="prix-quantity-group" *ngIf="isVente()">
+        <div class="prix-quantity-group prix-quantity-group--vente" *ngIf="isVente()">
           <div class="input-wrapper">
             <app-floating-label-input
               [label]="'Prix final'"
@@ -359,15 +359,14 @@
               suffix="€">
             </app-floating-label-input>
           </div>
-          <div class="input-wrapper">
-            <app-floating-label-input
-              [label]="'Frais / commission (%)'"
-              [control]="get('frais_pourcentage')"
+          <div class="input-wrapper frais-commission-wrapper">
+            <app-frais-commission-picker
               [formGroup]="formGroup"
-              type="number"
-              step="0.01"
-              suffix="%">
-            </app-floating-label-input>
+              [selectionControl]="get('frais_commission_selection')"
+              [idControl]="get('frais_commission_id')"
+              [libelleControl]="get('frais_commission_libelle')"
+              [pourcentageControl]="get('frais_pourcentage')">
+            </app-frais-commission-picker>
           </div>
           <div class="input-wrapper">
             <app-floating-label-input

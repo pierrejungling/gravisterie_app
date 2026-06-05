@@ -164,4 +164,14 @@ export class AjouterCommandePayload {
     @Min(0)
     @Max(100)
     frais_pourcentage?: number;
+
+    @ApiProperty({ required: false, description: 'Identifiant du frais/commission prédéfini sélectionné' })
+    @IsOptional()
+    @IsString()
+    frais_commission_id?: string | null;
+
+    @ApiProperty({ required: false, description: 'Libellé du frais/commission (prédéfini ou saisie libre)' })
+    @IsOptional()
+    @IsString()
+    frais_commission_libelle?: string | null;
 }

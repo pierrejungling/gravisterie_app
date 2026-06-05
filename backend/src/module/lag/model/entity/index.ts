@@ -6,4 +6,5 @@ export * from './personnalisation.entity';
 export * from './support.entity';
 export * from './commande_support.entity';
 export * from './commande_fichier.entity';
+export * from './frais_commission.entity';
 export * from './enum';

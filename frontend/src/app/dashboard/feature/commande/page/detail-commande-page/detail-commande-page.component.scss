@@ -1860,13 +1860,22 @@
 
 .prix-quantity-group {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 1rem;
   margin-bottom: 1.5rem;
 
+  &--vente {
+    grid-template-columns: 1fr 1fr;
+  }
+
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
   }
+}
+
+.input-wrapper.frais-commission-wrapper {
+  min-width: 0;
 }
 
 .pcs-realises-section {

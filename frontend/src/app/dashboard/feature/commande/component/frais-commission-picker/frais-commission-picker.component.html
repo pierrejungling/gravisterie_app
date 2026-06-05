@@ -1,0 +1,79 @@
+<div class="frais-commission-picker" [class.frais-commission-picker--readonly]="readonly">
+  <ng-container *ngIf="!readonly; else readonlyView">
+    <div
+      class="input input--select"
+      [class.disabled]="disabled || selectionControl.disabled"
+      [class.input--focused]="selectFocus">
+      <select
+        class="floating-input floating-select"
+        [formControl]="selectionControl"
+        [disabled]="disabled || selectionControl.disabled"
+        (focus)="selectFocus = true"
+        (blur)="selectFocus = false">
+        <option [ngValue]="null">— Sélectionner —</option>
+        <option
+          *ngFor="let item of fraisCommissions()"
+          [ngValue]="item.id_frais_commission">
+          {{ formatPresetLabel(item) }}
+        </option>
+        <option [ngValue]="FRAIS_COMMISSION_LIBRE">Autre (saisie libre)</option>
+        <option [ngValue]="FRAIS_COMMISSION_NOUVEAU">+ Créer un nouveau frais / commission</option>
+      </select>
+      <label
+        class="floating-label"
+        [class.fixed-label]="selectFocus || hasSelectionValue()">
+        Frais / commission
+      </label>
+      <span class="select-chevron" aria-hidden="true"></span>
+    </div>
+    <p class="frais-commission-picker__hint" *ngIf="isLoading()">Chargement des frais / commissions…</p>
+
+    <div class="frais-commission-picker__panel" *ngIf="isLibreMode()">
+      <app-floating-label-input
+        [label]="'Libellé (libre)'"
+        [control]="libelleControl"
+        [formGroup]="formGroup"
+        type="text">
+      </app-floating-label-input>
+      <app-floating-label-input
+        [label]="'Pourcentage (libre)'"
+        [control]="pourcentageControl"
+        [formGroup]="formGroup"
+        type="number"
+        step="0.01"
+        suffix="%">
+      </app-floating-label-input>
+    </div>
+
+    <div class="frais-commission-picker__panel frais-commission-picker__panel--nouveau" *ngIf="isNouveauMode()">
+      <app-floating-label-input
+        [label]="'Libellé'"
+        [control]="nouveauLibelleControl"
+        [formGroup]="formGroup"
+        type="text">
+      </app-floating-label-input>
+      <app-floating-label-input
+        [label]="'Pourcentage'"
+        [control]="nouveauPourcentageControl"
+        [formGroup]="formGroup"
+        type="number"
+        step="0.01"
+        suffix="%">
+      </app-floating-label-input>
+      <p class="frais-commission-picker__error" *ngIf="createError()">{{ createError() }}</p>
+      <button
+        type="button"
+        class="frais-commission-picker__save-btn"
+        (click)="saveNewPreset()"
+        [disabled]="disabled || isSavingPreset">
+        {{ isSavingPreset ? 'Enregistrement…' : 'Enregistrer dans la liste' }}
+      </button>
+    </div>
+  </ng-container>
+
+  <ng-template #readonlyView>
+    <div class="frais-commission-picker__readonly-value">
+      {{ getDisplayLabel() }}
+    </div>
+  </ng-template>
+</div>

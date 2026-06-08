@@ -1249,55 +1249,65 @@
               </span>
             </div>
             <div class="pcs-realises-input-row">
-              <input
-                *ngIf="isEditMode()"
-                type="number"
-                class="pcs-realises-input"
-                formControlName="quantite_realisee"
-                (change)="onCompteurRealiseOuCibleInputChange()"
-                [min]="0"
-                placeholder="0">
-              <span *ngIf="!isEditMode()" class="pcs-realises-realise-readonly">{{ compteurRealiseAffiche(i) }}</span>
-              <span class="pcs-realises-separator">/</span>
-              <input
-                *ngIf="isEditMode()"
-                type="number"
-                class="pcs-realises-input pcs-realises-cible-input"
-                formControlName="quantite_cible"
-                [min]="1"
-                (change)="onCompteurRealiseOuCibleInputChange()" />
-              <span *ngIf="!isEditMode()" class="pcs-realises-total pcs-realises-cible-readonly">{{ compteurCibleAffiche(i) }}</span>
-              <div class="pcs-realises-buttons" *ngIf="isQuantiteRealiseeEditable()">
-                <button
-                  type="button"
-                  class="pcs-btn pcs-btn-minus"
-                  (click)="decrementCompteur(i)"
-                  title="Diminuer">−</button>
-                <button
-                  type="button"
-                  class="pcs-btn pcs-btn-plus"
-                  (click)="incrementCompteur(i)"
-                  title="Augmenter">+</button>
+              <div class="pcs-realises-counter-controls">
+                <input
+                  *ngIf="isEditMode()"
+                  type="number"
+                  class="pcs-realises-input"
+                  formControlName="quantite_realisee"
+                  (change)="onCompteurRealiseOuCibleInputChange()"
+                  [min]="0"
+                  placeholder="0">
+                <span *ngIf="!isEditMode()" class="pcs-realises-realise-readonly">{{ compteurRealiseAffiche(i) }}</span>
+                <span class="pcs-realises-separator">/</span>
+                <input
+                  *ngIf="isEditMode()"
+                  type="number"
+                  class="pcs-realises-input pcs-realises-cible-input"
+                  formControlName="quantite_cible"
+                  [min]="1"
+                  (change)="onCompteurRealiseOuCibleInputChange()" />
+                <span *ngIf="!isEditMode()" class="pcs-realises-total pcs-realises-cible-readonly">{{ compteurCibleAffiche(i) }}</span>
+                <div class="pcs-realises-buttons" *ngIf="isQuantiteRealiseeEditable()">
+                  <button
+                    type="button"
+                    class="pcs-btn pcs-btn-minus"
+                    (click)="decrementCompteur(i)"
+                    title="Diminuer">−</button>
+                  <button
+                    type="button"
+                    class="pcs-btn pcs-btn-plus"
+                    (click)="incrementCompteur(i)"
+                    title="Augmenter">+</button>
+                </div>
               </div>
             </div>
             <!-- Barre de progression (réalisé / objectif) -->
-            <div
-              class="pcs-compteur-progress"
-              role="progressbar"
-              [attr.aria-valuenow]="compteurRealiseAffiche(i)"
-              aria-valuemin="0"
-              [attr.aria-valuemax]="compteurProgressAriaMax(i)"
-              [attr.aria-label]="
-                'Avancement : ' +
-                compteurRealiseAffiche(i) +
-                ' sur ' +
-                compteurCibleAffiche(i)
-              ">
-              <div class="pcs-compteur-progress__track">
-                <div
-                  class="pcs-compteur-progress__fill"
-                  [style.width.%]="compteurProgressPercent(i)"></div>
+            <div class="pcs-compteur-progress-wrap">
+              <div
+                class="pcs-compteur-progress"
+                role="progressbar"
+                [attr.aria-valuenow]="compteurRealiseAffiche(i)"
+                aria-valuemin="0"
+                [attr.aria-valuemax]="compteurProgressAriaMax(i)"
+                [attr.aria-label]="
+                  'Avancement : ' +
+                  compteurRealiseAffiche(i) +
+                  ' sur ' +
+                  compteurCibleAffiche(i)
+                ">
+                <div class="pcs-compteur-progress__track">
+                  <div
+                    class="pcs-compteur-progress__fill"
+                    [style.width.%]="compteurProgressPercent(i)"></div>
+                </div>
               </div>
+              <span
+                *ngIf="!compteurQuantiteComplete(i)"
+                class="pcs-compteur-restant"
+                [attr.aria-label]="'Restant : ' + compteurQuantiteRestante(i)">
+                restant : {{ compteurQuantiteRestante(i) }}
+              </span>
             </div>
             <div class="pcs-realises-add-row pcs-realises-add-row--compteur" *ngIf="isQuantiteRealiseeEditable()">
               <input

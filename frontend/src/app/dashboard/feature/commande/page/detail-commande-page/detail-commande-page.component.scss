@@ -1927,6 +1927,13 @@
     align-items: center;
     gap: 0.5rem;
 
+    .pcs-realises-counter-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 0;
+    }
+
     .pcs-realises-input {
       width: 80px;
       padding: 0.6rem 0.75rem;
@@ -2070,10 +2077,10 @@
     border-radius: 8px;
     padding: 0.55rem 0.85rem 0.85rem;
     margin-bottom: 0.85rem;
-    border-bottom: none;
 
     &:last-child {
       padding-bottom: 0.85rem;
+      border-bottom: 1px solid var(--btn-save-border);
     }
   }
 
@@ -2179,7 +2186,7 @@
     order: 3;
   }
 
-  > .pcs-compteur-progress {
+  > .pcs-compteur-progress-wrap {
     order: 4;
   }
 
@@ -2188,7 +2195,7 @@
   }
 
   @media (min-width: 992px) {
-    > .pcs-compteur-progress {
+    > .pcs-compteur-progress-wrap {
       order: 3;
     }
 
@@ -2198,12 +2205,33 @@
   }
 }
 
+.pcs-compteur-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  width: 100%;
+  margin-top: 0.35rem;
+  box-sizing: border-box;
+}
+
+.pcs-compteur-restant {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--color-text-light);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  opacity: 0.85;
+  line-height: 1.2;
+  padding-left: 0.1rem;
+}
+
 /* Barre de progression par compteur (toutes largeurs d’écran) */
 .pcs-compteur-progress {
   display: block;
   width: 100%;
   max-width: 100%;
-  margin-top: 0.35rem;
+  margin-top: 0;
   box-sizing: border-box;
 }
 

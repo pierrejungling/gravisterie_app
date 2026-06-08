@@ -1640,6 +1640,11 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return Number.isFinite(n) && n >= 0 ? n : 0;
   }
 
+  /** Quantité restante à produire pour ce compteur (objectif − réalisé, min. 0). */
+  compteurQuantiteRestante(index: number): number {
+    return Math.max(0, this.compteurCibleAffiche(index) - this.compteurRealiseAffiche(index));
+  }
+
   /** Réalisé ≥ objectif (tolère les valeurs en cours de saisie tant qu’elles sont cohérentes). */
   compteurQuantiteComplete(index: number): boolean {
     const g = this.getCompteurGroup(index);

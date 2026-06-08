@@ -1,6 +1,7 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { concatMap, from, last } from 'rxjs';
 import { HeaderComponent } from '@shared';
 import { ApiService } from '@api';
 import { ApiURI } from '@api';
@@ -21,6 +22,18 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   private scrollRestored: boolean = false;
   /** Ne décider (fermer tout / restaurer) qu'au premier chargement ; après, garder l'état des sections. */
   private initialExpandedStateApplied: boolean = false;
+  private draggedRecently: boolean = false;
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  private static readonly DRAG_COMMANDE_ID = 'application/x-gravisterie-commande-id';
+  private static readonly DRAG_SOURCE_STATUT = 'application/x-gravisterie-source-statut';
+
+  /** Drag & drop (vue desktop) */
+  dragCommandeId: string | null = null;
+  dragSourceStatut: StatutCommande | null = null;
+  dragOverStatut: WritableSignal<StatutCommande | null> = signal(null);
+  dragOverFinalsGroup: WritableSignal<boolean> = signal(false);
+  isStatutMoveInProgress: boolean = false;
   
   @ViewChild('tableScroll', { static: false }) tableScrollElement?: ElementRef<HTMLDivElement>;
   @ViewChild('mobileContainer', { static: false }) mobileContainerElement?: ElementRef<HTMLDivElement>;
@@ -44,6 +57,26 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     StatutCommande.A_METTRE_EN_LIGNE,
     StatutCommande.A_FACTURER,
     StatutCommande.DEMANDE_AVIS,
+  ];
+
+  private readonly statutsFinaux: StatutCommande[] = [
+    StatutCommande.A_LIVRER,
+    StatutCommande.A_METTRE_EN_LIGNE,
+    StatutCommande.A_FACTURER,
+    StatutCommande.DEMANDE_AVIS,
+  ];
+
+  /** Première colonne du bloc parallèle (Livraison → Avis). */
+  readonly firstFinalStatut: StatutCommande = StatutCommande.A_LIVRER;
+  /** Dernière colonne du bloc parallèle. */
+  readonly lastFinalStatut: StatutCommande = StatutCommande.DEMANDE_AVIS;
+
+  private readonly ordreEtapes: StatutCommande[] = [
+    StatutCommande.EN_ATTENTE_INFORMATION,
+    StatutCommande.A_MODELLISER_PREPARER,
+    StatutCommande.A_GRAVER,
+    StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE,
+    StatutCommande.A_PRENDRE_EN_PHOTO,
   ];
 
   // Labels pour chaque statut (version courte pour l'affichage dans la liste)
@@ -361,12 +394,9 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
       c.statut_commande !== StatutCommande.TERMINE && c.statut_commande !== StatutCommande.ANNULEE
     );
     
-    // Pour les 4 dernières colonnes, vérifier aussi statuts_actifs
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
-    
     let commandesFiltrees: Commande[] = [];
     
-    if (statutsFinaux.includes(statut)) {
+    if (this.statutsFinaux.includes(statut)) {
       // Afficher les commandes qui ont ce statut dans statuts_actifs
       commandesFiltrees = commandesNonTerminees.filter(c => 
         c.statuts_actifs && c.statuts_actifs.includes(statut)
@@ -423,8 +453,6 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   onCheckboxChange(commande: Commande, statut: StatutCommande): void {
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
-    
     // Mettre à jour localement immédiatement pour un feedback instantané
     const commandes = [...this.commandes()];
     const index = commandes.findIndex(c => c.id_commande === commande.id_commande);
@@ -432,7 +460,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     if (index !== -1) {
       const updatedCommande = { ...commandes[index] };
       
-      if (statutsFinaux.includes(statut)) {
+      if (this.statutsFinaux.includes(statut)) {
         // Pour les statuts finaux : retirer de statuts_actifs (marquer comme terminé)
         if (updatedCommande.statuts_actifs) {
           updatedCommande.statuts_actifs = updatedCommande.statuts_actifs.filter(s => s !== statut);
@@ -441,7 +469,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
           }
           
           // Si tous les 4 statuts finaux sont complétés, passer à TERMINE
-          const tousCompletes = statutsFinaux.every(s => 
+          const tousCompletes = this.statutsFinaux.every(s => 
             !updatedCommande.statuts_actifs || !updatedCommande.statuts_actifs.includes(s)
           );
           
@@ -452,19 +480,12 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
         }
       } else {
         // Pour les autres statuts : passer au statut suivant dans l'ordre
-        const ordreEtapes: StatutCommande[] = [
-          StatutCommande.EN_ATTENTE_INFORMATION,
-          StatutCommande.A_MODELLISER_PREPARER,
-          StatutCommande.A_GRAVER,
-          StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE,
-          StatutCommande.A_PRENDRE_EN_PHOTO,
-        ];
-        const currentIndex = ordreEtapes.indexOf(statut);
-        if (currentIndex !== -1 && currentIndex < ordreEtapes.length - 1) {
-          updatedCommande.statut_commande = ordreEtapes[currentIndex + 1];
+        const currentIndex = this.ordreEtapes.indexOf(statut);
+        if (currentIndex !== -1 && currentIndex < this.ordreEtapes.length - 1) {
+          updatedCommande.statut_commande = this.ordreEtapes[currentIndex + 1];
         } else if (statut === StatutCommande.A_PRENDRE_EN_PHOTO) {
           // Si on termine "À Prendre en photo", créer statuts_actifs avec les 4 statuts finaux
-          updatedCommande.statuts_actifs = [...statutsFinaux];
+          updatedCommande.statuts_actifs = [...this.statutsFinaux];
         }
       }
       
@@ -520,7 +541,6 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
         // Sinon, revenir au statut précédent
         updatedCommande.statut_commande = etapePrecedente;
         // Si on revient en arrière depuis les statuts finaux, retirer statuts_actifs
-        const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
         if (updatedCommande.statuts_actifs && updatedCommande.statuts_actifs.length > 0) {
           updatedCommande.statuts_actifs = undefined;
         }
@@ -547,9 +567,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   isCommandeInStatut(commande: Commande, statut: StatutCommande): boolean {
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
-    
-    if (statutsFinaux.includes(statut)) {
+    if (this.statutsFinaux.includes(statut)) {
       // Pour les 3 dernières colonnes, vérifier si le statut est dans statuts_actifs
       return commande.statuts_actifs?.includes(statut) || false;
     }
@@ -566,40 +584,26 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   getEtapesPrecedentes(commande: Commande, statutActuel: StatutCommande): StatutCommande[] {
-    // Ordre des étapes dans le workflow
-    const ordreEtapes: StatutCommande[] = [
-      StatutCommande.EN_ATTENTE_INFORMATION,
-      StatutCommande.A_MODELLISER_PREPARER,
-      StatutCommande.A_GRAVER,
-      StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE,
-      StatutCommande.A_PRENDRE_EN_PHOTO,
-    ];
-
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
-    
     // Pour les 4 dernières colonnes, toutes les étapes précédentes sont complétées
-    if (statutsFinaux.includes(statutActuel)) {
-      return ordreEtapes; // Toutes les étapes sont complétées, incluant "À Prendre en photo"
+    if (this.statutsFinaux.includes(statutActuel)) {
+      return this.ordreEtapes; // Toutes les étapes sont complétées, incluant "À Prendre en photo"
     }
 
     // Trouver l'index de l'étape actuelle
-    const indexActuel = ordreEtapes.indexOf(statutActuel);
+    const indexActuel = this.ordreEtapes.indexOf(statutActuel);
     
     // Si l'étape actuelle n'est pas dans l'ordre, retourner toutes les étapes
     if (indexActuel === -1) {
-      return ordreEtapes;
+      return this.ordreEtapes;
     }
 
     // Retourner toutes les étapes précédentes (non incluses)
-    return ordreEtapes.slice(0, indexActuel);
+    return this.ordreEtapes.slice(0, indexActuel);
   }
 
   isEtapePrecedente(commande: Commande, etapePrecedente: StatutCommande, statutActuel: StatutCommande): boolean {
-    // Vérifier si cette étape précédente peut être décochée pour revenir en arrière
-    const statutsFinaux = [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS];
-    
     // Si on est dans les colonnes finales et qu'on décoche "À Prendre en photo", c'est spécial
-    if (statutsFinaux.includes(statutActuel) && etapePrecedente === StatutCommande.A_PRENDRE_EN_PHOTO) {
+    if (this.statutsFinaux.includes(statutActuel) && etapePrecedente === StatutCommande.A_PRENDRE_EN_PHOTO) {
       return true; // On peut décocher "À Prendre en photo" pour revenir en arrière
     }
     return true; // Par défaut, toutes les étapes précédentes peuvent être décochées
@@ -702,6 +706,9 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   onCommandeClick(commande: Commande): void {
+    if (this.draggedRecently) {
+      return;
+    }
     try {
       sessionStorage.setItem(this.restoreExpandedKey, '1');
       sessionStorage.setItem(this.detailReturnPageKey, 'en-cours');
@@ -736,6 +743,306 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
         // Revert la valeur en cas d'erreur
         target.checked = !attenteReponseValue;
       }
+    });
+  }
+
+  isCommandeDragging(commande: Commande): boolean {
+    return this.dragCommandeId === commande.id_commande;
+  }
+
+  isFinalStatut(statut: StatutCommande): boolean {
+    return this.statutsFinaux.includes(statut);
+  }
+
+  isColumnDropHighlighted(statut: StatutCommande): boolean {
+    if (this.isFinalStatut(statut)) {
+      return this.dragOverFinalsGroup() && this.isFinalsGroupDropValid();
+    }
+    return this.dragOverStatut() === statut && this.isDropTargetValid(statut);
+  }
+
+  isFinalsGroupDropValid(): boolean {
+    if (!this.dragCommandeId || !this.dragSourceStatut || this.isStatutMoveInProgress) {
+      return false;
+    }
+    // Déjà dans le bloc parallèle : pas de zone de drop verte (comme sa propre colonne linéaire)
+    if (this.isFinalStatut(this.dragSourceStatut)) {
+      return false;
+    }
+    return true;
+  }
+
+  isDropTargetValid(statut: StatutCommande): boolean {
+    if (!this.dragCommandeId || !this.dragSourceStatut || this.isStatutMoveInProgress) {
+      return false;
+    }
+    const commande = this.commandes().find(c => c.id_commande === this.dragCommandeId);
+    if (!commande) {
+      return false;
+    }
+    return this.canDropCommande(commande, this.dragSourceStatut, statut);
+  }
+
+  canDropCommande(commande: Commande, sourceStatut: StatutCommande, targetStatut: StatutCommande): boolean {
+    if (sourceStatut === targetStatut) {
+      return false;
+    }
+    if (!this.isCommandeInStatut(commande, sourceStatut)) {
+      return false;
+    }
+    return true;
+  }
+
+  onCommandeDragStart(event: DragEvent, commande: Commande, sourceStatut: StatutCommande): void {
+    if (this.isStatutMoveInProgress) {
+      event.preventDefault();
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('input, button, .toggle-switch-small, .commande-checkbox, label.checkbox-label')) {
+      event.preventDefault();
+      return;
+    }
+
+    this.draggedRecently = true;
+    this.dragCommandeId = commande.id_commande;
+    this.dragSourceStatut = sourceStatut;
+
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', commande.id_commande);
+      event.dataTransfer.setData(CommandesEnCoursPageComponent.DRAG_COMMANDE_ID, commande.id_commande);
+      event.dataTransfer.setData(CommandesEnCoursPageComponent.DRAG_SOURCE_STATUT, sourceStatut);
+    }
+
+    this.cdr.detectChanges();
+  }
+
+  onCommandeDragEnd(): void {
+    this.dragCommandeId = null;
+    this.dragSourceStatut = null;
+    this.dragOverStatut.set(null);
+    this.dragOverFinalsGroup.set(false);
+    this.cdr.detectChanges();
+    setTimeout(() => {
+      this.draggedRecently = false;
+    }, 150);
+  }
+
+  onColumnDragEnter(event: DragEvent, statut: StatutCommande): void {
+    if (!this.isDragActive()) {
+      return;
+    }
+    event.preventDefault();
+    this.setDragOverZone(statut);
+  }
+
+  onColumnDragOver(event: DragEvent, statut: StatutCommande): void {
+    if (!this.isDragActive()) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const canDrop = this.isFinalStatut(statut)
+      ? this.isFinalsGroupDropValid()
+      : this.isDropTargetValid(statut);
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = canDrop ? 'move' : 'none';
+    }
+    this.setDragOverZone(statut);
+  }
+
+  onColumnDragLeave(event: DragEvent, statut: StatutCommande): void {
+    const related = event.relatedTarget as Node | null;
+    const currentTarget = event.currentTarget as HTMLElement;
+    if (related && currentTarget.contains(related)) {
+      return;
+    }
+    if (related instanceof Element && related.closest('[data-drop-zone="finals"]')) {
+      return;
+    }
+    if (this.isFinalStatut(statut)) {
+      this.dragOverFinalsGroup.set(false);
+    } else if (this.dragOverStatut() === statut) {
+      this.dragOverStatut.set(null);
+    }
+    this.cdr.detectChanges();
+  }
+
+  onColumnDrop(event: DragEvent, targetStatut: StatutCommande): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragOverStatut.set(null);
+    this.dragOverFinalsGroup.set(false);
+
+    const commandeId = event.dataTransfer?.getData(CommandesEnCoursPageComponent.DRAG_COMMANDE_ID)
+      || event.dataTransfer?.getData('text/plain')
+      || this.dragCommandeId;
+    const sourceStatut = (event.dataTransfer?.getData(CommandesEnCoursPageComponent.DRAG_SOURCE_STATUT) as StatutCommande)
+      || this.dragSourceStatut;
+
+    this.onCommandeDragEnd();
+
+    if (!commandeId || !sourceStatut || this.isStatutMoveInProgress) {
+      return;
+    }
+
+    const commande = this.commandes().find(c => c.id_commande === commandeId);
+    const resolvedTarget = this.resolveDropTargetStatut(sourceStatut, targetStatut);
+    if (!commande || !this.canDropCommande(commande, sourceStatut, resolvedTarget)) {
+      return;
+    }
+
+    this.moveCommandeToStatut(commande, resolvedTarget);
+  }
+
+  private resolveDropTargetStatut(sourceStatut: StatutCommande, targetStatut: StatutCommande): StatutCommande {
+    if (!this.isFinalStatut(targetStatut)) {
+      return targetStatut;
+    }
+    if (!this.isFinalStatut(sourceStatut)) {
+      return this.firstFinalStatut;
+    }
+    return targetStatut;
+  }
+
+  private isDragActive(): boolean {
+    return !!this.dragCommandeId && !!this.dragSourceStatut && !this.isStatutMoveInProgress;
+  }
+
+  private setDragOverZone(statut: StatutCommande): void {
+    if (this.isFinalStatut(statut)) {
+      if (!this.dragOverFinalsGroup()) {
+        this.dragOverFinalsGroup.set(true);
+        this.dragOverStatut.set(null);
+        this.cdr.detectChanges();
+      }
+      return;
+    }
+    if (this.dragOverFinalsGroup()) {
+      this.dragOverFinalsGroup.set(false);
+    }
+    this.setDragOverStatut(statut);
+  }
+
+  private setDragOverStatut(statut: StatutCommande): void {
+    if (this.dragOverStatut() !== statut) {
+      this.dragOverStatut.set(statut);
+      this.cdr.detectChanges();
+    }
+  }
+
+  private buildTargetStateForStatut(targetStatut: StatutCommande): Pick<Commande, 'statut_commande' | 'statuts_actifs'> {
+    const targetIdx = this.statuts.indexOf(targetStatut);
+
+    if (targetIdx <= 4) {
+      return {
+        statut_commande: targetStatut,
+        statuts_actifs: undefined,
+      };
+    }
+
+    const desiredActifs = this.statutsFinaux.slice(targetIdx - 5);
+    if (desiredActifs.length === 0) {
+      return {
+        statut_commande: StatutCommande.TERMINE,
+        statuts_actifs: undefined,
+      };
+    }
+
+    return {
+      statut_commande: StatutCommande.A_PRENDRE_EN_PHOTO,
+      statuts_actifs: desiredActifs,
+    };
+  }
+
+  private buildApiCallsForMove(commande: Commande, targetStatut: StatutCommande): StatutCommande[] {
+    const targetIdx = this.statuts.indexOf(targetStatut);
+    const calls: StatutCommande[] = [];
+    const hasActifs = (commande.statuts_actifs?.length ?? 0) > 0;
+
+    if (targetIdx <= 4) {
+      calls.push(targetStatut);
+      return calls;
+    }
+
+    const desiredActifs = this.statutsFinaux.slice(targetIdx - 5);
+
+    if (!hasActifs) {
+      if (commande.statut_commande !== StatutCommande.A_PRENDRE_EN_PHOTO) {
+        calls.push(StatutCommande.A_PRENDRE_EN_PHOTO);
+      }
+      calls.push(StatutCommande.A_PRENDRE_EN_PHOTO);
+    }
+
+    let simulatedActifs = hasActifs ? [...(commande.statuts_actifs ?? [])] : [...this.statutsFinaux];
+
+    for (const final of this.statutsFinaux) {
+      if (!desiredActifs.includes(final) && simulatedActifs.includes(final)) {
+        calls.push(final);
+        simulatedActifs = simulatedActifs.filter(s => s !== final);
+      }
+    }
+
+    for (const final of this.statutsFinaux) {
+      if (desiredActifs.includes(final) && !simulatedActifs.includes(final)) {
+        calls.push(final);
+        simulatedActifs.push(final);
+      }
+    }
+
+    return calls;
+  }
+
+  private moveCommandeToStatut(commande: Commande, targetStatut: StatutCommande): void {
+    const apiCalls = this.buildApiCallsForMove(commande, targetStatut);
+    if (apiCalls.length === 0) {
+      return;
+    }
+
+    const targetState = this.buildTargetStateForStatut(targetStatut);
+    const commandes = [...this.commandes()];
+    const index = commandes.findIndex(c => c.id_commande === commande.id_commande);
+
+    if (index !== -1) {
+      commandes[index] = {
+        ...commandes[index],
+        ...targetState,
+      };
+      this.commandes.set(commandes);
+    }
+
+    this.isStatutMoveInProgress = true;
+
+    from(apiCalls).pipe(
+      concatMap(statut =>
+        this.apiService.put(ApiURI.UPDATE_STATUT_COMMANDE, {
+          id_commande: commande.id_commande,
+          statut,
+        })
+      ),
+      last()
+    ).subscribe({
+      next: (response) => {
+        if (response?.result && response?.data) {
+          const updated = [...this.commandes()];
+          const idx = updated.findIndex(c => c.id_commande === commande.id_commande);
+          if (idx !== -1) {
+            updated[idx] = { ...updated[idx], ...response.data };
+            this.commandes.set(updated);
+          }
+        }
+      },
+      error: (error) => {
+        console.error('Erreur lors du déplacement de la commande:', error);
+        this.isStatutMoveInProgress = false;
+        this.loadCommandes();
+      },
+      complete: () => {
+        this.isStatutMoveInProgress = false;
+        this.loadCommandes();
+      },
     });
   }
 }

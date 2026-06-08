@@ -572,15 +572,14 @@
   border: 1px solid var(--color-input-border);
   border-radius: 6px;
   padding: 1rem;
-  padding-top: 2.45rem; // Espace en haut pour "✓ payé" + marge titre
-  padding-bottom: 2.5rem; // Espace en bas pour le toggle
+  padding-top: 2.45rem;
+  padding-bottom: 2.5rem;
 
   &.has-prix {
-    padding-bottom: 3.6rem; // Ligne toggle + ligne prix
+    padding-bottom: 3.6rem;
   }
 
-  cursor: grab;
-  -webkit-user-drag: element;
+  cursor: pointer;
   transition: opacity 0.15s ease, filter 0.15s ease, box-shadow 0.3s ease, transform 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -608,12 +607,16 @@
 }
 
 .commande-drag-body {
-  cursor: inherit;
+  cursor: grab;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
   position: relative;
   z-index: 1;
+
+  &:active {
+    cursor: grabbing;
+  }
 }
 
 .commande-card:hover,
@@ -623,6 +626,7 @@
 
 .commande-card.is-dragging {
   z-index: 200;
+  pointer-events: none;
   cursor: grabbing;
 }
 

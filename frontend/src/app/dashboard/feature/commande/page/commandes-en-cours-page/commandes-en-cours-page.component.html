@@ -34,10 +34,7 @@
                 [class.statut-column--final-last]="statut === lastFinalStatut"
                 [class.drop-target-valid]="isColumnDropHighlighted(statut)"
                 [attr.data-drop-zone]="isFinalStatut(statut) ? 'finals' : statut"
-                (dragenter)="onColumnDragEnter($event, statut)"
-                (dragover)="onColumnDragOver($event, statut)"
-                (dragleave)="onColumnDragLeave($event, statut)"
-                (drop)="onColumnDrop($event, statut)">
+                [attr.data-statut-drop]="statut">
                 <div class="statut-header-content">
                   <span class="statut-emoji">{{ statutEmojis[statut] }}</span>
                   <span class="statut-label">{{ getStatutLabel(statut) }}</span>
@@ -55,10 +52,7 @@
                 [class.statut-column--final-last]="statut === lastFinalStatut"
                 [class.drop-target-valid]="isColumnDropHighlighted(statut)"
                 [attr.data-drop-zone]="isFinalStatut(statut) ? 'finals' : statut"
-                (dragenter)="onColumnDragEnter($event, statut)"
-                (dragover)="onColumnDragOver($event, statut)"
-                (dragleave)="onColumnDragLeave($event, statut)"
-                (drop)="onColumnDrop($event, statut)">
+                [attr.data-statut-drop]="statut">
                 <div class="commande-cards">
                   <div
                     *ngFor="let commande of getCommandesByStatut(statut); trackBy: trackByCommandeId; let cardIndex = index"
@@ -69,12 +63,11 @@
                     [class.deadline-warning]="getDeadlineStatus(commande) === 'warning'"
                     [class.deadline-danger]="getDeadlineStatus(commande) === 'danger'"
                     [title]="commande.produit || 'Commande #' + commande.id_commande"
-                    draggable="true"
-                    (dragstart)="onCommandeDragStart($event, commande, statut)"
-                    (dragend)="onCommandeDragEnd()"
                     (click)="onCommandeClick(commande)">
                     <span class="payment-indicator" *ngIf="commande['payé']">✓ payé</span>
-                    <div class="commande-drag-body">
+                    <div
+                      class="commande-drag-body"
+                      (pointerdown)="onCardPointerDown($event, commande, statut)">
                       <div class="commande-header">
                         <h3 class="commande-title">
                           {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}

@@ -90,6 +90,11 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+body.commande-pointer-drag-active {
+  user-select: none;
+  cursor: grabbing !important;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;

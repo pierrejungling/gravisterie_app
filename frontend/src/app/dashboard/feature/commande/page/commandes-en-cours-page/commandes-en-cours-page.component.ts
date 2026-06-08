@@ -24,9 +24,25 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   private initialExpandedStateApplied: boolean = false;
   private draggedRecently: boolean = false;
   private readonly cdr = inject(ChangeDetectorRef);
+  private static readonly POINTER_DRAG_THRESHOLD_PX = 6;
 
-  private static readonly DRAG_COMMANDE_ID = 'application/x-gravisterie-commande-id';
-  private static readonly DRAG_SOURCE_STATUT = 'application/x-gravisterie-source-statut';
+  private pointerDrag: {
+    commande: Commande;
+    sourceStatut: StatutCommande;
+    startX: number;
+    startY: number;
+    active: boolean;
+    pointerId: number;
+    captureElement: HTMLElement;
+  } | null = null;
+
+  private readonly onDocumentPointerMove = (event: PointerEvent): void => {
+    this.handleDocumentPointerMove(event);
+  };
+
+  private readonly onDocumentPointerUp = (event: PointerEvent): void => {
+    this.handleDocumentPointerUp(event);
+  };
 
   /** Drag & drop (vue desktop) */
   dragCommandeId: string | null = null;
@@ -294,6 +310,8 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
 
   ngOnDestroy(): void {
     window.removeEventListener('beforeunload', this.onBeforeUnload);
+    this.cleanupPointerDragListeners();
+    this.resetDragState(false);
   }
 
   private onBeforeUnload = (): void => {
@@ -793,116 +811,151 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     return true;
   }
 
-  onCommandeDragStart(event: DragEvent, commande: Commande, sourceStatut: StatutCommande): void {
-    if (this.isStatutMoveInProgress) {
-      event.preventDefault();
+  onCardPointerDown(event: PointerEvent, commande: Commande, sourceStatut: StatutCommande): void {
+    if (this.isStatutMoveInProgress || event.button !== 0 || this.pointerDrag) {
       return;
     }
 
     const target = event.target as HTMLElement | null;
-    if (target?.closest(
-      'input, button, .toggle-switch-small, .commande-checkbox, label.checkbox-label, .commande-actions, .attente-reponse-toggle-bottom-left, .prix-indicator'
-    )) {
-      event.preventDefault();
+    if (this.isInteractiveDragTarget(target)) {
       return;
     }
 
-    this.draggedRecently = true;
-    this.dragCommandeId = commande.id_commande;
-    this.dragSourceStatut = sourceStatut;
+    const captureElement = event.currentTarget as HTMLElement;
+    this.pointerDrag = {
+      commande,
+      sourceStatut,
+      startX: event.clientX,
+      startY: event.clientY,
+      active: false,
+      pointerId: event.pointerId,
+      captureElement,
+    };
 
-    const cardElement = (event.currentTarget as HTMLElement);
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', commande.id_commande);
-      event.dataTransfer.setData(CommandesEnCoursPageComponent.DRAG_COMMANDE_ID, commande.id_commande);
-      event.dataTransfer.setData(CommandesEnCoursPageComponent.DRAG_SOURCE_STATUT, sourceStatut);
-      if (cardElement) {
-        event.dataTransfer.setDragImage(cardElement, Math.min(cardElement.offsetWidth / 2, 120), 24);
+    captureElement.setPointerCapture(event.pointerId);
+    document.addEventListener('pointermove', this.onDocumentPointerMove, { passive: false });
+    document.addEventListener('pointerup', this.onDocumentPointerUp);
+    document.addEventListener('pointercancel', this.onDocumentPointerUp);
+  }
+
+  private handleDocumentPointerMove(event: PointerEvent): void {
+    if (!this.pointerDrag || event.pointerId !== this.pointerDrag.pointerId) {
+      return;
+    }
+
+    const dx = event.clientX - this.pointerDrag.startX;
+    const dy = event.clientY - this.pointerDrag.startY;
+
+    if (!this.pointerDrag.active) {
+      if ((dx * dx) + (dy * dy) < CommandesEnCoursPageComponent.POINTER_DRAG_THRESHOLD_PX ** 2) {
+        return;
+      }
+      this.activatePointerDrag();
+    }
+
+    event.preventDefault();
+    this.updateDropZoneFromPoint(event.clientX, event.clientY);
+  }
+
+  private handleDocumentPointerUp(event: PointerEvent): void {
+    if (!this.pointerDrag || event.pointerId !== this.pointerDrag.pointerId) {
+      return;
+    }
+
+    const pending = this.pointerDrag;
+    this.releasePointerCapture(pending.captureElement, pending.pointerId);
+    this.cleanupPointerDragListeners();
+
+    if (pending.active) {
+      const targetStatut = this.resolveStatutFromPoint(event.clientX, event.clientY);
+      this.resetDragState(true);
+
+      if (targetStatut && !this.isStatutMoveInProgress) {
+        const resolvedTarget = this.resolveDropTargetStatut(pending.sourceStatut, targetStatut);
+        if (this.canDropCommande(pending.commande, pending.sourceStatut, resolvedTarget)) {
+          this.moveCommandeToStatut(pending.commande, resolvedTarget);
+        }
       }
     }
 
+    this.pointerDrag = null;
+  }
+
+  private activatePointerDrag(): void {
+    if (!this.pointerDrag || this.pointerDrag.active) {
+      return;
+    }
+
+    this.pointerDrag.active = true;
+    this.draggedRecently = true;
+    this.dragCommandeId = this.pointerDrag.commande.id_commande;
+    this.dragSourceStatut = this.pointerDrag.sourceStatut;
     this.lockTableScroll(true);
+    document.body.classList.add('commande-pointer-drag-active');
     this.cdr.detectChanges();
   }
 
-  onCommandeDragEnd(): void {
+  private updateDropZoneFromPoint(clientX: number, clientY: number): void {
+    const statut = this.resolveStatutFromPoint(clientX, clientY);
+    if (statut) {
+      this.setDragOverZone(statut);
+      return;
+    }
+
+    if (this.dragOverStatut() !== null || this.dragOverFinalsGroup()) {
+      this.dragOverStatut.set(null);
+      this.dragOverFinalsGroup.set(false);
+      this.cdr.detectChanges();
+    }
+  }
+
+  private resolveStatutFromPoint(clientX: number, clientY: number): StatutCommande | null {
+    const stack = document.elementsFromPoint(clientX, clientY);
+    for (const node of stack) {
+      if (!(node instanceof Element)) {
+        continue;
+      }
+      const zone = node.closest('[data-statut-drop]') as HTMLElement | null;
+      const statut = zone?.dataset['statutDrop'] as StatutCommande | undefined;
+      if (statut && this.statuts.includes(statut)) {
+        return statut;
+      }
+    }
+    return null;
+  }
+
+  private isInteractiveDragTarget(target: HTMLElement | null): boolean {
+    return !!target?.closest(
+      'input, button, .toggle-switch-small, .commande-checkbox, label.checkbox-label, .commande-actions, .attente-reponse-toggle-bottom-left, .prix-indicator'
+    );
+  }
+
+  private releasePointerCapture(element: HTMLElement, pointerId: number): void {
+    if (element.hasPointerCapture(pointerId)) {
+      element.releasePointerCapture(pointerId);
+    }
+  }
+
+  private cleanupPointerDragListeners(): void {
+    document.removeEventListener('pointermove', this.onDocumentPointerMove);
+    document.removeEventListener('pointerup', this.onDocumentPointerUp);
+    document.removeEventListener('pointercancel', this.onDocumentPointerUp);
+  }
+
+  private resetDragState(markDraggedRecently: boolean): void {
     this.lockTableScroll(false);
+    document.body.classList.remove('commande-pointer-drag-active');
     this.dragCommandeId = null;
     this.dragSourceStatut = null;
     this.dragOverStatut.set(null);
     this.dragOverFinalsGroup.set(false);
     this.cdr.detectChanges();
-    setTimeout(() => {
-      this.draggedRecently = false;
-    }, 150);
-  }
 
-  onColumnDragEnter(event: DragEvent, statut: StatutCommande): void {
-    if (!this.isDragActive()) {
-      return;
+    if (markDraggedRecently) {
+      setTimeout(() => {
+        this.draggedRecently = false;
+      }, 150);
     }
-    event.preventDefault();
-    this.setDragOverZone(statut);
-  }
-
-  onColumnDragOver(event: DragEvent, statut: StatutCommande): void {
-    if (!this.isDragActive()) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const canDrop = this.isFinalStatut(statut)
-      ? this.isFinalsGroupDropValid()
-      : this.isDropTargetValid(statut);
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = canDrop ? 'move' : 'none';
-    }
-    this.setDragOverZone(statut);
-  }
-
-  onColumnDragLeave(event: DragEvent, statut: StatutCommande): void {
-    const related = event.relatedTarget as Node | null;
-    const currentTarget = event.currentTarget as HTMLElement;
-    if (related && currentTarget.contains(related)) {
-      return;
-    }
-    if (related instanceof Element && related.closest('[data-drop-zone="finals"]')) {
-      return;
-    }
-    if (this.isFinalStatut(statut)) {
-      this.dragOverFinalsGroup.set(false);
-    } else if (this.dragOverStatut() === statut) {
-      this.dragOverStatut.set(null);
-    }
-    this.cdr.detectChanges();
-  }
-
-  onColumnDrop(event: DragEvent, targetStatut: StatutCommande): void {
-    event.preventDefault();
-    event.stopPropagation();
-    this.dragOverStatut.set(null);
-    this.dragOverFinalsGroup.set(false);
-
-    const commandeId = event.dataTransfer?.getData(CommandesEnCoursPageComponent.DRAG_COMMANDE_ID)
-      || event.dataTransfer?.getData('text/plain')
-      || this.dragCommandeId;
-    const sourceStatut = (event.dataTransfer?.getData(CommandesEnCoursPageComponent.DRAG_SOURCE_STATUT) as StatutCommande)
-      || this.dragSourceStatut;
-
-    this.onCommandeDragEnd();
-
-    if (!commandeId || !sourceStatut || this.isStatutMoveInProgress) {
-      return;
-    }
-
-    const commande = this.commandes().find(c => c.id_commande === commandeId);
-    const resolvedTarget = this.resolveDropTargetStatut(sourceStatut, targetStatut);
-    if (!commande || !this.canDropCommande(commande, sourceStatut, resolvedTarget)) {
-      return;
-    }
-
-    this.moveCommandeToStatut(commande, resolvedTarget);
   }
 
   private resolveDropTargetStatut(sourceStatut: StatutCommande, targetStatut: StatutCommande): StatutCommande {
@@ -913,10 +966,6 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
       return this.firstFinalStatut;
     }
     return targetStatut;
-  }
-
-  private isDragActive(): boolean {
-    return !!this.dragCommandeId && !!this.dragSourceStatut && !this.isStatutMoveInProgress;
   }
 
   private setDragOverZone(statut: StatutCommande): void {

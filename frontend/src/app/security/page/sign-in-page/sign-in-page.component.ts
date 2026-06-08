@@ -7,7 +7,7 @@ import { FloatingLabelInputComponent, HeaderComponent, ThemeService } from '@sha
 import { SignInForm } from '../../data/form';
 import { getFormValidationErrors, FormError } from '@shared';
 import { AppRoutes } from '@shared';
-import { ApiService, TokenService } from '@api';
+import { ApiService, AuthSessionService, TokenService } from '@api';
 import { ApiURI } from '@api';
 
 @Component({
@@ -28,6 +28,7 @@ export class SignInPageComponent {
   submitted = false;
   private readonly apiService: ApiService = inject(ApiService);
   private readonly tokenService: TokenService = inject(TokenService);
+  private readonly authSession: AuthSessionService = inject(AuthSessionService);
   private readonly themeService: ThemeService = inject(ThemeService);
 
   // Liste des fichiers logo possibles à essayer (ordre de priorité)
@@ -148,9 +149,10 @@ export class SignInPageComponent {
             this.successMessage = 'Connexion réussie ! Redirection...';
             console.log('Connexion réussie pour:', username);
             
-            // Rediriger vers le dashboard après un court délai
+            // Rediriger vers la dernière page visitée ou le dashboard
             setTimeout(() => {
-              this.router.navigate([AppRoutes.AUTHENTICATED]);
+              const returnUrl = this.authSession.consumeReturnUrl();
+              this.router.navigateByUrl(returnUrl ?? AppRoutes.AUTHENTICATED);
             }, 1000);
           } else {
             this.errors.set([{

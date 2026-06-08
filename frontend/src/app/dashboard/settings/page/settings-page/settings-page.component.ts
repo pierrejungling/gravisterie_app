@@ -6,7 +6,7 @@ import { HeaderComponent } from '@shared';
 import { FloatingLabelInputComponent } from '@shared';
 import { getFormValidationErrors, FormError } from '@shared';
 import { AppRoutes } from '@shared';
-import { TokenService } from '@api';
+import { AuthSessionService, TokenService } from '@api';
 
 interface CredentialsForm {
   username: FormControl<string>;
@@ -30,12 +30,14 @@ export class SettingsPageComponent implements OnInit {
   currentUsername: string = '';
 
   private readonly tokenService = inject(TokenService);
+  private readonly authSession = inject(AuthSessionService);
 
   constructor(private router: Router) {
     this.initFormGroup();
   }
 
   logout(): void {
+    this.authSession.clearPersistedRoutes();
     this.tokenService.setToken({ token: '', refreshToken: '', isEmpty: true });
     localStorage.removeItem('currentUser');
     this.router.navigate([AppRoutes.SIGN_IN]);

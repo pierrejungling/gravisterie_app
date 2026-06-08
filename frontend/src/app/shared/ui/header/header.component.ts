@@ -2,7 +2,7 @@ import { Component, inject, computed, signal, effect, ViewChild, ElementRef } fr
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AppRoutes, AppNode, ThemeService } from '@shared';
-import { TokenService, ApiService, ApiURI } from '@api';
+import { TokenService, ApiService, ApiURI, AuthSessionService } from '@api';
 import { filter } from 'rxjs/operators';
 import { Commande, StatutCommande } from '../../../dashboard/feature/commande/model/commande.interface';
 
@@ -17,6 +17,7 @@ export class HeaderComponent {
   logoLoaded = false;
   logoError = false;
   private readonly tokenService: TokenService = inject(TokenService);
+  private readonly authSession: AuthSessionService = inject(AuthSessionService);
   private readonly apiService: ApiService = inject(ApiService);
   private readonly themeService: ThemeService = inject(ThemeService);
   private readonly searchMinLength = 2;
@@ -124,11 +125,10 @@ export class HeaderComponent {
   }
   
   logout(): void {
-    // Nettoyer le token via le TokenService
+    this.authSession.clearPersistedRoutes();
     this.tokenService.setToken({ token: '', refreshToken: '', isEmpty: true });
     localStorage.removeItem('currentUser');
-    
-    // Rediriger vers la page de connexion
+
     this.router.navigate([AppRoutes.SIGN_IN]);
   }
 

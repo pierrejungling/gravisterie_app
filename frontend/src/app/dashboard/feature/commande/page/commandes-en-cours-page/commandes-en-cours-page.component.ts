@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, ViewChild, ElementRef, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, ViewChild, ElementRef, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { concatMap, from, last } from 'rxjs';
@@ -24,7 +24,15 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   private initialExpandedStateApplied: boolean = false;
   private draggedRecently: boolean = false;
   private readonly cdr = inject(ChangeDetectorRef);
+  private readonly ngZone = inject(NgZone);
   private static readonly POINTER_DRAG_THRESHOLD_PX = 6;
+  private static readonly COLUMN_SWITCH_HYSTERESIS_PX = 10;
+
+  private columnDropRects: Array<{ statut: StatutCommande; left: number; right: number }> = [];
+  private dragMoveRaf: number | null = null;
+  private pendingPointerX = 0;
+  private pendingPointerY = 0;
+  private lastResolvedDropStatut: StatutCommande | null = null;
 
   private pointerDrag: {
     commande: Commande;
@@ -34,7 +42,12 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     active: boolean;
     pointerId: number;
     captureElement: HTMLElement;
+    cardElement: HTMLElement;
+    offsetX: number;
+    offsetY: number;
   } | null = null;
+
+  private dragGhost: HTMLElement | null = null;
 
   private readonly onDocumentPointerMove = (event: PointerEvent): void => {
     this.handleDocumentPointerMove(event);
@@ -310,7 +323,9 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
 
   ngOnDestroy(): void {
     window.removeEventListener('beforeunload', this.onBeforeUnload);
+    this.cancelDragMoveRaf();
     this.cleanupPointerDragListeners();
+    this.removeDragGhost();
     this.resetDragState(false);
   }
 
@@ -822,6 +837,12 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     }
 
     const captureElement = event.currentTarget as HTMLElement;
+    const cardElement = captureElement.closest('.commande-card') as HTMLElement | null;
+    if (!cardElement) {
+      return;
+    }
+
+    const cardRect = cardElement.getBoundingClientRect();
     this.pointerDrag = {
       commande,
       sourceStatut,
@@ -830,6 +851,9 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
       active: false,
       pointerId: event.pointerId,
       captureElement,
+      cardElement,
+      offsetX: event.clientX - cardRect.left,
+      offsetY: event.clientY - cardRect.top,
     };
 
     captureElement.setPointerCapture(event.pointerId);
@@ -850,11 +874,32 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
       if ((dx * dx) + (dy * dy) < CommandesEnCoursPageComponent.POINTER_DRAG_THRESHOLD_PX ** 2) {
         return;
       }
-      this.activatePointerDrag();
+      this.activatePointerDrag(event.clientX, event.clientY);
     }
 
     event.preventDefault();
-    this.updateDropZoneFromPoint(event.clientX, event.clientY);
+    this.pendingPointerX = event.clientX;
+    this.pendingPointerY = event.clientY;
+    this.scheduleDragMoveFrame();
+  }
+
+  private scheduleDragMoveFrame(): void {
+    if (this.dragMoveRaf !== null) {
+      return;
+    }
+
+    this.dragMoveRaf = requestAnimationFrame(() => {
+      this.dragMoveRaf = null;
+      this.updateDragGhostPosition(this.pendingPointerX, this.pendingPointerY);
+      this.updateDropZoneFromPoint(this.pendingPointerX, this.pendingPointerY);
+    });
+  }
+
+  private cancelDragMoveRaf(): void {
+    if (this.dragMoveRaf !== null) {
+      cancelAnimationFrame(this.dragMoveRaf);
+      this.dragMoveRaf = null;
+    }
   }
 
   private handleDocumentPointerUp(event: PointerEvent): void {
@@ -863,6 +908,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     }
 
     const pending = this.pointerDrag;
+    this.cancelDragMoveRaf();
     this.releasePointerCapture(pending.captureElement, pending.pointerId);
     this.cleanupPointerDragListeners();
 
@@ -881,7 +927,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     this.pointerDrag = null;
   }
 
-  private activatePointerDrag(): void {
+  private activatePointerDrag(clientX: number, clientY: number): void {
     if (!this.pointerDrag || this.pointerDrag.active) {
       return;
     }
@@ -890,9 +936,94 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     this.draggedRecently = true;
     this.dragCommandeId = this.pointerDrag.commande.id_commande;
     this.dragSourceStatut = this.pointerDrag.sourceStatut;
+    this.createDragGhost();
+    this.refreshColumnDropRects();
+    this.lastResolvedDropStatut = null;
+    this.updateDragGhostPosition(clientX, clientY);
     this.lockTableScroll(true);
     document.body.classList.add('commande-pointer-drag-active');
-    this.cdr.detectChanges();
+    this.ngZone.run(() => this.cdr.markForCheck());
+  }
+
+  private createDragGhost(): void {
+    if (!this.pointerDrag) {
+      return;
+    }
+
+    this.removeDragGhost();
+
+    const source = this.pointerDrag.cardElement;
+    const rect = source.getBoundingClientRect();
+    const computed = getComputedStyle(source);
+    const ghost = source.cloneNode(true) as HTMLElement;
+
+    ghost.classList.add('commande-drag-ghost');
+    ghost.classList.remove('is-dragging');
+    ghost.setAttribute('aria-hidden', 'true');
+
+    ghost.style.position = 'fixed';
+    ghost.style.top = '0';
+    ghost.style.left = '0';
+    ghost.style.margin = '0';
+    ghost.style.width = `${rect.width}px`;
+    ghost.style.minHeight = `${rect.height}px`;
+    ghost.style.boxSizing = 'border-box';
+    ghost.style.animation = 'none';
+    ghost.style.opacity = '1';
+    ghost.style.visibility = 'visible';
+    ghost.style.pointerEvents = 'none';
+    ghost.style.zIndex = '100000';
+    ghost.style.transformOrigin = 'top left';
+    ghost.style.backgroundColor = computed.backgroundColor;
+    ghost.style.color = computed.color;
+    ghost.style.border = computed.border;
+    ghost.style.borderRadius = computed.borderRadius;
+    ghost.style.padding = computed.padding;
+    ghost.style.fontSize = computed.fontSize;
+    ghost.style.lineHeight = computed.lineHeight;
+    ghost.style.boxShadow = '0 20px 44px rgba(0, 0, 0, 0.28)';
+
+    const badge = document.createElement('div');
+    badge.className = 'commande-drag-ghost-badge';
+    badge.textContent = 'Déplacement';
+    ghost.prepend(badge);
+
+    document.body.appendChild(ghost);
+    this.dragGhost = ghost;
+  }
+
+  private updateDragGhostPosition(clientX: number, clientY: number): void {
+    if (!this.dragGhost || !this.pointerDrag) {
+      return;
+    }
+
+    const x = clientX - this.pointerDrag.offsetX;
+    const y = clientY - this.pointerDrag.offsetY;
+    this.dragGhost.style.transform = `translate3d(${Math.round(x)}px, ${Math.round(y)}px, 0) rotate(-0.75deg) scale(1.02)`;
+  }
+
+  private removeDragGhost(): void {
+    this.dragGhost?.remove();
+    this.dragGhost = null;
+  }
+
+  private refreshColumnDropRects(): void {
+    const table = this.tableScrollElement?.nativeElement.querySelector('.commandes-table');
+    if (!table) {
+      this.columnDropRects = [];
+      return;
+    }
+
+    this.columnDropRects = Array.from(
+      table.querySelectorAll<HTMLElement>('tbody td[data-statut-drop]')
+    ).map(cell => {
+      const rect = cell.getBoundingClientRect();
+      return {
+        statut: cell.dataset['statutDrop'] as StatutCommande,
+        left: rect.left,
+        right: rect.right,
+      };
+    });
   }
 
   private updateDropZoneFromPoint(clientX: number, clientY: number): void {
@@ -903,25 +1034,59 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     }
 
     if (this.dragOverStatut() !== null || this.dragOverFinalsGroup()) {
-      this.dragOverStatut.set(null);
-      this.dragOverFinalsGroup.set(false);
-      this.cdr.detectChanges();
+      this.lastResolvedDropStatut = null;
+      this.ngZone.run(() => {
+        this.dragOverStatut.set(null);
+        this.dragOverFinalsGroup.set(false);
+      });
     }
   }
 
   private resolveStatutFromPoint(clientX: number, clientY: number): StatutCommande | null {
-    const stack = document.elementsFromPoint(clientX, clientY);
-    for (const node of stack) {
-      if (!(node instanceof Element)) {
-        continue;
-      }
-      const zone = node.closest('[data-statut-drop]') as HTMLElement | null;
-      const statut = zone?.dataset['statutDrop'] as StatutCommande | undefined;
-      if (statut && this.statuts.includes(statut)) {
-        return statut;
+    if (this.columnDropRects.length === 0) {
+      return null;
+    }
+
+    let hit: StatutCommande | null = null;
+    for (const col of this.columnDropRects) {
+      if (clientX >= col.left && clientX < col.right) {
+        hit = col.statut;
+        break;
       }
     }
-    return null;
+
+    if (!hit) {
+      const table = this.tableScrollElement?.nativeElement.querySelector('.commandes-table');
+      const headers = table?.querySelectorAll<HTMLElement>('thead th[data-statut-drop]');
+      if (headers) {
+        for (const th of Array.from(headers)) {
+          const rect = th.getBoundingClientRect();
+          if (clientX >= rect.left && clientX < rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+            hit = th.dataset['statutDrop'] as StatutCommande;
+            break;
+          }
+        }
+      }
+    }
+
+    if (!hit) {
+      return null;
+    }
+
+    if (this.lastResolvedDropStatut && hit !== this.lastResolvedDropStatut) {
+      const prev = this.columnDropRects.find(c => c.statut === this.lastResolvedDropStatut);
+      const next = this.columnDropRects.find(c => c.statut === hit);
+      if (prev && next) {
+        const movingRight = next.left >= prev.left;
+        const edge = movingRight ? next.left : next.right;
+        if (Math.abs(clientX - edge) < CommandesEnCoursPageComponent.COLUMN_SWITCH_HYSTERESIS_PX) {
+          return this.lastResolvedDropStatut;
+        }
+      }
+    }
+
+    this.lastResolvedDropStatut = hit;
+    return hit;
   }
 
   private isInteractiveDragTarget(target: HTMLElement | null): boolean {
@@ -943,13 +1108,18 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   private resetDragState(markDraggedRecently: boolean): void {
+    this.cancelDragMoveRaf();
+    this.removeDragGhost();
+    this.columnDropRects = [];
+    this.lastResolvedDropStatut = null;
     this.lockTableScroll(false);
     document.body.classList.remove('commande-pointer-drag-active');
-    this.dragCommandeId = null;
-    this.dragSourceStatut = null;
-    this.dragOverStatut.set(null);
-    this.dragOverFinalsGroup.set(false);
-    this.cdr.detectChanges();
+    this.ngZone.run(() => {
+      this.dragCommandeId = null;
+      this.dragSourceStatut = null;
+      this.dragOverStatut.set(null);
+      this.dragOverFinalsGroup.set(false);
+    });
 
     if (markDraggedRecently) {
       setTimeout(() => {
@@ -969,25 +1139,23 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   private setDragOverZone(statut: StatutCommande): void {
-    if (this.isFinalStatut(statut)) {
-      if (!this.dragOverFinalsGroup()) {
-        this.dragOverFinalsGroup.set(true);
-        this.dragOverStatut.set(null);
-        this.cdr.detectChanges();
+    this.ngZone.run(() => {
+      if (this.isFinalStatut(statut)) {
+        if (!this.dragOverFinalsGroup()) {
+          this.dragOverFinalsGroup.set(true);
+          this.dragOverStatut.set(null);
+        }
+        return;
       }
-      return;
-    }
-    if (this.dragOverFinalsGroup()) {
-      this.dragOverFinalsGroup.set(false);
-    }
-    this.setDragOverStatut(statut);
-  }
 
-  private setDragOverStatut(statut: StatutCommande): void {
-    if (this.dragOverStatut() !== statut) {
-      this.dragOverStatut.set(statut);
-      this.cdr.detectChanges();
-    }
+      if (this.dragOverFinalsGroup()) {
+        this.dragOverFinalsGroup.set(false);
+      }
+
+      if (this.dragOverStatut() !== statut) {
+        this.dragOverStatut.set(statut);
+      }
+    });
   }
 
   private lockTableScroll(locked: boolean): void {

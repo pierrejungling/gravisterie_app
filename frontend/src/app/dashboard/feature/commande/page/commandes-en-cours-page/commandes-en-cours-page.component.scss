@@ -286,6 +286,12 @@
     rgba(255, 255, 255, 0.28) 100%
   );
   --glass-active-shine-opacity: 1;
+
+  th.statut-column,
+  td.statut-column,
+  .commande-card:not(.is-dragging) {
+    transition: none !important;
+  }
 }
 
 :host-context([data-theme="dark"]) .commandes-table.is-drag-active {
@@ -386,7 +392,7 @@
 }
 
 .commandes-table.is-drag-active .commande-card.is-dragging {
-  opacity: 1;
+  opacity: 0.2;
   filter: none;
   overflow: visible;
   background: var(--glass-active-bg);

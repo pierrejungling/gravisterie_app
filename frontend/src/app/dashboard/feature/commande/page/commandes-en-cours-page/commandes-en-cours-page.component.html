@@ -20,7 +20,7 @@
 
     <!-- Vue desktop : tableau par statut -->
     <div class="table-container desktop-view" *ngIf="!isLoading()">
-      <div class="table-scroll">
+      <div class="table-scroll" #tableScroll>
         <table
           class="commandes-table"
           [class.is-drag-active]="!!dragCommandeId">
@@ -63,39 +63,43 @@
                   <div
                     *ngFor="let commande of getCommandesByStatut(statut); trackBy: trackByCommandeId"
                     class="commande-card"
-                    draggable="true"
                     [class.has-prix]="commande.prix_final != null && commande.prix_final > 0"
                     [class.is-dragging]="isCommandeDragging(commande)"
                     [class.deadline-warning]="getDeadlineStatus(commande) === 'warning'"
                     [class.deadline-danger]="getDeadlineStatus(commande) === 'danger'"
                     [title]="commande.produit || 'Commande #' + commande.id_commande"
-                    (dragstart)="onCommandeDragStart($event, commande, statut)"
-                    (dragend)="onCommandeDragEnd()"
                     (click)="onCommandeClick(commande)">
                     <span class="payment-indicator" *ngIf="commande['payé']">✓ payé</span>
-                    <div class="commande-header">
-                      <h3 class="commande-title">
-                        {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
-                      </h3>
-                    </div>
-                    <div class="commande-info">
-                      <p class="commande-client">
-                        <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
-                        <span class="mode-contact-emoji" *ngIf="commande.mode_contact">{{ getModeContactEmoji(commande.mode_contact) }}</span>
-                      </p>
-                      <p class="commande-societe" *ngIf="commande.client['société']">
-                        <strong>Société :</strong>&nbsp;{{ commande.client['société'] }}
-                      </p>
-                      <p class="commande-date">
-                        <strong>Date :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
-                      </p>
-                      <p
-                        class="commande-deadline"
-                        [class.deadline-highlight-warning]="getDeadlineStatus(commande) === 'warning'"
-                        [class.deadline-highlight-danger]="getDeadlineStatus(commande) === 'danger'"
-                        *ngIf="commande.deadline">
-                        <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
-                      </p>
+                    <div
+                      class="commande-drag-body"
+                      draggable="true"
+                      title="Glisser pour déplacer"
+                      (dragstart)="onCommandeDragStart($event, commande, statut)"
+                      (dragend)="onCommandeDragEnd()">
+                      <div class="commande-header">
+                        <h3 class="commande-title">
+                          {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
+                        </h3>
+                      </div>
+                      <div class="commande-info">
+                        <p class="commande-client">
+                          <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
+                          <span class="mode-contact-emoji" *ngIf="commande.mode_contact">{{ getModeContactEmoji(commande.mode_contact) }}</span>
+                        </p>
+                        <p class="commande-societe" *ngIf="commande.client['société']">
+                          <strong>Société :</strong>&nbsp;{{ commande.client['société'] }}
+                        </p>
+                        <p class="commande-date">
+                          <strong>Date :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
+                        </p>
+                        <p
+                          class="commande-deadline"
+                          [class.deadline-highlight-warning]="getDeadlineStatus(commande) === 'warning'"
+                          [class.deadline-highlight-danger]="getDeadlineStatus(commande) === 'danger'"
+                          *ngIf="commande.deadline">
+                          <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
+                        </p>
+                      </div>
                     </div>
                     <div class="commande-actions" (click)="$event.stopPropagation()">
                       <div class="etapes-precedentes" *ngIf="getEtapesPrecedentes(commande, statut).length > 0">

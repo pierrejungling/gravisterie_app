@@ -34,6 +34,13 @@
   --btn-save-bg: #e8f5e9;
   --btn-save-border: #4caf50;
   --btn-save-color: #2e7d32;
+  /* Drag glass — mode clair */
+  --drag-glass-idle-bg: rgba(255, 255, 255, 0.42);
+  --drag-glass-idle-border: rgba(255, 255, 255, 0.58);
+  --drag-glass-idle-blur: blur(18px) saturate(190%) brightness(1.04);
+  --drag-glass-active-bg: rgba(255, 255, 255, 0.78);
+  --drag-glass-active-border: rgba(255, 255, 255, 0.82);
+  --drag-glass-active-blur: blur(28px) saturate(210%) brightness(1.06);
 }
 
 /* Dark mode */
@@ -63,6 +70,13 @@
   --btn-save-bg: #2e7d32;
   --btn-save-border: #1b5e20;
   --btn-save-color: #ffffff;
+  /* Drag glass — mode sombre */
+  --drag-glass-idle-bg: rgba(26, 26, 26, 0.88);
+  --drag-glass-idle-border: rgba(255, 255, 255, 0.07);
+  --drag-glass-idle-blur: none;
+  --drag-glass-active-bg: rgba(42, 42, 42, 0.96);
+  --drag-glass-active-border: rgba(255, 255, 255, 0.09);
+  --drag-glass-active-blur: none;
 }
 
 * {

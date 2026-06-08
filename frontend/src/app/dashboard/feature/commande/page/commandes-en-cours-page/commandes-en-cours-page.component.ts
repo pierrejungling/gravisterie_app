@@ -809,17 +809,23 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     this.dragCommandeId = commande.id_commande;
     this.dragSourceStatut = sourceStatut;
 
+    const cardElement = (event.currentTarget as HTMLElement).closest('.commande-card') as HTMLElement | null;
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.setData('text/plain', commande.id_commande);
       event.dataTransfer.setData(CommandesEnCoursPageComponent.DRAG_COMMANDE_ID, commande.id_commande);
       event.dataTransfer.setData(CommandesEnCoursPageComponent.DRAG_SOURCE_STATUT, sourceStatut);
+      if (cardElement) {
+        event.dataTransfer.setDragImage(cardElement, Math.min(cardElement.offsetWidth / 2, 120), 24);
+      }
     }
 
+    this.lockTableScroll(true);
     this.cdr.detectChanges();
   }
 
   onCommandeDragEnd(): void {
+    this.lockTableScroll(false);
     this.dragCommandeId = null;
     this.dragSourceStatut = null;
     this.dragOverStatut.set(null);
@@ -931,6 +937,12 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
       this.dragOverStatut.set(statut);
       this.cdr.detectChanges();
     }
+  }
+
+  private lockTableScroll(locked: boolean): void {
+    const scrollEl = this.tableScrollElement?.nativeElement
+      ?? document.querySelector('.table-scroll') as HTMLElement | null;
+    scrollEl?.classList.toggle('scroll-locked', locked);
   }
 
   private buildTargetStateForStatut(targetStatut: StatutCommande): Pick<Commande, 'statut_commande' | 'statuts_actifs'> {

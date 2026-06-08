@@ -221,6 +221,11 @@
   width: calc(100% / 9); // 9 colonnes égales
 }
 
+.commandes-table td.statut-column {
+  position: relative;
+  isolation: isolate;
+}
+
 .commandes-table td:last-child {
   border-right: none;
 }
@@ -389,8 +394,8 @@
     0 0 28px var(--drag-select-glow),
     var(--glass-active-shadow);
   transform: scale(1.04) translateY(-4px);
-  z-index: 20;
-  animation: dragCardSelected 1.4s ease-in-out infinite;
+  z-index: 300;
+  cursor: grabbing;
   transition:
     transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.28s ease,
@@ -549,8 +554,6 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  min-height: 100%;
-  height: 100%;
 }
 
 .commande-card {
@@ -565,7 +568,8 @@
     padding-bottom: 3.6rem; // Ligne toggle + ligne prix
   }
 
-  cursor: pointer;
+  cursor: grab;
+  -webkit-user-drag: element;
   transition: opacity 0.15s ease, filter 0.15s ease, box-shadow 0.3s ease, transform 0.3s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -574,7 +578,12 @@
   animation: slideInFade 0.4s ease-out;
   opacity: 1;
   position: relative;
-  z-index: 0;
+  z-index: var(--card-stack-index, 1);
+  isolation: isolate;
+
+  &:active {
+    cursor: grabbing;
+  }
 
   &.deadline-warning {
     background: rgba(255, 152, 0, 0.15); // Fond orange léger
@@ -588,22 +597,22 @@
 }
 
 .commande-drag-body {
-  cursor: grab;
-  -webkit-user-drag: element;
+  cursor: inherit;
   user-select: none;
   -webkit-user-select: none;
   touch-action: none;
   position: relative;
   z-index: 1;
-
-  &:active {
-    cursor: grabbing;
-  }
 }
 
 .commande-card:hover,
 .commande-card.is-dragging {
-  z-index: 2;
+  z-index: calc(var(--card-stack-index, 1) + 100);
+}
+
+.commande-card.is-dragging {
+  z-index: 200;
+  cursor: grabbing;
 }
 
 .commande-card:hover {

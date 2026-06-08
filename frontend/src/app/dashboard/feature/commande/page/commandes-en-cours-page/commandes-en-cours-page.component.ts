@@ -800,7 +800,9 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     }
 
     const target = event.target as HTMLElement | null;
-    if (target?.closest('input, button, .toggle-switch-small, .commande-checkbox, label.checkbox-label')) {
+    if (target?.closest(
+      'input, button, .toggle-switch-small, .commande-checkbox, label.checkbox-label, .commande-actions, .attente-reponse-toggle-bottom-left, .prix-indicator'
+    )) {
       event.preventDefault();
       return;
     }
@@ -809,7 +811,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     this.dragCommandeId = commande.id_commande;
     this.dragSourceStatut = sourceStatut;
 
-    const cardElement = (event.currentTarget as HTMLElement).closest('.commande-card') as HTMLElement | null;
+    const cardElement = (event.currentTarget as HTMLElement);
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
       event.dataTransfer.setData('text/plain', commande.id_commande);

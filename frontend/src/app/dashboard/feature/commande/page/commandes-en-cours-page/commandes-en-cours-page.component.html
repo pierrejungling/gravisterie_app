@@ -61,21 +61,20 @@
                 (drop)="onColumnDrop($event, statut)">
                 <div class="commande-cards">
                   <div
-                    *ngFor="let commande of getCommandesByStatut(statut); trackBy: trackByCommandeId"
+                    *ngFor="let commande of getCommandesByStatut(statut); trackBy: trackByCommandeId; let cardIndex = index"
                     class="commande-card"
+                    [style.--card-stack-index]="cardIndex + 1"
                     [class.has-prix]="commande.prix_final != null && commande.prix_final > 0"
                     [class.is-dragging]="isCommandeDragging(commande)"
                     [class.deadline-warning]="getDeadlineStatus(commande) === 'warning'"
                     [class.deadline-danger]="getDeadlineStatus(commande) === 'danger'"
                     [title]="commande.produit || 'Commande #' + commande.id_commande"
+                    draggable="true"
+                    (dragstart)="onCommandeDragStart($event, commande, statut)"
+                    (dragend)="onCommandeDragEnd()"
                     (click)="onCommandeClick(commande)">
                     <span class="payment-indicator" *ngIf="commande['payé']">✓ payé</span>
-                    <div
-                      class="commande-drag-body"
-                      draggable="true"
-                      title="Glisser pour déplacer"
-                      (dragstart)="onCommandeDragStart($event, commande, statut)"
-                      (dragend)="onCommandeDragEnd()">
+                    <div class="commande-drag-body">
                       <div class="commande-header">
                         <h3 class="commande-title">
                           {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}

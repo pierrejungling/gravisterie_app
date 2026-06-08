@@ -39,6 +39,7 @@
                   <div
                     *ngFor="let commande of getCommandesByStatut(statut); trackBy: trackByCommandeId"
                     class="commande-card"
+                    [class.has-prix]="commande.prix_final != null && commande.prix_final > 0"
                     [class.deadline-warning]="getDeadlineStatus(commande) === 'warning'"
                     [class.deadline-danger]="getDeadlineStatus(commande) === 'danger'"
                     [title]="commande.produit || 'Commande #' + commande.id_commande"
@@ -103,6 +104,7 @@
                         <span class="toggle-label-small">{{ commande['attente_reponse'] ? 'Rien à faire' : 'Client attend' }}</span>
                       </label>
                     </div>
+                    <span class="prix-indicator" *ngIf="commande.prix_final != null && commande.prix_final > 0">{{ commande.prix_final | number:'1.0-2' }} €</span>
                   </div>
                   <div *ngIf="getCommandesByStatut(statut).length === 0" class="empty-column">
                     <p class="empty-message">Aucune commande</p>
@@ -140,6 +142,7 @@
             <div
               *ngFor="let commande of getCommandesByStatut(statut); trackBy: trackByCommandeId"
               class="mobile-card"
+              [class.has-prix]="commande.prix_final != null && commande.prix_final > 0"
               [class.deadline-warning]="getDeadlineStatus(commande) === 'warning'"
               [class.deadline-danger]="getDeadlineStatus(commande) === 'danger'"
               [title]="commande.produit || 'Commande #' + commande.id_commande"
@@ -204,6 +207,7 @@
                   <span class="toggle-label-small">{{ commande['attente_reponse'] ? 'Rien à faire' : 'Client attend' }}</span>
                 </label>
               </div>
+              <span class="prix-indicator" *ngIf="commande.prix_final != null && commande.prix_final > 0">{{ commande.prix_final | number:'1.0-2' }} €</span>
             </div>
             <p class="mobile-section__empty" *ngIf="getCommandesByStatut(statut).length === 0">
               Aucune commande

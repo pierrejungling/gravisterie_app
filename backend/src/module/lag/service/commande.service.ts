@@ -1,14 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Commande, Client, Gravure, Personnalisation, Support, CommandeSupport } from '../model/entity';
-import { AjouterCommandePayload } from '../model/payload';
+import { AjouterCommandePayload, CreateOrderFromWebhookDto } from '../model/payload';
 import { StatutCommande } from '../model/entity/enum';
 import { ulid } from 'ulid';
 import { CommandeFichierService } from './commande-fichier.service';
 
 @Injectable()
 export class CommandeService {
+    private readonly logger = new Logger(CommandeService.name);
+
     constructor(
         @InjectRepository(Commande) private readonly commandeRepository: Repository<Commande>,
         @InjectRepository(Client) private readonly clientRepository: Repository<Client>,
@@ -71,6 +73,85 @@ export class CommandeService {
             out.push({ id: idStr, libelle, quantite_cible: cible, quantite_realisee: realise });
         }
         return out.length === 0 ? null : JSON.stringify(out);
+    }
+
+    /**
+     * Crée une commande à partir d'un formulaire du site vitrine (send-order.php / send-mail.php).
+     * Réutilise ajouterCommande pour la création client + commande, puis gère
+     * les champs CGV/newsletter et l'upload des pièces jointes vers R2.
+     */
+    async creerCommandeDepuisWebhook(dto: CreateOrderFromWebhookDto): Promise<Commande> {
+        // Adresse au format attendu par le frontend : "rue, code postal, ville, pays"
+        // (même logique que buildAdresseComplete côté Angular, champ client.adresse varchar(100))
+        const adresseParts = [dto.street, dto.postal, dto.city, dto.country]
+            .map((p) => p?.trim() ?? '')
+            .filter((p) => p.length > 0);
+        const adresse = adresseParts.length > 0 ? adresseParts.join(', ').slice(0, 100) : undefined;
+
+        // Deadline : champ dédié si la valeur est une date valide
+        const deadlineRaw = dto.deadline?.trim() || '';
+        const deadlineIsDate = deadlineRaw !== '' && !Number.isNaN(Date.parse(deadlineRaw));
+
+        // Description : produit, remarques, deadline, newsletter, CGV
+        const descriptionParts: string[] = [];
+        if (dto.product_name?.trim()) {
+            descriptionParts.push(`Produit demandé : ${dto.product_name.trim()}`);
+        }
+        if (dto.message?.trim()) {
+            descriptionParts.push(`Remarques supplémentaires :\n${dto.message.trim()}`);
+        }
+        descriptionParts.push(`Deadline : ${deadlineRaw || 'Non spécifiée'}`);
+        descriptionParts.push(`Newsletter : ${dto.newsletter === true ? 'Oui' : 'Non'}`);
+        descriptionParts.push(`CGV acceptées : ${dto.terms === true ? 'Oui' : 'Non'}`);
+
+        // Titre de la commande : "📫 WEB | Nom Prenom" (fallback sur l'email si pas de nom)
+        // L'emoji 📫 signale une commande arrivée automatiquement depuis le site, à traiter
+        const nomClient = [dto.lastname?.trim(), dto.firstname?.trim()].filter(Boolean).join(' ');
+
+        const payload: AjouterCommandePayload = {
+            nom_commande: `📫 WEB | ${nomClient || dto.email.trim()}`.slice(0, 100),
+            deadline: deadlineIsDate ? new Date(deadlineRaw).toISOString() : undefined,
+            coordonnees_contact: {
+                nom: dto.lastname?.trim().slice(0, 50) || undefined,
+                prenom: dto.firstname?.trim().slice(0, 50) || undefined,
+                mail: dto.email?.trim().slice(0, 50) || undefined,
+                telephone: dto.phone?.trim().slice(0, 30) || undefined,
+                adresse,
+            },
+            description_projet: descriptionParts.join('\n\n'),
+            mode_contact: 'mail',
+            attente_reponse: false,
+        };
+
+        const commande = await this.ajouterCommande(payload);
+
+        // ajouterCommande force CGV/newsletter à false : on applique les valeurs du formulaire
+        commande.CGV_acceptée = dto.terms === true;
+        commande.newsletter_acceptée = dto.newsletter === true;
+        const commandeSauvegardee = await this.commandeRepository.save(commande);
+
+        // Pièces jointes : décodage base64 puis upload via le flux standard (R2 + commande_fichier)
+        if (dto.attachments && dto.attachments.length > 0) {
+            for (const attachment of dto.attachments) {
+                try {
+                    const buffer = Buffer.from(attachment.content_base64, 'base64');
+                    if (buffer.length === 0) {
+                        continue;
+                    }
+                    await this.commandeFichierService.upload(commandeSauvegardee.id_commande, {
+                        originalname: attachment.filename,
+                        mimetype: attachment.mime_type || 'application/octet-stream',
+                        buffer,
+                        size: buffer.length,
+                    } as Express.Multer.File);
+                } catch (error: any) {
+                    // Un fichier en échec ne doit pas faire échouer la création de la commande
+                    this.logger.error(`Webhook : échec upload du fichier "${attachment.filename}" pour la commande ${commandeSauvegardee.id_commande}: ${error?.message ?? error}`);
+                }
+            }
+        }
+
+        return commandeSauvegardee;
     }
 
     async ajouterCommande(payload: AjouterCommandePayload): Promise<Commande> {

@@ -1,98 +1,112 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# API La Gravisterie (NestJS)
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Backend de l'application de gestion La Gravisterie : commandes, clients, fichiers (R2), authentification JWT.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## Installation
 
 ```bash
-$ npm install
+npm install
+cp .env.example .env
+# Éditer .env avec vos valeurs (DB, JWT, R2, WEBHOOK_SECRET)
 ```
 
-## Compile and run the project
+## Lancement
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npm run start:dev    # développement (watch)
+npm run start:prod   # production
 ```
 
-## Run tests
+API par défaut : `http://localhost:2023/api`
+
+## Variables d'environnement
+
+Voir `.env.example`. Variables importantes :
+
+| Variable | Description |
+|---|---|
+| `APP_PORT` | Port du serveur (ex. `2023`) |
+| `APP_BASE_URL` | Préfixe global des routes (ex. `/api`) |
+| `DB_*` | Connexion PostgreSQL |
+| `JWT_*` | Secrets et durées des tokens |
+| `WEBHOOK_SECRET` | Secret partagé avec le site vitrine (header `x-webhook-secret`) |
+| `R2_*` | Stockage Cloudflare R2 pour les pièces jointes des commandes |
+
+Générer un secret webhook :
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+openssl rand -hex 32
 ```
 
-## Deployment
+## Webhook — création automatique de commandes depuis le site vitrine
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Lorsqu'un visiteur soumet un formulaire sur [gravisterie.be](https://www.gravisterie.be), les scripts PHP (`send-mail.php`, `send-order.php`) envoient les données à l'API **en plus** de l'email de notification. Une commande est créée automatiquement dans l'app de gestion.
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Endpoint
+
+```
+POST /api/orders/webhook
+```
+
+- **Authentification** : header `x-webhook-secret` (valeur = `WEBHOOK_SECRET` dans le `.env`)
+- **Public** : pas de JWT (décorateur `@Public()`)
+- **Content-Type** : `multipart/form-data` (champs texte + fichiers)
+- **Réponses** :
+  - `201` — commande créée
+  - `401` — secret invalide ou absent
+  - `400` — validation échouée (email obligatoire)
+
+### Champs du formulaire (multipart)
+
+| Champ | Obligatoire | Description |
+|---|---|---|
+| `email` | oui | Email du client |
+| `firstname` | non | Prénom |
+| `lastname` | non | Nom |
+| `phone` | non | Téléphone |
+| `street`, `postal`, `city`, `country` | non | Adresse (format stocké : `rue, code postal, ville, pays`) |
+| `message` | non | Remarques / message du client |
+| `deadline` | non | Deadline (texte libre ou date ISO) |
+| `newsletter` | non | `"1"` ou `"0"` |
+| `terms` | non | CGV acceptées : `"1"` ou `"0"` |
+| `product_name` | non | Produit demandé (uniquement depuis `send-order.php`) |
+| `attachments[]` | non | Pièces jointes (tous types, max 50 Mo total, 20 fichiers) |
+
+### Comportement côté API
+
+- **Titre de la commande** : `📫 WEB | Nom Prenom` (fallback sur l'email)
+- **Statut initial** : `en_attente_information`
+- **Client** : créé ou mis à jour par email
+- **Description** : produit (si présent), remarques, deadline, newsletter, CGV
+- **Fichiers** : uploadés vers R2 via `CommandeFichierService` (table `commande_fichier`)
+
+### Test local
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+curl -X POST http://localhost:2023/api/orders/webhook \
+  -H "x-webhook-secret: VOTRE_SECRET" \
+  -F "email=test@test.be" \
+  -F "firstname=Jean" \
+  -F "lastname=Dupont" \
+  -F "message=Test webhook" \
+  -F "deadline=2026-09-01" \
+  -F "newsletter=1" \
+  -F "terms=1" \
+  -F "attachments[0]=@/chemin/vers/fichier.pdf"
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Fichiers concernés
 
-## Resources
+```
+src/module/lag/
+├── controller/webhook.controller.ts
+├── service/commande.service.ts          # creerCommandeDepuisWebhook()
+└── model/payload/commande_payload/
+    └── create_order_from_webhook.dto.ts
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+Les endpoints existants (`/api/commande/*`) ne sont pas modifiés.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Déploiement
 
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+En production (Render), ajouter `WEBHOOK_SECRET` dans les variables d'environnement **avant** le déploiement. Le secret doit être identique à `GRAVISTERIE_API_WEBHOOK_SECRET` dans les scripts PHP du site vitrine.

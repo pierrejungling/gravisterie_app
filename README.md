@@ -24,9 +24,11 @@ cd ../backend && npm install
 
 ### Backend (NestJS)
 
-Le fichier `.env` dans le dossier `backend/` doit être configuré avec vos paramètres de base de données et autres variables d'environnement.
+Le fichier `.env` dans le dossier `backend/` doit être configuré avec vos paramètres de base de données et autres variables d'environnement. Voir `backend/.env.example`.
 
 **Important** : Modifiez les valeurs JWT_SECRET pour la production !
+
+**Webhook site vitrine** : définir `WEBHOOK_SECRET` (même valeur que `GRAVISTERIE_API_WEBHOOK_SECRET` dans `send-mail.php` et `send-order.php` du site). Voir [backend/README.md](backend/README.md#webhook--création-automatique-de-commandes-depuis-le-site-vitrine).
 
 ### Frontend (Angular)
 
@@ -100,6 +102,17 @@ app/
 ├── package.json    # Scripts racine (start:all, install:all, etc.)
 └── README.md
 ```
+
+## Intégration site vitrine → app de gestion
+
+Les formulaires du site [La Gravisterie](https://www.gravisterie.be) (contact et commande boutique) créent automatiquement une commande dans l'app via un webhook :
+
+1. Le visiteur soumet le formulaire → `send-mail.php` ou `send-order.php`
+2. Un email de notification est envoyé à `info@gravisterie.be`
+3. En parallèle (best-effort), les données + pièces jointes sont envoyées à `POST /api/orders/webhook`
+4. Une commande `📫 WEB | Nom Prenom` apparaît dans le kanban (statut « En attente d'informations »)
+
+Documentation détaillée : [backend/README.md](backend/README.md#webhook--création-automatique-de-commandes-depuis-le-site-vitrine).
 
 ## Ressources
 

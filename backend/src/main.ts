@@ -7,13 +7,9 @@ import { ConfigKey } from '@common/config/enum';
 import { swaggerConfiguration } from '@common/documentation';
 import { Logger, ValidationError, ValidationPipe } from '@nestjs/common';
 import { ApiInterceptor, ValidationException } from '@common/api';
-import { json } from 'express';
 
 const bootstrap = async (): Promise<void> => {
   const app = await NestFactory.create(AppModule);
-
-  // Limite augmentée pour le webhook du site vitrine : pièces jointes en base64 (max ~20Mo de fichiers)
-  app.use(json({ limit: '30mb' }));
   
   // Configuration CORS pour autoriser les requêtes depuis le frontend Render
   app.enableCors({

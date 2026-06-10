@@ -1,24 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
-import { IsArray, IsBoolean, IsEmail, IsNotEmpty, IsOptional, IsString, ValidateNested } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
-export class WebhookAttachmentDto {
-    @ApiProperty({ description: 'Nom original du fichier' })
-    @IsNotEmpty()
-    @IsString()
-    filename: string;
-
-    @ApiProperty({ required: false, description: 'Type MIME (ex: image/png)' })
-    @IsOptional()
-    @IsString()
-    mime_type?: string;
-
-    @ApiProperty({ description: 'Contenu du fichier encodé en base64' })
-    @IsNotEmpty()
-    @IsString()
-    content_base64: string;
-}
-
+/**
+ * Payload du webhook site vitrine (send-mail.php / send-order.php).
+ * Envoyé en multipart/form-data : tous les champs arrivent en string,
+ * les fichiers sont transmis via le champ "attachments" (multer).
+ */
 export class CreateOrderFromWebhookDto {
     @ApiProperty({ required: false, description: 'Produit demandé (présent uniquement depuis send-order.php)' })
     @IsOptional()
@@ -75,20 +62,13 @@ export class CreateOrderFromWebhookDto {
     @IsString()
     deadline?: string;
 
-    @ApiProperty({ required: false })
+    @ApiProperty({ required: false, description: "Newsletter acceptée ('1' ou '0')" })
     @IsOptional()
-    @IsBoolean()
-    newsletter?: boolean;
+    @IsString()
+    newsletter?: string;
 
-    @ApiProperty({ required: false, description: 'CGV acceptées' })
+    @ApiProperty({ required: false, description: "CGV acceptées ('1' ou '0')" })
     @IsOptional()
-    @IsBoolean()
-    terms?: boolean;
-
-    @ApiProperty({ required: false, type: [WebhookAttachmentDto] })
-    @IsOptional()
-    @IsArray()
-    @ValidateNested({ each: true })
-    @Type(() => WebhookAttachmentDto)
-    attachments?: WebhookAttachmentDto[];
+    @IsString()
+    terms?: string;
 }

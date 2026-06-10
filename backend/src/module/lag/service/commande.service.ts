@@ -78,9 +78,14 @@ export class CommandeService {
     /**
      * Crée une commande à partir d'un formulaire du site vitrine (send-order.php / send-mail.php).
      * Réutilise ajouterCommande pour la création client + commande, puis gère
-     * les champs CGV/newsletter et l'upload des pièces jointes vers R2.
+     * les champs CGV/newsletter et l'upload des pièces jointes (multipart) vers R2.
      */
-    async creerCommandeDepuisWebhook(dto: CreateOrderFromWebhookDto): Promise<Commande> {
+    async creerCommandeDepuisWebhook(dto: CreateOrderFromWebhookDto, files: Express.Multer.File[] = []): Promise<Commande> {
+        // Champs booléens transmis en string par le multipart PHP ('1' / '0')
+        const parseBool = (v: string | undefined): boolean => v === '1' || v === 'true' || v === 'on';
+        const newsletter = parseBool(dto.newsletter);
+        const terms = parseBool(dto.terms);
+
         // Adresse au format attendu par le frontend : "rue, code postal, ville, pays"
         // (même logique que buildAdresseComplete côté Angular, champ client.adresse varchar(100))
         const adresseParts = [dto.street, dto.postal, dto.city, dto.country]
@@ -101,8 +106,8 @@ export class CommandeService {
             descriptionParts.push(`Remarques supplémentaires :\n${dto.message.trim()}`);
         }
         descriptionParts.push(`Deadline : ${deadlineRaw || 'Non spécifiée'}`);
-        descriptionParts.push(`Newsletter : ${dto.newsletter === true ? 'Oui' : 'Non'}`);
-        descriptionParts.push(`CGV acceptées : ${dto.terms === true ? 'Oui' : 'Non'}`);
+        descriptionParts.push(`Newsletter : ${newsletter ? 'Oui' : 'Non'}`);
+        descriptionParts.push(`CGV acceptées : ${terms ? 'Oui' : 'Non'}`);
 
         // Titre de la commande : "📫 WEB | Nom Prenom" (fallback sur l'email si pas de nom)
         // L'emoji 📫 signale une commande arrivée automatiquement depuis le site, à traiter
@@ -126,28 +131,17 @@ export class CommandeService {
         const commande = await this.ajouterCommande(payload);
 
         // ajouterCommande force CGV/newsletter à false : on applique les valeurs du formulaire
-        commande.CGV_acceptée = dto.terms === true;
-        commande.newsletter_acceptée = dto.newsletter === true;
+        commande.CGV_acceptée = terms;
+        commande.newsletter_acceptée = newsletter;
         const commandeSauvegardee = await this.commandeRepository.save(commande);
 
-        // Pièces jointes : décodage base64 puis upload via le flux standard (R2 + commande_fichier)
-        if (dto.attachments && dto.attachments.length > 0) {
-            for (const attachment of dto.attachments) {
-                try {
-                    const buffer = Buffer.from(attachment.content_base64, 'base64');
-                    if (buffer.length === 0) {
-                        continue;
-                    }
-                    await this.commandeFichierService.upload(commandeSauvegardee.id_commande, {
-                        originalname: attachment.filename,
-                        mimetype: attachment.mime_type || 'application/octet-stream',
-                        buffer,
-                        size: buffer.length,
-                    } as Express.Multer.File);
-                } catch (error: any) {
-                    // Un fichier en échec ne doit pas faire échouer la création de la commande
-                    this.logger.error(`Webhook : échec upload du fichier "${attachment.filename}" pour la commande ${commandeSauvegardee.id_commande}: ${error?.message ?? error}`);
-                }
+        // Pièces jointes multipart : upload direct via le flux standard (R2 + commande_fichier)
+        for (const file of files) {
+            try {
+                await this.commandeFichierService.upload(commandeSauvegardee.id_commande, file);
+            } catch (error: any) {
+                // Un fichier en échec ne doit pas faire échouer la création de la commande
+                this.logger.error(`Webhook : échec upload du fichier "${file.originalname}" pour la commande ${commandeSauvegardee.id_commande}: ${error?.message ?? error}`);
             }
         }
 

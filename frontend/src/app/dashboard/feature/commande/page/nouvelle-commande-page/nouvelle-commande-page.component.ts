@@ -10,6 +10,7 @@ import { NouvelleCommandeForm, CoordonneesContactForm } from '../../data/form/no
 import { Couleur, StatutCommande, ModeContact } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
+import { formatTelephoneBE } from '../../util/format-telephone.util';
 
 @Component({
   selector: 'app-nouvelle-commande-page',
@@ -260,7 +261,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       // Coordonnées contact (champs individuels)
       nom: new FormControl<string>('', [Validators.maxLength(50)]),
       prenom: new FormControl<string>('', [Validators.maxLength(50)]),
-      telephone: new FormControl<string>('', [Validators.maxLength(15)]),
+      telephone: new FormControl<string>(''),
       mail: new FormControl<string>('', [Validators.email]),
       rue: new FormControl<string>('', [Validators.maxLength(100)]),
       code_postal: new FormControl<string>('', [Validators.maxLength(10)]),
@@ -699,7 +700,8 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       const coordonneesContact: any = {};
       if (formValue.nom?.trim()) coordonneesContact.nom = formValue.nom.trim();
       if (formValue.prenom?.trim()) coordonneesContact.prenom = formValue.prenom.trim();
-      if (formValue.telephone?.trim()) coordonneesContact.telephone = formValue.telephone.trim();
+      const telephoneFormatted = formatTelephoneBE(formValue.telephone);
+      if (telephoneFormatted) coordonneesContact.telephone = telephoneFormatted;
       if (formValue.mail?.trim()) coordonneesContact.mail = formValue.mail.trim();
       if (formValue.societe?.trim()) coordonneesContact.societe = formValue.societe.trim();
       if (formValue.tva?.trim()) coordonneesContact.tva = formValue.tva.trim();

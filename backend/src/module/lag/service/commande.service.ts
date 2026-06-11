@@ -6,6 +6,7 @@ import { AjouterCommandePayload, CreateOrderFromWebhookDto } from '../model/payl
 import { StatutCommande } from '../model/entity/enum';
 import { ulid } from 'ulid';
 import { CommandeFichierService } from './commande-fichier.service';
+import { formatTelephoneBE } from '../util/format-telephone.util';
 
 @Injectable()
 export class CommandeService {
@@ -119,7 +120,7 @@ export class CommandeService {
                 nom: dto.lastname?.trim().slice(0, 50) || undefined,
                 prenom: dto.firstname?.trim().slice(0, 50) || undefined,
                 mail: dto.email?.trim().slice(0, 50) || undefined,
-                telephone: dto.phone?.trim().slice(0, 30) || undefined,
+                telephone: formatTelephoneBE(dto.phone) || undefined,
                 adresse,
             },
             description_projet: descriptionParts.join('\n\n'),
@@ -165,7 +166,7 @@ export class CommandeService {
             // Générer un ID unique manuellement
             const clientId = ulid();
             const mailValue = payload.coordonnees_contact?.mail?.trim() || null;
-            const telephoneValue = payload.coordonnees_contact?.telephone?.trim() || null;
+            const telephoneValue = formatTelephoneBE(payload.coordonnees_contact?.telephone);
             const societeValue = payload.coordonnees_contact?.societe?.trim() || null;
             
             // Vérifier si un client avec cet email existe déjà (seulement si un email est fourni)
@@ -211,7 +212,7 @@ export class CommandeService {
                 client.prénom = payload.coordonnees_contact.prenom?.trim() || null;
             }
             if (payload.coordonnees_contact?.telephone !== undefined) {
-                client.téléphone = payload.coordonnees_contact.telephone?.trim() || null;
+                client.téléphone = formatTelephoneBE(payload.coordonnees_contact.telephone);
             }
             if (payload.coordonnees_contact?.societe !== undefined) {
                 client.société = payload.coordonnees_contact.societe?.trim() || null;
@@ -605,7 +606,9 @@ export class CommandeService {
             const client = commande.client;
             if (payload.coordonnees_contact.nom !== undefined) client.nom = payload.coordonnees_contact.nom?.trim() || null;
             if (payload.coordonnees_contact.prenom !== undefined) client.prénom = payload.coordonnees_contact.prenom?.trim() || null;
-            if (payload.coordonnees_contact.telephone !== undefined) client.téléphone = payload.coordonnees_contact.telephone?.trim() || null;
+            if (payload.coordonnees_contact.telephone !== undefined) {
+                client.téléphone = formatTelephoneBE(payload.coordonnees_contact.telephone);
+            }
             if (payload.coordonnees_contact.mail !== undefined) client.mail = payload.coordonnees_contact.mail?.trim() || null;
             if (payload.coordonnees_contact.societe !== undefined) client.société = payload.coordonnees_contact.societe?.trim() || null;
             if (payload.coordonnees_contact.adresse !== undefined) client.adresse = payload.coordonnees_contact.adresse?.trim() || null;

@@ -18,6 +18,7 @@ import {
 } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
+import { formatTelephoneBE } from '../../util/format-telephone.util';
 import { FRAIS_COMMISSION_LIBRE } from '../../model/frais-commission.interface';
 import { renderAsync } from 'docx-preview';
 import * as THREE from 'three';
@@ -1910,6 +1911,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const quantiteRealiseeSomme = this.deriveQuantiteRealiseeSomme(compteursSerialises);
 
     const formValue = this.formGroup.getRawValue();
+    const telephoneFormatted = formatTelephoneBE(formValue.telephone) ?? '';
     const payload: any = {
       produit: formValue.nom_commande,
       date_commande: formValue.date_commande || null,
@@ -1930,7 +1932,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       coordonnees_contact: {
         nom: formValue.nom,
         prenom: formValue.prenom,
-        telephone: formValue.telephone,
+        telephone: telephoneFormatted || null,
         mail: formValue.mail,
         adresse: this.buildAdresseComplete(formValue.rue, formValue.code_postal, formValue.ville, formValue.pays),
         societe: formValue.societe,
@@ -1991,7 +1993,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         nom: formValue.nom,
         prénom: formValue.prenom,
         société: formValue.societe,
-        téléphone: formValue.telephone,
+        téléphone: telephoneFormatted || undefined,
         mail: formValue.mail,
         adresse: this.buildAdresseComplete(formValue.rue, formValue.code_postal, formValue.ville, formValue.pays) || undefined,
         tva: formValue.tva,

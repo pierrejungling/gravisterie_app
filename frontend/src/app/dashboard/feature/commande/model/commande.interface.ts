@@ -85,6 +85,39 @@ export interface Client {
   tva?: string;
 }
 
+const SITE_ORDER_TITLE_PREFIX = /^(?:📫\s*)?(?:WEB|🌐)\s*(?:\|\s*)?/iu;
+
+/** Commande issue du site vitrine (webhook), y compris les anciennes entrées sans `source_web`. */
+export function isCommandeSite(commande: Pick<Commande, 'source_web' | 'produit'>): boolean {
+  if (commande.source_web) {
+    return true;
+  }
+  return SITE_ORDER_TITLE_PREFIX.test(commande.produit?.trimStart() ?? '');
+}
+
+/** Commande site encore à traiter (pastille active dans le kanban). */
+export function isCommandeSiteNonTraitee(commande: Pick<Commande, 'source_web' | 'produit' | 'site_traitee'>): boolean {
+  return isCommandeSite(commande) && !commande.site_traitee;
+}
+
+/** Normalise l'affichage du titre (🌐 …, sans ancien 📫, WEB ni barre |). */
+export function formatProduitCommandeSite(produit: string | null | undefined): string {
+  return (produit ?? '')
+    .replace(/^📫\s*/u, '')
+    .replace(/^WEB\s*\|\s*/i, '🌐 ')
+    .replace(/^WEB\s+/i, '🌐 ')
+    .replace(/^🌐\s*\|\s*/u, '🌐 ')
+    .trim();
+}
+
+/** Titre affiché sans le préfixe technique « 🌐 ». */
+export function getCommandeSiteDisplayTitle(commande: Pick<Commande, 'id_commande' | 'produit'>): string {
+  const fallback = `Commande #${commande.id_commande.substring(0, 8)}`;
+  const raw = commande.produit?.trim() || fallback;
+  const stripped = raw.replace(SITE_ORDER_TITLE_PREFIX, '').trim();
+  return stripped || raw;
+}
+
 export interface Commande {
   id_commande: string;
   date_commande: string;
@@ -102,6 +135,8 @@ export interface Commande {
   commentaire_paye?: string;
   attente_reponse?: boolean; // false = client attend réponse, true = moi qui attends réponse
   mode_contact?: string; // 'mail', 'tel', ou 'meta'
+  source_web?: boolean;
+  site_traitee?: boolean;
   client: Client;
   support?: {
     nom_support?: string;

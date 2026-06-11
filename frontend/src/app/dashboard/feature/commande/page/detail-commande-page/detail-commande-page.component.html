@@ -26,6 +26,14 @@
         title="Supprimer la commande">
         🗑️ Supprimer
       </button>
+      <button
+        *ngIf="afficherNotifCommandeSite()"
+        type="button"
+        class="btn-action-bar btn-site-traitee"
+        (click)="onMarquerSiteTraitee()"
+        title="Marquer la commande comme traitée">
+        ✓ Traitée
+      </button>
     </div>
     <div class="detail-actions-bar__right">
       <div class="attente-reponse-toggle-bar" *ngIf="!isVente()">
@@ -1386,6 +1394,13 @@
           {{ showPrixFields() ? '💰 Masquer frais' : '💰 Afficher frais' }}
         </button>
         <button type="button" class="btn-footer btn-footer-delete" (click)="openDeleteConfirm()">🗑️ Supprimer</button>
+        <button
+          *ngIf="afficherNotifCommandeSite()"
+          type="button"
+          class="btn-footer btn-footer-site-traitee"
+          (click)="onMarquerSiteTraitee()">
+          ✓ Traitée
+        </button>
       </div>
       <div class="detail-actions-footer__row">
         <ng-container *ngIf="!isEditMode()">

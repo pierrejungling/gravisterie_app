@@ -144,7 +144,7 @@ export class DashboardHomePageComponent implements OnInit {
           const commandes = response.data as Commande[];
           
           // Compter les commandes non terminées (excluant aussi les annulées)
-          const commandesEnCours = commandes.filter(cmd => 
+          const commandesEnCours = commandes.filter(cmd =>
             cmd.statut_commande !== StatutCommande.TERMINE && cmd.statut_commande !== StatutCommande.ANNULEE
           ).length;
 

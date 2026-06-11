@@ -109,12 +109,11 @@ export class CommandeService {
         descriptionParts.push(`Newsletter : ${newsletter ? 'Oui' : 'Non'}`);
         descriptionParts.push(`CGV acceptées : ${terms ? 'Oui' : 'Non'}`);
 
-        // Titre de la commande : "📫 WEB | Nom Prenom" (fallback sur l'email si pas de nom)
-        // L'emoji 📫 signale une commande arrivée automatiquement depuis le site, à traiter
+        // Titre de la commande : "🌐 Nom Prenom" (fallback sur l'email si pas de nom)
         const nomClient = [dto.lastname?.trim(), dto.firstname?.trim()].filter(Boolean).join(' ');
 
         const payload: AjouterCommandePayload = {
-            nom_commande: `📫 WEB | ${nomClient || dto.email.trim()}`.slice(0, 100),
+            nom_commande: `🌐 ${nomClient || dto.email.trim()}`.slice(0, 100),
             deadline: deadlineIsDate ? new Date(deadlineRaw).toISOString() : undefined,
             coordonnees_contact: {
                 nom: dto.lastname?.trim().slice(0, 50) || undefined,
@@ -133,6 +132,8 @@ export class CommandeService {
         // ajouterCommande force CGV/newsletter à false : on applique les valeurs du formulaire
         commande.CGV_acceptée = terms;
         commande.newsletter_acceptée = newsletter;
+        commande.source_web = true;
+        commande.site_traitee = false;
         const commandeSauvegardee = await this.commandeRepository.save(commande);
 
         // Pièces jointes multipart : upload direct via le flux standard (R2 + commande_fichier)
@@ -584,6 +585,8 @@ export class CommandeService {
         if (payload.commentaire_paye !== undefined) commande.commentaire_paye = payload.commentaire_paye?.trim() || null;
         if (payload.attente_reponse !== undefined) commande.attente_reponse = payload.attente_reponse;
         if (payload.mode_contact !== undefined) commande.mode_contact = payload.mode_contact || null;
+        if (payload.source_web !== undefined) commande.source_web = Boolean(payload.source_web);
+        if (payload.site_traitee !== undefined) commande.site_traitee = Boolean(payload.site_traitee);
         if (payload.prix_final !== undefined) commande.prix_final = payload.prix_final !== null ? Number(payload.prix_final) : null;
         if (payload.prix_unitaire_final !== undefined) commande.prix_unitaire_final = payload.prix_unitaire_final !== null ? Number(payload.prix_unitaire_final) : null;
         if (payload.frais_pourcentage !== undefined) {

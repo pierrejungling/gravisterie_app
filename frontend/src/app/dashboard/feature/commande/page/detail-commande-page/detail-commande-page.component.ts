@@ -6,7 +6,16 @@ import { HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, Safe
 import { ApiService } from '@api';
 import { ApiURI, COMMANDE_FICHIERS_LIST, COMMANDE_FICHIERS_UPLOAD, COMMANDE_FICHIER_DOWNLOAD, COMMANDE_DUPLIQUER } from '@api';
 import { forkJoin, Subscription } from 'rxjs';
-import { Commande, CommandeFichier, StatutCommande, ModeContact, Couleur, QuantiteProduitCompteur } from '../../model/commande.interface';
+import {
+  Commande,
+  CommandeFichier,
+  StatutCommande,
+  ModeContact,
+  Couleur,
+  QuantiteProduitCompteur,
+  isCommandeSite,
+  isCommandeSiteNonTraitee,
+} from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
 import { FRAIS_COMMISSION_LIBRE } from '../../model/frais-commission.interface';
@@ -2083,6 +2092,40 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         });
         this.formGroup.get('payé')?.setValue(!payeValue, { emitEvent: false });
       }
+    });
+  }
+
+  afficherNotifCommandeSite(): boolean {
+    const commande = this.commande();
+    if (!commande || this.isVente()) {
+      return false;
+    }
+    return commande.statut_commande === StatutCommande.EN_ATTENTE_INFORMATION
+      && isCommandeSiteNonTraitee(commande);
+  }
+
+  onMarquerSiteTraitee(): void {
+    const currentCommande = this.commande();
+    if (!currentCommande || !this.afficherNotifCommandeSite()) {
+      return;
+    }
+
+    const payload: Partial<Commande> = { site_traitee: true };
+    if (isCommandeSite(currentCommande) && !currentCommande.source_web) {
+      payload.source_web = true;
+    }
+
+    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${currentCommande.id_commande}`, payload).subscribe({
+      next: () => {
+        this.commande.set({
+          ...currentCommande,
+          site_traitee: true,
+          source_web: currentCommande.source_web || isCommandeSite(currentCommande),
+        });
+      },
+      error: (error) => {
+        console.error('Erreur lors du marquage de la commande site comme traitée:', error);
+      },
     });
   }
 

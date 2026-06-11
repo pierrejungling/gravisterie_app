@@ -5,7 +5,14 @@ import { concatMap, from, last } from 'rxjs';
 import { HeaderComponent } from '@shared';
 import { ApiService } from '@api';
 import { ApiURI } from '@api';
-import { Commande, StatutCommande, ModeContact } from '../../model/commande.interface';
+import {
+  Commande,
+  StatutCommande,
+  ModeContact,
+  isCommandeSite,
+  isCommandeSiteNonTraitee,
+  formatProduitCommandeSite,
+} from '../../model/commande.interface';
 import { Payload } from '@shared';
 import { AppRoutes } from '@shared';
 
@@ -446,7 +453,23 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     }
     
     // Trier les commandes selon le type de deadline
-    return this.sortCommandesByDeadline(commandesFiltrees);
+    return this.sortCommandesByDeadline(commandesFiltrees, statut);
+  }
+
+  /** Colonne où arrivent les commandes du site vitrine (webhook). */
+  readonly statutCommandesSite = StatutCommande.EN_ATTENTE_INFORMATION;
+
+  isColonneCommandesSite(statut: StatutCommande): boolean {
+    return statut === this.statutCommandesSite;
+  }
+
+  afficherNotifCommandeSite(commande: Commande, statut: StatutCommande): boolean {
+    return this.isColonneCommandesSite(statut) && isCommandeSiteNonTraitee(commande);
+  }
+
+  getProduitAffiche(commande: Commande): string {
+    const raw = commande.produit || `Commande #${commande.id_commande.substring(0, 8)}`;
+    return isCommandeSite(commande) ? formatProduitCommandeSite(raw) || raw : raw;
   }
 
   /**
@@ -455,8 +478,32 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
    * 2. Deadlines dans moins de 7 jours (warning) -> juste après
    * 3. Le reste -> trié par date d'ajout (date_commande) - plus récentes en premier
    */
-  private sortCommandesByDeadline(commandes: Commande[]): Commande[] {
+  countCommandesSiteNonTraitees(): number {
+    return this.getCommandesByStatut(this.statutCommandesSite)
+      .filter((c) => isCommandeSiteNonTraitee(c))
+      .length;
+  }
+
+  private sortCommandesByDeadline(commandes: Commande[], statut: StatutCommande): Commande[] {
     return [...commandes].sort((a, b) => {
+      if (this.isColonneCommandesSite(statut)) {
+        const siteA = isCommandeSiteNonTraitee(a);
+        const siteB = isCommandeSiteNonTraitee(b);
+
+        // Priorité 0 (colonne Attente) : nouvelles commandes site en haut, plus récentes d'abord
+        if (siteA && !siteB) {
+          return -1;
+        }
+        if (!siteA && siteB) {
+          return 1;
+        }
+        if (siteA && siteB) {
+          const dateSiteA = a.date_commande ? new Date(a.date_commande).getTime() : 0;
+          const dateSiteB = b.date_commande ? new Date(b.date_commande).getTime() : 0;
+          return dateSiteB - dateSiteA;
+        }
+      }
+
       const statusA = this.getDeadlineStatus(a);
       const statusB = this.getDeadlineStatus(b);
       

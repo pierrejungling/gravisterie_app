@@ -3,7 +3,17 @@
 <div class="commandes-en-cours-wrapper">
   <div class="commandes-en-cours-container" #mobileContainer>
     <div class="page-header">
-      <h1 class="page-title">Commandes en cours</h1>
+      <div class="page-header__main">
+        <h1 class="page-title">Commandes en cours</h1>
+        <p
+          class="site-orders-counter"
+          *ngIf="countCommandesSiteNonTraitees() > 0"
+          [attr.aria-label]="countCommandesSiteNonTraitees() + ' nouvelle(s) commande(s) à traiter'">
+          <span class="site-orders-counter__dot" aria-hidden="true"></span>
+          <span class="site-orders-counter__count">{{ countCommandesSiteNonTraitees() }}</span>
+          <span class="site-orders-counter__label">{{ countCommandesSiteNonTraitees() > 1 ? 'nouvelles commandes à traiter' : 'nouvelle commande à traiter' }}</span>
+        </p>
+      </div>
       <div class="header-actions">
         <button class="btn-add-commande" (click)="navigateToNouvelleCommande()" title="Créer une nouvelle commande">
           +
@@ -62,15 +72,19 @@
                     [class.is-dragging]="isCommandeDragging(commande)"
                     [class.deadline-warning]="getDeadlineStatus(commande) === 'warning'"
                     [class.deadline-danger]="getDeadlineStatus(commande) === 'danger'"
-                    [title]="commande.produit || 'Commande #' + commande.id_commande"
+                    [title]="getProduitAffiche(commande)"
                     (click)="onCommandeClick(commande)">
                     <span class="payment-indicator" *ngIf="commande['payé']">✓ payé</span>
+                    <span class="site-notif" *ngIf="afficherNotifCommandeSite(commande, statut)">
+                      <span class="site-notif__dot" aria-hidden="true"></span>
+                      <span class="site-notif__label">new</span>
+                    </span>
                     <div
                       class="commande-drag-body"
                       (pointerdown)="onCardPointerDown($event, commande, statut)">
                       <div class="commande-header">
                         <h3 class="commande-title">
-                          {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
+                          {{ getProduitAffiche(commande) }}
                         </h3>
                       </div>
                       <div class="commande-info">
@@ -172,9 +186,13 @@
               [title]="commande.produit || 'Commande #' + commande.id_commande"
               (click)="onCommandeClick(commande)">
               <span class="payment-indicator" *ngIf="commande['payé']">✓ payé</span>
+              <span class="site-notif" *ngIf="afficherNotifCommandeSite(commande, statut)">
+                <span class="site-notif__dot" aria-hidden="true"></span>
+                <span class="site-notif__label">new</span>
+              </span>
               <div class="mobile-card__header">
                 <h3 class="mobile-card__title">
-                  {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
+                  {{ getProduitAffiche(commande) }}
                 </h3>
               </div>
               <div class="mobile-card__info">

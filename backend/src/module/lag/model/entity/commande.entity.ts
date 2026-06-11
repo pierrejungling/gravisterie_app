@@ -77,6 +77,14 @@ export class Commande {
     @Column({type: 'varchar', nullable: true})
     mode_contact: string | null; // 'mail', 'tel', ou 'meta'
 
+    /** Commande créée automatiquement depuis le site vitrine (webhook). */
+    @Column({type: 'boolean', default: false})
+    source_web: boolean;
+
+    /** Commande site marquée comme traitée dans le kanban (retire la pastille « nouveau »). */
+    @Column({type: 'boolean', default: false})
+    site_traitee: boolean;
+
     @ManyToOne(() => Client, (client) => client.id_client)
     @JoinColumn({name: 'id_client'})
     client: Client;

@@ -18,7 +18,7 @@ export class WebhookController {
     @UseInterceptors(AnyFilesInterceptor({
         limits: {
             fileSize: 50 * 1024 * 1024, // 50 Mo par fichier
-            files: 20,
+            files: 30,
         },
     }))
     async createFromWebhook(

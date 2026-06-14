@@ -7,6 +7,7 @@ import { StatutCommande } from '../model/entity/enum';
 import { ulid } from 'ulid';
 import { CommandeFichierService } from './commande-fichier.service';
 import { formatTelephoneBE } from '../util/format-telephone.util';
+import { scoreFlexibleSearch } from '../util/search.util';
 
 @Injectable()
 export class CommandeService {
@@ -376,6 +377,72 @@ export class CommandeService {
                 date_commande: 'DESC'
             }
         });
+    }
+
+    async rechercherCommandes(query: string, limit = 8): Promise<Commande[]> {
+        const trimmedQuery = query.trim();
+        if (trimmedQuery.length < 2) {
+            return [];
+        }
+
+        const [commandes, personnalisations] = await Promise.all([
+            this.getAllCommandes(),
+            this.personnalisationRepository
+                .createQueryBuilder('personnalisation')
+                .innerJoin('personnalisation.gravure', 'gravure')
+                .select('personnalisation.texte', 'texte')
+                .addSelect('gravure.id_commande', 'id_commande')
+                .getRawMany<{ texte: string; id_commande: string }>(),
+        ]);
+
+        const personnalisationParCommande = new Map<string, string>();
+        for (const row of personnalisations) {
+            if (!row.id_commande || !row.texte) {
+                continue;
+            }
+            const existing = personnalisationParCommande.get(row.id_commande);
+            personnalisationParCommande.set(
+                row.id_commande,
+                existing ? `${existing} ${row.texte}` : row.texte,
+            );
+        }
+
+        return commandes
+            .map((commande) => ({
+                commande,
+                score: scoreFlexibleSearch(
+                    this.buildCommandeSearchHaystack(
+                        commande,
+                        personnalisationParCommande.get(commande.id_commande),
+                    ),
+                    trimmedQuery,
+                ),
+            }))
+            .filter((entry) => entry.score > 0)
+            .sort((a, b) => b.score - a.score)
+            .slice(0, limit)
+            .map((entry) => entry.commande);
+    }
+
+    private buildCommandeSearchHaystack(commande: Commande, personnalisationTexte?: string): string {
+        const client = commande.client;
+        const supportNames = commande.supports?.map((support) => support.nom_support).filter(Boolean) ?? [];
+
+        return [
+            commande.id_commande,
+            commande.produit,
+            commande.description,
+            personnalisationTexte,
+            client?.nom,
+            client?.prénom,
+            client?.société,
+            client?.mail,
+            client?.téléphone,
+            client?.tva,
+            ...supportNames,
+        ]
+            .filter(Boolean)
+            .join(' ');
     }
 
     async getCommandeById(idCommande: string): Promise<any> {

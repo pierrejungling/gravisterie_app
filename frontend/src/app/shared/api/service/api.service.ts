@@ -18,6 +18,14 @@ export class ApiService {
     return this.handle(this.http.get(`${this.baseURL}${partURL}`));
   }
 
+  getWithQuery(partURL: string, params: Record<string, string | number>): Observable<ApiResponse> {
+    const query = new URLSearchParams(
+      Object.entries(params).map(([key, value]) => [key, String(value)]),
+    ).toString();
+    const suffix = query ? `?${query}` : '';
+    return this.handle(this.http.get(`${this.baseURL}${partURL}${suffix}`));
+  }
+
   /** GET qui retourne un Blob (ex. téléchargement de fichier). Ne passe pas par le wrapper JSON. */
   getBlob(partURL: string): Observable<Blob> {
     return this.http.get(`${this.baseURL}${partURL}`, { responseType: 'blob' });

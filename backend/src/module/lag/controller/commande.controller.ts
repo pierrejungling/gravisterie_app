@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Put, Delete, Param, UseInterceptors, UploadedFile, BadRequestException, StreamableFile } from '@nestjs/common';
+import { Controller, Post, Body, Get, Put, Delete, Param, Query, UseInterceptors, UploadedFile, BadRequestException, StreamableFile } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CommandeService } from '../service/commande.service';
@@ -24,6 +24,16 @@ export class CommandeController {
     @ApiOperation({ summary: 'Récupérer toutes les commandes' })
     async getAllCommandes() {
         return await this.commandeService.getAllCommandes();
+    }
+
+    @Get('recherche')
+    @ApiOperation({ summary: 'Rechercher des commandes (accents, casse, pluriels, fautes)' })
+    async rechercherCommandes(
+        @Query('q') query?: string,
+        @Query('limit') limit?: string,
+    ) {
+        const parsedLimit = Math.min(Math.max(parseInt(limit || '8', 10) || 8, 1), 50);
+        return await this.commandeService.rechercherCommandes(query || '', parsedLimit);
     }
 
     @Put('statut')

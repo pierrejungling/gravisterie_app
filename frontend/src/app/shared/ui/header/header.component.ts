@@ -1,9 +1,11 @@
-import { Component, inject, computed, signal, effect, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, computed, signal, effect, ViewChild, ElementRef, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AppRoutes, AppNode, ThemeService } from '@shared';
 import { TokenService, ApiService, ApiURI, AuthSessionService } from '@api';
-import { filter } from 'rxjs/operators';
+import { filter, debounceTime, distinctUntilChanged, switchMap, catchError, map, finalize } from 'rxjs/operators';
+import { Subject, of } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Commande, StatutCommande } from '../../../dashboard/feature/commande/model/commande.interface';
 
 @Component({
@@ -20,6 +22,8 @@ export class HeaderComponent {
   private readonly authSession: AuthSessionService = inject(AuthSessionService);
   private readonly apiService: ApiService = inject(ApiService);
   private readonly themeService: ThemeService = inject(ThemeService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly searchInput$ = new Subject<string>();
   private readonly searchMinLength = 2;
   private readonly searchMaxResults = 8;
   
@@ -73,9 +77,8 @@ export class HeaderComponent {
   searchQuery = signal<string>('');
   searchFocused = signal<boolean>(false);
   searchLoading = signal<boolean>(false);
-  searchLoaded = signal<boolean>(false);
   searchOpen = signal<boolean>(false);
-  allCommandes = signal<Commande[]>([]);
+  searchResults = signal<Commande[]>([]);
 
   @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
   showBackButton = computed(() => {
@@ -95,15 +98,6 @@ export class HeaderComponent {
     if (!this.searchOpen()) return false;
     return this.searchQuery().trim().length > 0 || this.searchLoading();
   });
-
-  filteredCommandes = computed(() => {
-    const query = this.searchQuery().trim().toLowerCase();
-    if (query.length < this.searchMinLength) return [];
-    const data = this.allCommandes();
-    return data
-      .filter(cmd => this.getCommandeSearchText(cmd).includes(query))
-      .slice(0, this.searchMaxResults);
-  });
   
   constructor(private router: Router) {
     // Écouter les changements de route
@@ -115,6 +109,35 @@ export class HeaderComponent {
     
     // Initialiser avec la route actuelle
     this.currentRoute.set(this.router.url);
+
+    this.searchInput$
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap((query) => {
+          const trimmed = query.trim();
+          if (trimmed.length < this.searchMinLength) {
+            this.searchLoading.set(false);
+            this.searchResults.set([]);
+            return of([] as Commande[]);
+          }
+
+          this.searchLoading.set(true);
+          return this.apiService.getWithQuery(ApiURI.RECHERCHE_COMMANDES, {
+            q: trimmed,
+            limit: this.searchMaxResults,
+          }).pipe(
+            map((response) => (response.result && response.data ? response.data as Commande[] : [])),
+            catchError((error) => {
+              console.error('Erreur lors de la recherche de commandes:', error);
+              return of([] as Commande[]);
+            }),
+            finalize(() => this.searchLoading.set(false)),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((results) => this.searchResults.set(results));
 
     // Réinitialiser le fallback quand le thème change
     effect(() => {
@@ -183,15 +206,14 @@ export class HeaderComponent {
   onSearchInput(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.searchQuery.set(value);
-    if (value.trim().length >= this.searchMinLength) {
-      this.ensureCommandesLoaded();
-    }
+    this.searchInput$.next(value);
   }
 
   onSearchFocus(): void {
     this.searchFocused.set(true);
-    if (this.searchQuery().trim().length >= this.searchMinLength) {
-      this.ensureCommandesLoaded();
+    const query = this.searchQuery().trim();
+    if (query.length >= this.searchMinLength) {
+      this.searchInput$.next(query);
     }
   }
 
@@ -203,7 +225,7 @@ export class HeaderComponent {
 
   onSearchEnter(event: Event): void {
     event.preventDefault();
-    const results = this.filteredCommandes();
+    const results = this.searchResults();
     if (results.length > 0) {
       this.onSelectCommande(results[0]);
     }
@@ -213,6 +235,7 @@ export class HeaderComponent {
     this.searchFocused.set(false);
     this.searchOpen.set(false);
     this.searchQuery.set('');
+    this.searchResults.set([]);
     this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'detail', commande.id_commande]);
   }
 
@@ -222,7 +245,10 @@ export class HeaderComponent {
     if (nextState) {
       this.onSearchFocus();
       this.focusSearchInput();
+      return;
     }
+    this.searchQuery.set('');
+    this.searchResults.set([]);
   }
 
   private focusSearchInput(attempt: number = 0): void {
@@ -298,43 +324,6 @@ export class HeaderComponent {
     return client?.mail || client?.téléphone || 'Client inconnu';
   }
 
-  private getCommandeSearchText(commande: Commande): string {
-    const client = commande.client;
-    return [
-      commande.id_commande,
-      commande.produit,
-      commande.description,
-      commande.personnalisation?.texte,
-      client?.nom,
-      client?.prénom,
-      client?.société,
-      client?.mail,
-      client?.téléphone,
-      client?.tva,
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .toLowerCase();
-  }
-
-  private ensureCommandesLoaded(): void {
-    if (this.searchLoaded() || this.searchLoading()) return;
-    this.searchLoading.set(true);
-    this.apiService.get(ApiURI.LISTE_COMMANDES).subscribe({
-      next: (response) => {
-        if (response.result && response.data) {
-          this.allCommandes.set(response.data as Commande[]);
-          this.searchLoaded.set(true);
-        }
-        this.searchLoading.set(false);
-      },
-      error: (error) => {
-        console.error('Erreur lors du chargement des commandes:', error);
-        this.searchLoading.set(false);
-      }
-    });
-  }
-  
   private encodeLogoPath(path: string): string {
     // Encoder les espaces et caractères spéciaux dans l'URL
     return path.split('/').map(part => encodeURIComponent(part)).join('/');

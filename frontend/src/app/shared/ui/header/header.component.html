@@ -90,14 +90,14 @@
         aria-label="Rechercher une commande">
     </div>
     <div class="header__search-results" *ngIf="showSearchResults()">
-      <div class="header__search-status" *ngIf="searchLoading()">Chargement des commandes...</div>
+      <div class="header__search-status" *ngIf="searchLoading()">Recherche en cours...</div>
       <div class="header__search-status" *ngIf="!searchLoading() && searchQuery().trim().length < 2">
         Tapez au moins 2 caractères
       </div>
       <button
         type="button"
         class="header__search-item"
-        *ngFor="let commande of filteredCommandes()"
+        *ngFor="let commande of searchResults()"
         (mousedown)="onSelectCommande(commande)">
         <div class="header__search-item-head">
           <div class="header__search-item-title">{{ getCommandeTitle(commande) }}</div>
@@ -110,7 +110,7 @@
           <span *ngIf="getCommandePriceLabel(commande)"> • {{ getCommandePriceLabel(commande) }}</span>
         </div>
       </button>
-      <div class="header__search-status" *ngIf="!searchLoading() && searchQuery().trim().length >= 2 && filteredCommandes().length === 0">
+      <div class="header__search-status" *ngIf="!searchLoading() && searchQuery().trim().length >= 2 && searchResults().length === 0">
         Aucune commande trouvée
       </div>
     </div>

@@ -6,6 +6,7 @@ export enum ApiURI {
   REFRESH_TOKEN = 'account/refresh',
   AJOUTER_COMMANDE = 'commande/ajouter',
   LISTE_COMMANDES = 'commande/liste',
+  RECHERCHE_COMMANDES = 'commande/recherche',
   UPDATE_STATUT_COMMANDE = 'commande/statut',
   GET_COMMANDE_BY_ID = 'commande',
   UPDATE_COMMANDE = 'commande',

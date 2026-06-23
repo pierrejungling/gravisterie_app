@@ -85,15 +85,39 @@
   // Safari iOS gère mal :placeholder-shown sur date → le label est toujours en position "floated" via la classe .fixed-label
   &.input--date {
     .floating-input {
-      padding-left: 1rem;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
       box-sizing: border-box;
       display: block;
       width: 100%;
+      text-align: left;
+
+      &::-webkit-date-and-time-value {
+        text-align: left;
+        margin: 0;
+        min-width: 0;
+      }
+
+      &::-webkit-datetime-edit {
+        text-align: left;
+        padding: 0;
+      }
+
+      &::-webkit-datetime-edit-fields-wrapper {
+        text-align: left;
+        padding: 0;
+      }
+
+      &::-webkit-calendar-picker-indicator {
+        margin-left: 0.25rem;
+      }
     }
+
     .floating-label {
-      left: 1rem;
+      left: 0.75rem;
       right: auto;
     }
+
     .floating-label.fixed-label {
       transform: translateY(-1.75rem) scale(0.85); // Plus de marge pour éviter que le label coupe la bordure sur Safari iOS
     }
@@ -130,5 +154,31 @@
 
   .input.input--suffix .floating-input {
     padding-right: 2.5rem !important;
+  }
+
+  .input.input--date .floating-input {
+    padding-top: 1.35rem;
+    padding-bottom: 0.55rem;
+    padding-left: 0.875rem;
+    padding-right: 0.875rem;
+    text-align: left;
+
+    &::-webkit-date-and-time-value {
+      text-align: left;
+      width: auto;
+      margin: 0;
+    }
+
+    &::-webkit-datetime-edit,
+    &::-webkit-datetime-edit-fields-wrapper {
+      text-align: left;
+      justify-content: flex-start;
+      width: auto;
+      padding: 0;
+    }
+  }
+
+  .input.input--date .floating-label.fixed-label {
+    transform: translateY(-1.85rem) scale(0.85);
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, HostListener, inject, signal, WritableSignal, computed, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, HostListener, inject, signal, WritableSignal, computed, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -91,6 +91,27 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   isDragOver: WritableSignal<boolean> = signal(false);
   /** URL de l'image en prévisualisation (null = modal fermée). */
   previewImageUrl: WritableSignal<string | null> = signal(null);
+  /** Fichier affiché dans la modal image (pour enregistrement / partage). */
+  previewFichier: WritableSignal<CommandeFichier | null> = signal(null);
+  previewImageScale: WritableSignal<number> = signal(1);
+  previewImageTranslateX: WritableSignal<number> = signal(0);
+  previewImageTranslateY: WritableSignal<number> = signal(0);
+  previewImageTransform = computed(() =>
+    `translate3d(${this.previewImageTranslateX()}px, ${this.previewImageTranslateY()}px, 0) scale(${this.previewImageScale()})`
+  );
+
+  private previewImageStageEl: HTMLElement | null = null;
+  private previewImagePinchStartDistance = 0;
+  private previewImagePinchStartScale = 1;
+  private previewImagePanStartX = 0;
+  private previewImagePanStartY = 0;
+  private previewImagePanStartTranslateX = 0;
+  private previewImagePanStartTranslateY = 0;
+  private previewImageIsPinching = false;
+  private previewImageIsPanning = false;
+  private readonly previewImageMinScale = 1;
+  private readonly previewImageMaxScale = 4;
+  private readonly onPreviewImageTouchMoveBound = (event: TouchEvent) => this.onPreviewImageTouchMove(event);
   /** URL du PDF en prévisualisation (null = modal fermée). */
   previewPdfUrl: WritableSignal<string | null> = signal(null);
   /** Blob du DOCX en prévisualisation (null = modal fermée). */
@@ -338,6 +359,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   ngOnDestroy(): void {
     window.removeEventListener('beforeunload', this.saveScrollPosition);
     this.routeSubscription?.unsubscribe();
+    this.bindPreviewImageTouchMove(null);
     this.revokeFichierPreviewUrls();
     const pdfUrl = this.previewPdfUrl();
     if (pdfUrl) URL.revokeObjectURL(pdfUrl);
@@ -601,15 +623,85 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     if (!id) return;
     this.apiService.getBlob(COMMANDE_FICHIER_DOWNLOAD(id, fichier.id_fichier)).subscribe({
       next: (blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fichier.nom_fichier || 'fichier';
-        a.click();
-        URL.revokeObjectURL(url);
+        void this.shareOrDownloadBlob(blob, fichier);
       },
       error: (err) => console.error('Erreur téléchargement:', err)
     });
+  }
+
+  canShareImageFichier(fichier: CommandeFichier): boolean {
+    return this.isRasterImageFichier(fichier) && this.canShareImageFiles();
+  }
+
+  getFichierDownloadTitle(fichier: CommandeFichier): string {
+    return this.canShareImageFichier(fichier)
+      ? 'Enregistrer dans Photos'
+      : 'Télécharger';
+  }
+
+  isRasterImageFichier(fichier: CommandeFichier): boolean {
+    return this.isImageFichier(fichier) && !this.isSvgFichier(fichier);
+  }
+
+  private canShareImageFiles(): boolean {
+    return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+  }
+
+  private resolveBlobMimeType(blob: Blob, fichier: CommandeFichier): string {
+    if (fichier.type_mime) {
+      return fichier.type_mime;
+    }
+    if (blob.type && blob.type !== 'application/octet-stream') {
+      return blob.type;
+    }
+    const ext = (fichier.nom_fichier || '').split('.').pop()?.toLowerCase();
+    const mimeByExt: Record<string, string> = {
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      webp: 'image/webp',
+      gif: 'image/gif',
+      heic: 'image/heic',
+      heif: 'image/heif',
+      svg: 'image/svg+xml',
+      pdf: 'application/pdf',
+    };
+    return (ext && mimeByExt[ext]) || blob.type || 'application/octet-stream';
+  }
+
+  private async shareOrDownloadBlob(blob: Blob, fichier: CommandeFichier): Promise<void> {
+    const filename = fichier.nom_fichier || 'fichier';
+    const mime = this.resolveBlobMimeType(blob, fichier);
+    const normalizedBlob = blob.type === mime ? blob : new Blob([blob], { type: mime });
+
+    if (this.isRasterImageFichier(fichier) && this.canShareImageFiles()) {
+      try {
+        const file = new File([normalizedBlob], filename, { type: mime });
+        if (typeof navigator.canShare === 'function' && !navigator.canShare({ files: [file] })) {
+          this.triggerBrowserDownload(normalizedBlob, filename);
+          return;
+        }
+        await navigator.share({ files: [file], title: filename });
+        return;
+      } catch (err) {
+        if ((err as DOMException)?.name === 'AbortError') {
+          return;
+        }
+      }
+    }
+
+    this.triggerBrowserDownload(normalizedBlob, filename);
+  }
+
+  private triggerBrowserDownload(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   }
 
   deleteFichier(idFichier: string): void {
@@ -812,7 +904,108 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   openPreview(fichier: CommandeFichier): void {
     if (!this.isPreviewableImageFichier(fichier)) return;
     const url = this.fichierPreviewUrls()[fichier.id_fichier];
-    if (url) this.previewImageUrl.set(url);
+    if (url) {
+      this.resetPreviewImageZoom();
+      this.previewFichier.set(fichier);
+      this.previewImageUrl.set(url);
+    }
+  }
+
+  @ViewChild('previewImageStage') set previewImageStage(ref: ElementRef<HTMLElement> | undefined) {
+    this.bindPreviewImageTouchMove(ref?.nativeElement ?? null);
+  }
+
+  resetPreviewImageZoom(): void {
+    this.previewImageScale.set(1);
+    this.previewImageTranslateX.set(0);
+    this.previewImageTranslateY.set(0);
+    this.previewImageIsPinching = false;
+    this.previewImageIsPanning = false;
+  }
+
+  onPreviewImageTouchStart(event: TouchEvent): void {
+    if (!this.previewImageUrl()) return;
+
+    if (event.touches.length === 2) {
+      this.previewImageIsPinching = true;
+      this.previewImageIsPanning = false;
+      this.previewImagePinchStartDistance = this.getPreviewTouchDistance(event.touches);
+      this.previewImagePinchStartScale = this.previewImageScale();
+      return;
+    }
+
+    if (event.touches.length === 1 && this.previewImageScale() > 1) {
+      this.previewImageIsPanning = true;
+      this.previewImageIsPinching = false;
+      this.previewImagePanStartX = event.touches[0].clientX;
+      this.previewImagePanStartY = event.touches[0].clientY;
+      this.previewImagePanStartTranslateX = this.previewImageTranslateX();
+      this.previewImagePanStartTranslateY = this.previewImageTranslateY();
+    }
+  }
+
+  onPreviewImageTouchMove(event: TouchEvent): void {
+    if (!this.previewImageUrl()) return;
+
+    if (this.previewImageIsPinching && event.touches.length >= 2) {
+      event.preventDefault();
+      const distance = this.getPreviewTouchDistance(event.touches);
+      if (this.previewImagePinchStartDistance > 0) {
+        const nextScale = this.previewImagePinchStartScale * (distance / this.previewImagePinchStartDistance);
+        this.previewImageScale.set(this.clampPreviewImageScale(nextScale));
+      }
+      return;
+    }
+
+    if (this.previewImageIsPanning && event.touches.length === 1) {
+      event.preventDefault();
+      const dx = event.touches[0].clientX - this.previewImagePanStartX;
+      const dy = event.touches[0].clientY - this.previewImagePanStartY;
+      this.previewImageTranslateX.set(this.previewImagePanStartTranslateX + dx);
+      this.previewImageTranslateY.set(this.previewImagePanStartTranslateY + dy);
+    }
+  }
+
+  onPreviewImageTouchEnd(event: TouchEvent): void {
+    if (event.touches.length < 2) {
+      this.previewImageIsPinching = false;
+    }
+
+    if (event.touches.length === 0) {
+      this.previewImageIsPanning = false;
+      if (this.previewImageScale() <= 1) {
+        this.resetPreviewImageZoom();
+      }
+      return;
+    }
+
+    if (event.touches.length === 1 && this.previewImageScale() > 1) {
+      this.previewImageIsPanning = true;
+      this.previewImagePanStartX = event.touches[0].clientX;
+      this.previewImagePanStartY = event.touches[0].clientY;
+      this.previewImagePanStartTranslateX = this.previewImageTranslateX();
+      this.previewImagePanStartTranslateY = this.previewImageTranslateY();
+    }
+  }
+
+  private bindPreviewImageTouchMove(el: HTMLElement | null): void {
+    if (this.previewImageStageEl) {
+      this.previewImageStageEl.removeEventListener('touchmove', this.onPreviewImageTouchMoveBound);
+    }
+    this.previewImageStageEl = el;
+    if (el) {
+      el.addEventListener('touchmove', this.onPreviewImageTouchMoveBound, { passive: false });
+    }
+  }
+
+  private getPreviewTouchDistance(touches: TouchList): number {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  }
+
+  private clampPreviewImageScale(scale: number): number {
+    return Math.min(this.previewImageMaxScale, Math.max(this.previewImageMinScale, scale));
   }
 
   openPreviewForFichier(fichier: CommandeFichier): void {
@@ -960,6 +1153,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const aiUrl = this.previewAiUrl();
     if (aiUrl) URL.revokeObjectURL(aiUrl);
     this.previewImageUrl.set(null);
+    this.previewFichier.set(null);
+    this.resetPreviewImageZoom();
     this.previewPdfUrl.set(null);
     this.previewDocxBlob.set(null);
     this.previewAiUrl.set(null);

@@ -2198,6 +2198,12 @@
       min-height: 48px;
     }
   }
+
+  .btn-add-support,
+  .btn-remove-support {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
 }
 
 @media (max-width: 480px) {

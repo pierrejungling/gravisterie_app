@@ -778,6 +778,26 @@
   }
 }
 
+.preview-save {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 1001;
+  border: none;
+  border-radius: 6px;
+  padding: 0.55rem 0.9rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background: #fff;
+  }
+}
+
 .preview-content {
   position: relative;
   max-width: 70vw;
@@ -807,6 +827,46 @@
     height: 90vh;
     min-height: 60vh;
   }
+
+  &--image {
+    max-width: 96vw;
+    max-height: 82vh;
+    width: 96vw;
+    height: 82vh;
+    overflow: hidden;
+    touch-action: none;
+    background: transparent;
+  }
+}
+
+.preview-image-stage {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  min-width: 100px;
+  min-height: 100px;
+  object-fit: contain;
+  display: block;
+  border-radius: 4px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  position: relative;
+  z-index: 1;
+  transform-origin: center center;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
 }
 
 .preview-docx {
@@ -885,21 +945,6 @@
   max-height: 90vh;
 }
 
-
-.preview-image {
-  max-width: 70vw;
-  max-height: 70vh;
-  width: auto;
-  height: auto;
-  min-width: 100px;
-  min-height: 100px;
-  object-fit: contain;
-  display: block;
-  border-radius: 4px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
-  position: relative;
-  z-index: 1;
-}
 
 // Toggle attente réponse : même ligne que les boutons (dans .header-actions)
 .attente-reponse-toggle-top-right {
@@ -1645,15 +1690,14 @@
     padding: 0.5rem;
     margin-bottom: 1rem;
 
-    ::ng-deep .floating-label-input {
-      input {
-        border-color: #ff9800;
-        color: #e65100;
-        font-weight: 600;
-      }
-      label {
-        color: #e65100;
-      }
+    ::ng-deep app-floating-label-input .floating-input {
+      border-color: #ff9800;
+      color: #e65100;
+      font-weight: 600;
+    }
+
+    ::ng-deep app-floating-label-input .floating-label {
+      color: #e65100;
     }
   }
 
@@ -1664,15 +1708,14 @@
     padding: 0.5rem;
     margin-bottom: 1rem;
 
-    ::ng-deep .floating-label-input {
-      input {
-        border-color: #f44336;
-        color: #c62828;
-        font-weight: 600;
-      }
-      label {
-        color: #c62828;
-      }
+    ::ng-deep app-floating-label-input .floating-input {
+      border-color: #f44336;
+      color: #c62828;
+      font-weight: 600;
+    }
+
+    ::ng-deep app-floating-label-input .floating-label {
+      color: #c62828;
     }
   }
 
@@ -1949,16 +1992,20 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    width: 100%;
+    min-width: 0;
 
     .pcs-realises-counter-controls {
       display: flex;
       align-items: center;
       gap: 0.5rem;
       min-width: 0;
+      flex: 1;
     }
 
     .pcs-realises-input {
       width: 80px;
+      box-sizing: border-box;
       padding: 0.6rem 0.75rem;
       font-size: 1rem;
       border: 1px solid var(--color-input-border);
@@ -2305,6 +2352,136 @@
     background: transparent;
     border-color: var(--color-success);
     font-weight: 600;
+  }
+}
+
+@media (max-width: 768px) {
+  .pcs-realises-wrapper {
+    padding: 0.65rem 0.5rem;
+    overflow-x: clip;
+  }
+
+  .pcs-realises-block--row {
+    min-width: 0;
+
+    &.pcs-realises-block--complet {
+      padding: 0.55rem 0.5rem 0.75rem;
+    }
+  }
+
+  .pcs-realises-block .pcs-realises-input-row {
+    width: 100%;
+    min-width: 0;
+
+    .pcs-realises-counter-controls {
+      width: 100%;
+      min-width: 0;
+      flex-wrap: wrap;
+      gap: 0.35rem 0.4rem;
+    }
+
+    .pcs-realises-input,
+    .pcs-realises-realise-readonly {
+      width: auto;
+      flex: 1 1 3rem;
+      min-width: 0;
+      max-width: 4.25rem;
+      padding: 0.5rem 0.35rem;
+      font-size: 0.95rem;
+    }
+
+    .pcs-realises-separator,
+    .pcs-realises-total,
+    .pcs-realises-cible-readonly {
+      flex-shrink: 0;
+    }
+
+    .pcs-realises-buttons {
+      margin-left: auto;
+      flex-shrink: 0;
+      gap: 0.2rem;
+    }
+
+    .pcs-btn {
+      width: 2.5rem;
+      height: 2.5rem;
+      min-width: 2.5rem;
+      font-size: 1.1rem;
+    }
+  }
+
+  .pcs-realises-block .pcs-realises-add-row {
+    width: 100%;
+    min-width: 0;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+
+    .pcs-realises-add-input {
+      width: auto;
+      flex: 1 1 3rem;
+      min-width: 0;
+      max-width: 4.5rem;
+      padding: 0.5rem 0.35rem;
+    }
+
+    .btn-add-support.btn-add-support--compteur-ligne {
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: 100%;
+      margin-top: 0;
+      padding: 0.5rem 0.65rem;
+      font-size: 0.8rem;
+    }
+  }
+
+  .pcs-compteur-progress-wrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .pcs-compteur-btn-supprimer,
+  .pcs-compteur-btn-ajouter-global {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .pcs-compteur-btn-ajouter-global {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pcs-realises-libelle-row {
+    .pcs-compteur-badge-complet {
+      margin-left: 0;
+    }
+  }
+
+  .pcs-realises-libelle-input {
+    min-width: 0;
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .pcs-realises-block .pcs-realises-input-row {
+    .pcs-realises-counter-controls {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto auto;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .pcs-realises-buttons {
+      margin-left: 0;
+      grid-column: 4 / 6;
+      justify-self: end;
+    }
+
+    .pcs-realises-input,
+    .pcs-realises-realise-readonly {
+      max-width: none;
+    }
   }
 }
 
@@ -3679,6 +3856,12 @@
       width: 100%;
       min-height: 48px;
     }
+  }
+
+  .btn-add-support,
+  .btn-remove-support {
+    max-width: 100%;
+    box-sizing: border-box;
   }
 }
 

@@ -359,7 +359,11 @@
                   class="btn-fichier btn-preview btn-preview-eye btn-icon"
                   (click)="openPreviewForFichier(fichier)"
                   title="Prévisualiser">👁</button>
-                <button type="button" class="btn-fichier btn-download btn-icon" (click)="downloadFichier(fichier)" title="Télécharger">⬇</button>
+                <button
+                  type="button"
+                  class="btn-fichier btn-download btn-icon"
+                  (click)="downloadFichier(fichier)"
+                  [title]="getFichierDownloadTitle(fichier)">⬇</button>
                 <button type="button" class="btn-fichier btn-delete btn-icon" (click)="deleteFichier(fichier.id_fichier)" title="Supprimer">🗑</button>
               </div>
             </li>
@@ -400,14 +404,36 @@
         tabindex="0"
         aria-label="Fermer l'aperçu">
         <button type="button" class="preview-close" (click)="closePreview(); $event.stopPropagation()" title="Fermer">✕</button>
+        <button
+          *ngIf="previewImageUrl() && previewFichier() && canShareImageFichier(previewFichier()!)"
+          type="button"
+          class="preview-save"
+          (click)="downloadFichier(previewFichier()!); $event.stopPropagation()"
+          [title]="getFichierDownloadTitle(previewFichier()!)">
+          Enregistrer
+        </button>
         <div
           class="preview-content"
+          [class.preview-content--image]="!!previewImageUrl()"
           [class.preview-content--pdf]="previewPdfUrl()"
           [class.preview-content--docx]="previewDocxBlob()"
           [class.preview-content--ai]="previewAiUrl()"
           [class.preview-content--3d]="preview3dVisible()"
           (click)="$event.stopPropagation()">
-          <img *ngIf="previewImageUrl()" [src]="previewImageUrl() | safeUrl" alt="Aperçu" class="preview-image">
+          <div
+            #previewImageStage
+            *ngIf="previewImageUrl()"
+            class="preview-image-stage"
+            (touchstart)="onPreviewImageTouchStart($event)"
+            (touchend)="onPreviewImageTouchEnd($event)"
+            (touchcancel)="onPreviewImageTouchEnd($event)">
+            <img
+              [src]="previewImageUrl() | safeUrl"
+              alt="Aperçu"
+              class="preview-image"
+              [style.transform]="previewImageTransform()"
+              draggable="false">
+          </div>
           <iframe *ngIf="previewPdfUrl()" [src]="previewPdfUrl() | safeResourceUrl" class="preview-pdf" title="Aperçu PDF"></iframe>
           <div *ngIf="previewDocxBlob()" id="docx-preview-container" class="preview-docx"></div>
           <div class="preview-ai-wrap" *ngIf="previewAiUrl()">
@@ -1208,12 +1234,17 @@
       <!-- Texte de la personnalisation -->
       <div class="input-wrapper">
         <ng-container *ngIf="isEditMode(); else textePersoCopyField">
-          <app-floating-label-input
-            [label]="'Texte de la personnalisation'"
-            [control]="get('texte_personnalisation')"
-            [formGroup]="formGroup"
-            [readonly]="false">
-          </app-floating-label-input>
+          <div class="textarea-container" [formGroup]="formGroup">
+            <textarea
+              class="description-textarea"
+              formControlName="texte_personnalisation"
+              (input)="autoGrowTextarea($event)"
+              rows="4"
+              placeholder=" "></textarea>
+            <label class="textarea-label" [class.fixed-label]="get('texte_personnalisation').value && get('texte_personnalisation').value.length > 0">
+              Texte de la personnalisation
+            </label>
+          </div>
         </ng-container>
         <ng-template #textePersoCopyField>
           <div class="copy-field-readonly">

@@ -617,11 +617,17 @@
 
       <!-- Texte de la personnalisation -->
       <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('texte_personnalisation')">
-        <app-floating-label-input
-          [label]="'Texte de la personnalisation'"
-          [control]="get('texte_personnalisation')"
-          [formGroup]="formGroup">
-        </app-floating-label-input>
+        <div class="textarea-container" [formGroup]="formGroup">
+          <textarea
+            class="description-textarea"
+            formControlName="texte_personnalisation"
+            (input)="autoGrowTextarea($event)"
+            rows="4"
+            placeholder=" "></textarea>
+          <label class="textarea-label" [class.fixed-label]="get('texte_personnalisation').value && get('texte_personnalisation').value.length > 0">
+            Texte de la personnalisation
+          </label>
+        </div>
         <p class="field-error" *ngIf="getFieldErrorMessage('texte_personnalisation')">{{ getFieldErrorMessage('texte_personnalisation') }}</p>
       </div>
     </section>

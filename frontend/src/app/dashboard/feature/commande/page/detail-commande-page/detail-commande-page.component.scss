@@ -1194,29 +1194,6 @@
     }
   }
 
-  &.btn-copy-fiche {
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    color: #4338ca;
-
-    &:hover {
-      background: rgba(99, 102, 241, 0.16);
-      border-color: #6366f1;
-    }
-
-    :root[data-theme="dark"] &,
-    [data-theme="dark"] & {
-      color: #c7d2fe !important;
-    }
-
-    :root[data-theme="dark"] &:hover,
-    [data-theme="dark"] &:hover {
-      background: rgba(99, 102, 241, 0.22) !important;
-      border-color: #818cf8 !important;
-      color: #ffffff !important;
-    }
-  }
-
   &.btn-edit {
     background: var(--btn-edit-bg);
     border: 1px solid var(--btn-edit-border);
@@ -3289,6 +3266,47 @@
   margin-bottom: 1.25rem;
   display: flex;
   justify-content: flex-start;
+  align-items: center;
+  gap: 0.5rem;
+
+  .copy-field-copy-btn {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    border: 1px solid var(--color-input-border);
+    border-radius: 6px;
+    background: var(--color-background-light);
+    color: var(--color-text);
+    padding: 0.45rem 0.7rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+
+    &:hover:not(:disabled),
+    &:focus-visible:not(:disabled) {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.18);
+      outline: none;
+    }
+
+    &::before {
+      content: '';
+      width: 1.15rem;
+      height: 1.15rem;
+      background-color: currentColor;
+      -webkit-mask: center / contain no-repeat url('/assets/icons/copy-svgrepo-com.svg');
+      mask: center / contain no-repeat url('/assets/icons/copy-svgrepo-com.svg');
+      flex-shrink: 0;
+    }
+  }
+}
+
+:host-context([data-theme="dark"]) .detail-duplicate-section .copy-field-copy-btn,
+[data-theme="dark"] .detail-duplicate-section .copy-field-copy-btn {
+  color: #e8eefb;
 }
 
 .btn-duplicate {
@@ -3713,17 +3731,6 @@
   .detail-actions-footer .btn-footer-prix:hover {
     background: #bbdefb;
     border-color: #64b5f6;
-  }
-
-  .detail-actions-footer .btn-footer-copy-fiche {
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid rgba(99, 102, 241, 0.35);
-    color: #4338ca;
-  }
-
-  .detail-actions-footer .btn-footer-copy-fiche:hover {
-    background: rgba(99, 102, 241, 0.16);
-    border-color: #6366f1;
   }
 
   .detail-actions-footer .btn-footer-delete {

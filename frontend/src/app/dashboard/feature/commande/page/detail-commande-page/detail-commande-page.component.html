@@ -14,13 +14,6 @@
       </button>
       <button 
         type="button" 
-        class="btn-action-bar btn-copy-fiche"
-        (click)="copyCommandeFiche()"
-        [title]="isFicheCopied() ? 'Fiche copiée' : 'Copier toute la fiche en texte'">
-        {{ isFicheCopied() ? 'Copié !' : '📋 Copier la fiche' }}
-      </button>
-      <button 
-        type="button" 
         class="btn-action-bar btn-edit"
         (click)="toggleEditMode()"
         [title]="isEditMode() ? 'Annuler' : 'Modifier'">
@@ -99,13 +92,21 @@
       <!-- Les boutons sont maintenant dans la barre fixe en haut -->
     </div>
 
-    <section class="detail-duplicate-section" *ngIf="canDuplicateCommande()">
+    <section class="detail-duplicate-section" *ngIf="formGroup">
       <button
+        *ngIf="canDuplicateCommande()"
         type="button"
         class="btn-duplicate"
         (click)="duplicateCommande()"
         [disabled]="isDuplicating()">
         {{ isDuplicating() ? 'Duplication en cours...' : 'Dupliquer la ' + (isVente() ? 'vente' : 'commande') }}
+      </button>
+      <button
+        type="button"
+        class="copy-field-copy-btn"
+        (click)="copyCommandeFiche()"
+        [title]="isFicheCopied() ? 'Fiche copiée' : 'Copier toute la fiche en texte'">
+        {{ isFicheCopied() ? 'Copié !' : '' }}
       </button>
     </section>
 
@@ -1465,9 +1466,6 @@
           class="btn-footer btn-footer-prix"
           (click)="togglePrixFields()">
           {{ showPrixFields() ? '💰 Masquer frais' : '💰 Afficher frais' }}
-        </button>
-        <button type="button" class="btn-footer btn-footer-copy-fiche" (click)="copyCommandeFiche()">
-          {{ isFicheCopied() ? 'Copié !' : '📋 Copier la fiche' }}
         </button>
         <button type="button" class="btn-footer btn-footer-delete" (click)="openDeleteConfirm()">🗑️ Supprimer</button>
         <button

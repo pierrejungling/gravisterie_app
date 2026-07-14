@@ -390,6 +390,17 @@
               [readonly]="true">
             </app-floating-label-input>
           </div>
+          <div class="input-wrapper">
+            <app-floating-label-input
+              [label]="'Montant HTVA (après frais)'"
+              [control]="get('montant_htva')"
+              [formGroup]="formGroup"
+              type="number"
+              step="0.01"
+              suffix="€"
+              [readonly]="true">
+            </app-floating-label-input>
+          </div>
         </div>
 
         <div class="input-wrapper">

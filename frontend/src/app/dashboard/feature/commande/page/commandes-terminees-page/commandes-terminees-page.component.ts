@@ -276,6 +276,11 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
     return prix - frais;
   }
 
+  getMontantHtvaPourTotaux(cmd: Commande): number {
+    if (!this.isVente(cmd)) return 0;
+    return this.getMontantNetPourTotaux(cmd) / 1.21;
+  }
+
   getMontantFraisAffiche(cmd: Commande): number {
     return this.getMontantFraisVente(cmd);
   }

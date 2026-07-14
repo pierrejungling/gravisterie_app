@@ -635,6 +635,34 @@
               </div>
             </ng-template>
           </div>
+          <div class="input-wrapper">
+            <ng-container *ngIf="isEditMode(); else montantHtvaCopyField">
+              <app-floating-label-input
+                [label]="'Montant HTVA (après frais)'"
+                [control]="get('montant_htva')"
+                [formGroup]="formGroup"
+                type="number"
+                step="0.01"
+                suffix="€"
+                [readonly]="true">
+              </app-floating-label-input>
+            </ng-container>
+            <ng-template #montantHtvaCopyField>
+              <div class="copy-field-readonly">
+                <div class="copy-field-content">
+                  <span class="copy-field-label">Montant HTVA (après frais)</span>
+                  <span class="copy-field-value">{{ getFieldDisplayValue('montant_htva') }}</span>
+                </div>
+                <button
+                  type="button"
+                  class="copy-field-copy-btn"
+                  (click)="copyFieldValue('montant_htva')"
+                  [disabled]="getFieldDisplayValue('montant_htva') === '-'">
+                  {{ copyFeedbackField() === 'montant_htva' ? 'Copié !' : '' }}
+                </button>
+              </div>
+            </ng-template>
+          </div>
         </div>
 
         <div class="input-wrapper">

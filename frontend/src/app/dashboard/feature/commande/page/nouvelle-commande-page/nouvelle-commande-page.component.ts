@@ -251,6 +251,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       frais_pourcentage: new FormControl<number | null>(null),
       montant_frais: new FormControl({ value: 0, disabled: true }),
       montant_net: new FormControl({ value: 0, disabled: true }),
+      montant_htva: new FormControl({ value: 0, disabled: true }),
       payé: new FormControl<boolean>(false),
       commentaire_paye: new FormControl<string>(''),
       attente_reponse: new FormControl<boolean>(false),
@@ -453,6 +454,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     if (!this.isVente()) {
       (this.formGroup.get('montant_frais') as any)?.setValue(0, { emitEvent: false });
       (this.formGroup.get('montant_net') as any)?.setValue(0, { emitEvent: false });
+      (this.formGroup.get('montant_htva') as any)?.setValue(0, { emitEvent: false });
       return;
     }
 
@@ -463,9 +465,11 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
     const montantFrais = prixFinal * (pct / 100);
     const montantNet = prixFinal - montantFrais;
+    const montantHtva = montantNet / 1.21;
 
     (this.formGroup.get('montant_frais') as any)?.setValue(montantFrais.toFixed(2), { emitEvent: false });
     (this.formGroup.get('montant_net') as any)?.setValue(montantNet.toFixed(2), { emitEvent: false });
+    (this.formGroup.get('montant_htva') as any)?.setValue(montantHtva.toFixed(2), { emitEvent: false });
   }
 
   getPrixBeneficeValue(): number {

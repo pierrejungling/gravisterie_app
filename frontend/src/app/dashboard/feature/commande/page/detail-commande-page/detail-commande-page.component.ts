@@ -1349,6 +1349,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       frais_pourcentage: new FormControl({ value: cmd.frais_pourcentage ?? null, disabled: !isEdit }),
       montant_frais: new FormControl({ value: 0, disabled: true }),
       montant_net: new FormControl({ value: 0, disabled: true }),
+      montant_htva: new FormControl({ value: 0, disabled: true }),
       payé: new FormControl(cmd.payé || false), // Toujours modifiable
       commentaire_paye: new FormControl({ value: cmd.commentaire_paye || '', disabled: !isEdit }),
       attente_reponse: new FormControl(cmd.attente_reponse ?? false), // Toujours modifiable (exception)
@@ -1669,19 +1670,27 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return prixFinal - montantFrais;
   }
 
+  getMontantHtvaVente(): number {
+    const montantNet = this.getMontantNetVente();
+    return montantNet / 1.21;
+  }
+
   private updateVenteFraisComputedFields(): void {
     if (!this.formGroup) return;
     if (!this.isVente()) {
       this.formGroup.get('montant_frais')?.setValue(0, { emitEvent: false });
       this.formGroup.get('montant_net')?.setValue(0, { emitEvent: false });
+      this.formGroup.get('montant_htva')?.setValue(0, { emitEvent: false });
       return;
     }
 
     const montantFrais = this.getMontantFraisVente();
     const montantNet = this.getMontantNetVente();
+    const montantHtva = this.getMontantHtvaVente();
 
     this.formGroup.get('montant_frais')?.setValue(montantFrais.toFixed(2), { emitEvent: false });
     this.formGroup.get('montant_net')?.setValue(montantNet.toFixed(2), { emitEvent: false });
+    this.formGroup.get('montant_htva')?.setValue(montantHtva.toFixed(2), { emitEvent: false });
   }
 
   getPrixBeneficeValue(): number {

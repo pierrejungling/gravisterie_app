@@ -69,7 +69,15 @@
             (click)="togglePeriod('terminees', group.sortKey)">
             <div class="group-header__title-row">
               <div class="group-header__title-block">
-                <h3 class="group-title">{{ group.label }}</h3>
+                <div class="group-header__title-line">
+                  <h3 class="group-title">{{ group.label }}</h3>
+                  <span
+                    class="group-header__unpaid-badge"
+                    *ngIf="group.unpaidCount > 0"
+                    [attr.title]="group.unpaidCount + ' commande(s) ou vente(s) terminée(s) non payée(s)'">
+                    {{ getUnpaidGroupLabel(group.unpaidCount) }}
+                  </span>
+                </div>
                 <span class="group-header__count">{{ group.commandes.length }} commande{{ group.commandes.length > 1 ? 's' : '' }}</span>
               </div>
               <span

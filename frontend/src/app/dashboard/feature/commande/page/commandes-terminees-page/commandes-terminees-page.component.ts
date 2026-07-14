@@ -92,6 +92,15 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
     return produit.trimStart().startsWith(this.ventePrefix);
   }
 
+  isCommandeNonPayee(commande: Commande): boolean {
+    const prixFinal = Number(commande.prix_final) || 0;
+    return !commande.payé && prixFinal > 0;
+  }
+
+  getUnpaidGroupLabel(count: number): string {
+    return count === 1 ? '1 non payé' : `${count} non payés`;
+  }
+
   ngOnInit(): void {
     // Sauvegarder la position de scroll avant le rechargement
     window.addEventListener('beforeunload', this.saveScrollPosition);
@@ -323,30 +332,36 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
     return totaux;
   }
 
-  private groupByPeriod(commandes: Commande[]): Array<{ label: string; commandes: Commande[]; sortKey: string; total: number }> {
+  private groupByPeriod(commandes: Commande[]): Array<{ label: string; commandes: Commande[]; sortKey: string; total: number; unpaidCount: number }> {
     const mode = this.groupMode();
-    const groups = new Map<string, { label: string; commandes: Commande[]; sortKey: string; total: number }>();
+    const groups = new Map<string, { label: string; commandes: Commande[]; sortKey: string; total: number; unpaidCount: number }>();
 
     for (const cmd of commandes) {
       const date = new Date(cmd.date_commande);
       if (Number.isNaN(date.getTime())) {
         const key = 'unknown';
         if (!groups.has(key)) {
-          groups.set(key, { label: 'Date inconnue', commandes: [], sortKey: '0000-00', total: 0 });
+          groups.set(key, { label: 'Date inconnue', commandes: [], sortKey: '0000-00', total: 0, unpaidCount: 0 });
         }
         const group = groups.get(key)!;
         group.commandes.push(cmd);
         group.total += this.getMontantNetPourTotaux(cmd);
+        if (this.isCommandeNonPayee(cmd)) {
+          group.unpaidCount++;
+        }
         continue;
       }
 
       const { sortKey, label } = this.getPeriodKeyAndLabel(date, mode);
       if (!groups.has(sortKey)) {
-        groups.set(sortKey, { label, commandes: [], sortKey, total: 0 });
+        groups.set(sortKey, { label, commandes: [], sortKey, total: 0, unpaidCount: 0 });
       }
       const group = groups.get(sortKey)!;
       group.commandes.push(cmd);
       group.total += this.getMontantNetPourTotaux(cmd);
+      if (this.isCommandeNonPayee(cmd)) {
+        group.unpaidCount++;
+      }
     }
 
     return Array.from(groups.values()).sort((a, b) => b.sortKey.localeCompare(a.sortKey));

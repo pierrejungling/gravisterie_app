@@ -141,7 +141,7 @@
                   &nbsp;{{ getMontantNetPourTotaux(commande) | number:'1.2-2' }} €
                 </p>
                 <p class="commande-prix" *ngIf="isVente(commande) && commande.prix_final">
-                  <strong>Montant HTVA (après frais) :</strong>
+                  <strong>Montant HTVA :</strong>
                   &nbsp;{{ getMontantHtvaPourTotaux(commande) | number:'1.2-2' }} €
                 </p>
               </div>
@@ -236,7 +236,7 @@
                   &nbsp;{{ getMontantNetPourTotaux(commande) | number:'1.2-2' }} €
                 </p>
                 <p class="commande-prix" *ngIf="isVente(commande) && commande.prix_final">
-                  <strong>Montant HTVA (après frais) :</strong>
+                  <strong>Montant HTVA :</strong>
                   &nbsp;{{ getMontantHtvaPourTotaux(commande) | number:'1.2-2' }} €
                 </p>
               </div>

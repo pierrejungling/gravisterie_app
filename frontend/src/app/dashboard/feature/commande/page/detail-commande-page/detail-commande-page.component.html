@@ -55,6 +55,16 @@
 </div>
 
 <div class="detail-commande-wrapper">
+  <div
+    class="fichiers-window-drop-overlay"
+    *ngIf="isDragOver() && !fichierUploading()"
+    aria-hidden="true">
+    <div class="fichiers-window-drop-overlay__panel">
+      <span class="fichiers-window-drop-overlay__icon" aria-hidden="true">📎</span>
+      <p class="fichiers-window-drop-overlay__title">Déposez vos fichiers ici</p>
+      <p class="fichiers-window-drop-overlay__hint">Relâchez pour ajouter la pièce jointe à la commande</p>
+    </div>
+  </div>
   <div 
     class="detail-commande-container" 
     [class.deadline-warning]="getDeadlineStatus() === 'warning' && !isCommandeTerminee() && !isCommandeAnnulee()"
@@ -370,15 +380,12 @@
           </ul>
           <div class="input-wrapper fichiers-add-wrapper">
             <label class="label">Ajouter un fichier</label>
-            <p class="fichiers-add-hint">Images, SVG, PDF, DOC/DOCX, AI, STL, 3MF. Plusieurs fichiers possibles.</p>
+            <p class="fichiers-add-hint">Images, SVG, PDF, DOC/DOCX, AI, STL, 3MF. Glissez n'importe où sur la page, collez depuis le presse-papier (Ctrl+V / Cmd+V), ou cliquez pour parcourir.</p>
             <div
               class="fichiers-drop-zone"
               [class.drag-over]="isDragOver()"
               [class.uploading]="fichierUploading()"
-              (click)="fileInputRef.click()"
-              (dragover)="onDragOver($event)"
-              (dragleave)="onDragLeave($event)"
-              (drop)="onDrop($event)">
+              (click)="fileInputRef.click()">
               <input
                 #fileInputRef
                 type="file"
@@ -388,7 +395,7 @@
                 [disabled]="fichierUploading()"
                 (change)="onFichierSelected($event)"
                 (click)="$event.stopPropagation()">
-              <span class="fichiers-drop-text" *ngIf="!fichierUploading()">Glissez des images ou des fichiers ici, ou cliquez pour parcourir</span>
+              <span class="fichiers-drop-text" *ngIf="!fichierUploading()">Glissez des fichiers sur la page, collez (Ctrl+V / Cmd+V), ou cliquez pour parcourir</span>
               <span class="fichiers-drop-text fichiers-add-loading" *ngIf="fichierUploading()">Envoi en cours…</span>
             </div>
           </div>

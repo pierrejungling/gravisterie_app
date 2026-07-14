@@ -19,6 +19,13 @@ import {
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
 import { formatTelephoneBE } from '../../util/format-telephone.util';
+import {
+  COMMANDE_UPLOAD_EXTENSIONS,
+  extractFilesFromClipboard,
+  filterAcceptedUploadFiles,
+  isEditablePasteTarget,
+  isExternalFileDrag,
+} from '../../util/commande-fichier-upload.util';
 import { FRAIS_COMMISSION_LIBRE } from '../../model/frais-commission.interface';
 import { renderAsync } from 'docx-preview';
 import * as THREE from 'three';
@@ -125,16 +132,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   /** Type 3D courant. */
   preview3dType: WritableSignal<'stl' | '3mf' | null> = signal(null);
   copyFeedbackField: WritableSignal<string | null> = signal(null);
+  private windowFileDragDepth = 0;
 
-  private readonly allowedUploadExtensions = new Set([
-    '.pdf',
-    '.doc',
-    '.docx',
-    '.svg',
-    '.ai',
-    '.stl',
-    '.3mf',
-  ]);
+  private readonly allowedUploadExtensions = COMMANDE_UPLOAD_EXTENSIONS;
 
   // Exposer StatutCommande et ModeContact pour l'utiliser dans le template
   readonly StatutCommande = StatutCommande;
@@ -721,11 +721,63 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const input = event.target as HTMLInputElement;
     const files = input.files ? Array.from(input.files) : [];
     if (files.length === 0) return;
-    this.uploadFiles(files);
+    this.processIncomingFiles(files);
     input.value = '';
   }
 
+  @HostListener('window:dragenter', ['$event'])
+  onWindowDragEnter(event: DragEvent): void {
+    if (!this.canAcceptFileUpload() || !isExternalFileDrag(event)) return;
+    event.preventDefault();
+    this.windowFileDragDepth++;
+    this.isDragOver.set(true);
+  }
+
+  @HostListener('window:dragover', ['$event'])
+  onWindowDragOver(event: DragEvent): void {
+    if (!this.canAcceptFileUpload() || !isExternalFileDrag(event)) return;
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+    this.isDragOver.set(true);
+  }
+
+  @HostListener('window:dragleave', ['$event'])
+  onWindowDragLeave(event: DragEvent): void {
+    if (!isExternalFileDrag(event)) return;
+    this.windowFileDragDepth = Math.max(0, this.windowFileDragDepth - 1);
+    if (this.windowFileDragDepth === 0) {
+      this.isDragOver.set(false);
+    }
+  }
+
+  @HostListener('window:drop', ['$event'])
+  onWindowDrop(event: DragEvent): void {
+    if (!isExternalFileDrag(event)) return;
+    event.preventDefault();
+    this.windowFileDragDepth = 0;
+    this.isDragOver.set(false);
+    if (!this.canAcceptFileUpload()) return;
+
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    this.processIncomingFiles(Array.from(files));
+  }
+
+  @HostListener('document:paste', ['$event'])
+  onDocumentPaste(event: ClipboardEvent): void {
+    if (!this.canAcceptFileUpload() || isEditablePasteTarget(event.target)) return;
+
+    const files = extractFilesFromClipboard(event);
+    if (files.length === 0) return;
+
+    event.preventDefault();
+    this.processIncomingFiles(files);
+  }
+
   onDragOver(event: DragEvent): void {
+    if (!this.canAcceptFileUpload()) return;
     event.preventDefault();
     event.stopPropagation();
     this.isDragOver.set(true);
@@ -734,32 +786,40 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   onDragLeave(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    this.isDragOver.set(false);
   }
 
   onDrop(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
+    this.windowFileDragDepth = 0;
     this.isDragOver.set(false);
+    if (!this.canAcceptFileUpload()) return;
+
     const files = event.dataTransfer?.files;
     if (!files || files.length === 0) return;
-    const accepted = Array.from(files).filter((file) => {
-      const t = file.type?.toLowerCase();
-      const n = file.name?.toLowerCase() ?? '';
-      if (t?.startsWith('image/')) return true;
-      // Mimes "classiques"
-      if (t?.includes('svg')) return true;
-      if (t === 'application/pdf') return true;
-      if (t === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return true;
-      if (t === 'application/msword') return true;
-      // Mimes fréquents pour AI / fichiers 3D (selon navigateur / OS)
-      if (t === 'application/postscript' || t === 'application/illustrator') return true; // .ai
-      if (t === 'model/stl' || t === 'application/sla' || t === 'application/vnd.ms-pki.stl') return true; // .stl
-      if (t === 'model/3mf' || t === 'application/vnd.ms-package.3dmanufacturing-3dmodel+xml') return true; // .3mf
-      // Fallback extension (type vide sur Safari / certains fichiers)
-      return Array.from(this.allowedUploadExtensions).some((ext) => n.endsWith(ext));
-    });
-    if (accepted.length > 0) this.uploadFiles(accepted);
+    this.processIncomingFiles(Array.from(files));
+  }
+
+  private canAcceptFileUpload(): boolean {
+    return !!this.commande()?.id_commande
+      && !this.fichierUploading()
+      && !this.isPreviewModalOpen();
+  }
+
+  private isPreviewModalOpen(): boolean {
+    return !!this.previewImageUrl()
+      || !!this.previewPdfUrl()
+      || !!this.previewDocxBlob()
+      || !!this.previewAiUrl()
+      || !!this.previewAiMessage()
+      || this.preview3dVisible();
+  }
+
+  private processIncomingFiles(files: File[]): void {
+    const accepted = filterAcceptedUploadFiles(files, this.allowedUploadExtensions);
+    if (accepted.length > 0) {
+      this.uploadFiles(accepted);
+    }
   }
 
   private uploadFiles(files: File[]): void {

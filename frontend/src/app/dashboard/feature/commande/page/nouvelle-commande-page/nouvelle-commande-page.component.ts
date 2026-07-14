@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, AfterViewInit, inject, signal, WritableSignal, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, AfterViewInit, HostListener, inject, signal, WritableSignal, ViewChild, ElementRef } from '@angular/core';
 import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -11,6 +11,13 @@ import { Couleur, StatutCommande, ModeContact } from '../../model/commande.inter
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
 import { formatTelephoneBE } from '../../util/format-telephone.util';
+import {
+  COMMANDE_UPLOAD_EXTENSIONS,
+  extractFilesFromClipboard,
+  filterAcceptedUploadFiles,
+  isEditablePasteTarget,
+  isExternalFileDrag,
+} from '../../util/commande-fichier-upload.util';
 
 @Component({
   selector: 'app-nouvelle-commande-page',
@@ -28,6 +35,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   uploadedFiles: File[] = [];
   supportInputFocus: boolean = false;
   isDragOver: boolean = false;
+  private windowFileDragDepth = 0;
   private scrollRestored: boolean = false;
   showPrixFields: WritableSignal<boolean> = signal(false);
   isVente: WritableSignal<boolean> = signal(false);
@@ -40,15 +48,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   private readonly scrollKey = 'nouvelle-commande-scroll';
   private readonly clearScrollKey = 'nouvelle-commande-clear-scroll';
 
-  private readonly allowedFileExtensions = new Set([
-    '.pdf',
-    '.doc',
-    '.docx',
-    '.svg',
-    '.ai',
-    '.stl',
-    '.3mf',
-  ]);
+  private readonly allowedFileExtensions = COMMANDE_UPLOAD_EXTENSIONS;
 
   // Options disponibles
   couleursDisponibles: Couleur[] = [
@@ -586,9 +586,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      const files = Array.from(input.files);
-      this.uploadedFiles = [...this.uploadedFiles, ...files];
-      this.formGroup.get('fichiers_joints')?.setValue(this.uploadedFiles);
+      this.processIncomingFiles(Array.from(input.files));
     }
   }
 
@@ -616,6 +614,56 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     this.formGroup.get('fichiers_joints')?.setValue(this.uploadedFiles);
   }
 
+  @HostListener('window:dragenter', ['$event'])
+  onWindowDragEnter(event: DragEvent): void {
+    if (!isExternalFileDrag(event)) return;
+    event.preventDefault();
+    this.windowFileDragDepth++;
+    this.isDragOver = true;
+  }
+
+  @HostListener('window:dragover', ['$event'])
+  onWindowDragOver(event: DragEvent): void {
+    if (!isExternalFileDrag(event)) return;
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+    this.isDragOver = true;
+  }
+
+  @HostListener('window:dragleave', ['$event'])
+  onWindowDragLeave(event: DragEvent): void {
+    if (!isExternalFileDrag(event)) return;
+    this.windowFileDragDepth = Math.max(0, this.windowFileDragDepth - 1);
+    if (this.windowFileDragDepth === 0) {
+      this.isDragOver = false;
+    }
+  }
+
+  @HostListener('window:drop', ['$event'])
+  onWindowDrop(event: DragEvent): void {
+    if (!isExternalFileDrag(event)) return;
+    event.preventDefault();
+    this.windowFileDragDepth = 0;
+    this.isDragOver = false;
+
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    this.processIncomingFiles(Array.from(files));
+  }
+
+  @HostListener('document:paste', ['$event'])
+  onDocumentPaste(event: ClipboardEvent): void {
+    if (isEditablePasteTarget(event.target)) return;
+
+    const files = extractFilesFromClipboard(event);
+    if (files.length === 0) return;
+
+    event.preventDefault();
+    this.processIncomingFiles(files);
+  }
+
   onDragOver(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
@@ -625,31 +673,25 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   onDragLeave(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    this.isDragOver = false;
   }
 
   onDrop(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
+    this.windowFileDragDepth = 0;
     this.isDragOver = false;
 
     const files = event.dataTransfer?.files;
-    if (files && files.length > 0) {
-      const fileArray = Array.from(files);
-      // Filtrer les fichiers selon les types acceptés
-      const acceptedFiles = fileArray.filter(file => {
-        const fileType = (file.type || '').toLowerCase();
-        const fileName = (file.name || '').toLowerCase();
-        if (fileType.startsWith('image/')) return true;
-        // Fallback extension (Safari / certains fichiers 3D renvoient type vide)
-        return Array.from(this.allowedFileExtensions).some((ext) => fileName.endsWith(ext));
-      });
-      
-      if (acceptedFiles.length > 0) {
-        this.uploadedFiles = [...this.uploadedFiles, ...acceptedFiles];
-        this.formGroup.get('fichiers_joints')?.setValue(this.uploadedFiles);
-      }
-    }
+    if (!files || files.length === 0) return;
+    this.processIncomingFiles(Array.from(files));
+  }
+
+  private processIncomingFiles(files: File[]): void {
+    const acceptedFiles = filterAcceptedUploadFiles(files, this.allowedFileExtensions);
+    if (acceptedFiles.length === 0) return;
+
+    this.uploadedFiles = [...this.uploadedFiles, ...acceptedFiles];
+    this.formGroup.get('fichiers_joints')?.setValue(this.uploadedFiles);
   }
 
   toggleCouleur(couleur: Couleur): void {

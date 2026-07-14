@@ -1194,6 +1194,29 @@
     }
   }
 
+  &.btn-copy-fiche {
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    color: #4338ca;
+
+    &:hover {
+      background: rgba(99, 102, 241, 0.16);
+      border-color: #6366f1;
+    }
+
+    :root[data-theme="dark"] &,
+    [data-theme="dark"] & {
+      color: #c7d2fe !important;
+    }
+
+    :root[data-theme="dark"] &:hover,
+    [data-theme="dark"] &:hover {
+      background: rgba(99, 102, 241, 0.22) !important;
+      border-color: #818cf8 !important;
+      color: #ffffff !important;
+    }
+  }
+
   &.btn-edit {
     background: var(--btn-edit-bg);
     border: 1px solid var(--btn-edit-border);
@@ -3690,6 +3713,17 @@
   .detail-actions-footer .btn-footer-prix:hover {
     background: #bbdefb;
     border-color: #64b5f6;
+  }
+
+  .detail-actions-footer .btn-footer-copy-fiche {
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.35);
+    color: #4338ca;
+  }
+
+  .detail-actions-footer .btn-footer-copy-fiche:hover {
+    background: rgba(99, 102, 241, 0.16);
+    border-color: #6366f1;
   }
 
   .detail-actions-footer .btn-footer-delete {

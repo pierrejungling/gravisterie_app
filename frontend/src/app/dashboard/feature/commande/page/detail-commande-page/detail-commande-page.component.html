@@ -14,6 +14,13 @@
       </button>
       <button 
         type="button" 
+        class="btn-action-bar btn-copy-fiche"
+        (click)="copyCommandeFiche()"
+        [title]="isFicheCopied() ? 'Fiche copiée' : 'Copier toute la fiche en texte'">
+        {{ isFicheCopied() ? 'Copié !' : '📋 Copier la fiche' }}
+      </button>
+      <button 
+        type="button" 
         class="btn-action-bar btn-edit"
         (click)="toggleEditMode()"
         [title]="isEditMode() ? 'Annuler' : 'Modifier'">
@@ -1458,6 +1465,9 @@
           class="btn-footer btn-footer-prix"
           (click)="togglePrixFields()">
           {{ showPrixFields() ? '💰 Masquer frais' : '💰 Afficher frais' }}
+        </button>
+        <button type="button" class="btn-footer btn-footer-copy-fiche" (click)="copyCommandeFiche()">
+          {{ isFicheCopied() ? 'Copié !' : '📋 Copier la fiche' }}
         </button>
         <button type="button" class="btn-footer btn-footer-delete" (click)="openDeleteConfirm()">🗑️ Supprimer</button>
         <button

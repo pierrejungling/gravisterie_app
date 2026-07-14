@@ -3017,6 +3017,157 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.copyWithFallback(textToCopy, feedbackKey);
   }
 
+  copyCommandeFiche(): void {
+    const text = this.buildCommandeFicheText();
+    if (!text) return;
+    this.copyTextValue(text, 'fiche_complete');
+  }
+
+  isFicheCopied(): boolean {
+    return this.copyFeedbackField() === 'fiche_complete';
+  }
+
+  buildCommandeFicheText(): string {
+    const cmd = this.commande();
+    if (!cmd || !this.formGroup) return '';
+
+    const lines: string[] = [];
+    const vente = this.isVente();
+    const typeLabel = vente ? 'Vente' : 'Commande';
+
+    const append = (label: string, value: string | number | null | undefined): void => {
+      const text = value === null || value === undefined ? '' : String(value).trim();
+      if (text && text !== '-') {
+        lines.push(`${label}: ${text}`);
+      }
+    };
+
+    const appendSection = (title: string): void => {
+      if (lines.length > 0) lines.push('');
+      lines.push(`--- ${title} ---`);
+    };
+
+    const formatEuroField = (controlName: string): string => {
+      const value = this.getFieldDisplayValue(controlName);
+      return value === '-' ? '' : `${value} €`;
+    };
+
+    lines.push(`=== FICHE ${typeLabel.toUpperCase()} ===`);
+    lines.push('');
+
+    append('Nom / Intitulé', this.getFieldDisplayValue('nom_commande'));
+    append('Référence', cmd.id_commande);
+
+    let statutText = this.statutLabels[cmd.statut_commande] || cmd.statut_commande;
+    if (this.isCommandeTerminee()) statutText += ' (Terminée)';
+    if (this.isCommandeAnnulee()) statutText += ' (Annulée)';
+    append('Statut', statutText);
+
+    if (!vente) {
+      const statutsCoches = this.allStatuts
+        .filter((statut) => this.isStatutChecked(statut))
+        .map((statut) => this.statutLabels[statut])
+        .join(', ');
+      if (statutsCoches) append('Étapes complétées', statutsCoches);
+
+      const statutsActifs = (cmd.statuts_actifs || [])
+        .map((statut) => this.statutLabels[statut] || statut)
+        .join(', ');
+      if (statutsActifs) append('Étapes en cours', statutsActifs);
+    }
+
+    appendSection('Informations générales');
+    append(vente ? 'Date de la vente' : 'Date de commande', this.formatDate(cmd.date_commande));
+    if (!vente) append('Deadline', this.formatDate(cmd.deadline || ''));
+    append(vente ? 'Description' : 'Description du projet', this.getFieldDisplayValue('description'));
+    if (!vente) {
+      append('Dimensions souhaitées', this.getFieldDisplayValue('dimensions'));
+      append('Support', this.getFieldDisplayValue('support'));
+    }
+
+    const fichiers = this.commandeFichiersSorted();
+    if (fichiers.length > 0) {
+      appendSection('Fichiers joints');
+      for (const fichier of fichiers) {
+        const size = fichier.taille_octets ? ` (${Math.round(fichier.taille_octets / 1024)} Ko)` : '';
+        lines.push(`- ${fichier.nom_fichier}${size}`);
+      }
+    }
+
+    appendSection('Prix et paiement');
+    if (!vente) {
+      append('Quantité', this.getFieldDisplayValue('quantité'));
+      append('Prix unitaire final', formatEuroField('prix_unitaire_final'));
+      append('Prix final', formatEuroField('prix_final'));
+    } else {
+      append('Prix final', formatEuroField('prix_final'));
+      append('Frais / commission', this.getFraisCommissionDisplayValue());
+      append('Montant des frais', formatEuroField('montant_frais'));
+      append('Montant net (après frais)', formatEuroField('montant_net'));
+      append('Montant HTVA (après frais)', formatEuroField('montant_htva'));
+    }
+    append('Payé', this.get('payé').value ? 'Oui' : 'Non');
+    append('Commentaire payé', this.getFieldDisplayValue('commentaire_paye'));
+
+    if (!vente && this.supportsFormArray?.length) {
+      const activeSupports = this.supportsFormArray.controls.filter((control) =>
+        this.isSupportActif(control as FormGroup)
+      );
+      if (activeSupports.length > 0) {
+        appendSection('Détail des supports / frais');
+        activeSupports.forEach((control, index) => {
+          const supportGroup = control as FormGroup;
+          const nom = supportGroup.get('nom_support')?.value || `Support ${index + 1}`;
+          const prixUnitaire = supportGroup.get('prix_support_unitaire')?.value ?? 0;
+          lines.push(`- ${nom}: ${prixUnitaire} € / unité`);
+        });
+        append('Total supports (unitaires)', formatEuroField('prix_final_supports_unitaires'));
+        append('Total supports', formatEuroField('prix_final_supports'));
+        append('Bénéfice', `${this.getPrixBeneficeDisplayValue()} €`);
+      }
+    }
+
+    appendSection('Coordonnées de contact');
+    append('Nom', this.getFieldDisplayValue('nom'));
+    append('Prénom', this.getFieldDisplayValue('prenom'));
+    append('Téléphone', this.getFieldDisplayValue('telephone'));
+    append('Email', this.getFieldDisplayValue('mail'));
+    const adresse = this.buildAdresseComplete(
+      this.get('rue')?.value,
+      this.get('code_postal')?.value,
+      this.get('ville')?.value,
+      this.get('pays')?.value
+    );
+    if (adresse) append('Adresse', adresse);
+    append('Société', this.getFieldDisplayValue('societe'));
+    append('N° TVA', this.getFieldDisplayValue('tva'));
+
+    const modeContact = this.get('mode_contact')?.value;
+    const modeLabel = this.modesContact.find((mode) => mode.value === modeContact)?.label;
+    append('Mode de contact préféré', modeLabel || modeContact);
+
+    if (!vente) {
+      appendSection('Personnalisation');
+      const couleurs = ((this.get('couleur')?.value as string[]) || []).join(', ');
+      if (couleurs) append('Couleurs', couleurs);
+      append('Police d\'écriture', this.getFieldDisplayValue('police_ecriture'));
+      append('Texte personnalisation', this.getFieldDisplayValue('texte_personnalisation'));
+
+      if (this.quantiteProduitCompteursFormArray?.length) {
+        appendSection('Quantité produite');
+        this.quantiteProduitCompteursFormArray.controls.forEach((_, index) => {
+          lines.push(
+            `- ${this.compteurLibelleLectureText(index)}: ${this.compteurRealiseAffiche(index)} / ${this.compteurCibleAffiche(index)}`
+          );
+        });
+      }
+
+      append('Attente réponse', this.get('attente_reponse').value ? 'Rien à faire' : 'Client attend');
+    }
+
+    return lines.join('\n');
+  }
+
   toCopyText(value: unknown): string {
     if (value === null || value === undefined) return '';
     return String(value);

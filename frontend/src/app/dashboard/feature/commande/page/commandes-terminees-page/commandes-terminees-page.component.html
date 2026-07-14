@@ -72,7 +72,7 @@
                 <div class="group-header__title-line">
                   <h3 class="group-title">{{ group.label }}</h3>
                   <span
-                    class="group-header__unpaid-badge"
+                    class="payment-indicator payment-indicator--unpaid payment-indicator--inline"
                     *ngIf="group.unpaidCount > 0"
                     [attr.title]="group.unpaidCount + ' commande(s) ou vente(s) terminée(s) non payée(s)'">
                     {{ getUnpaidGroupLabel(group.unpaidCount) }}

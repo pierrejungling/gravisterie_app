@@ -316,39 +316,6 @@
   min-width: 0;
 }
 
-.group-header__unpaid-badge {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-  padding: 0.2rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: #b91c1c;
-  background: rgba(220, 53, 69, 0.14);
-  border: 1px solid rgba(220, 53, 69, 0.38);
-  box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.35);
-  animation: group-unpaid-badge-pulse 2s ease-in-out infinite;
-}
-
-:host-context([data-theme="dark"]) .group-header__unpaid-badge,
-[data-theme="dark"] .group-header__unpaid-badge {
-  color: #fecaca;
-  background: rgba(244, 67, 54, 0.22);
-  border-color: rgba(244, 67, 54, 0.5);
-}
-
-@keyframes group-unpaid-badge-pulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.28);
-  }
-  50% {
-    box-shadow: 0 0 0 6px rgba(220, 53, 69, 0);
-  }
-}
-
 .group-header__count {
   font-size: 0.8rem;
   font-weight: 500;
@@ -653,6 +620,21 @@
     background: rgba(244, 67, 54, 0.2);
     color: #ef9a9a;
     border-color: rgba(244, 67, 54, 0.5);
+  }
+}
+
+.payment-indicator--inline {
+  position: static;
+  flex-shrink: 0;
+  animation: payment-indicator-unpaid-pulse 2s ease-in-out infinite;
+}
+
+@keyframes payment-indicator-unpaid-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.28);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(220, 53, 69, 0);
   }
 }
 

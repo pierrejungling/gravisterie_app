@@ -98,7 +98,7 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
   }
 
   getUnpaidGroupLabel(count: number): string {
-    return count === 1 ? '1 non payé' : `${count} non payés`;
+    return count === 1 ? 'Non payé' : `${count} non payés`;
   }
 
   ngOnInit(): void {

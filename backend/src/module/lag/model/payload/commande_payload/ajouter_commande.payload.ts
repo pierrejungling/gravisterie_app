@@ -84,7 +84,7 @@ export class AjouterCommandePayload {
     @ApiProperty()
     @IsOptional()
     @IsString()
-    support?: string; // Par défaut: "CP 3,6mm Méranti"
+    support?: string; // Par défaut: "CP"
 
     @ApiProperty()
     @IsOptional()

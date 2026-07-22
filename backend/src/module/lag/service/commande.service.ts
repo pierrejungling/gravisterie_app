@@ -315,7 +315,7 @@ export class CommandeService {
         // Créer le support
         const support = new Support();
         support.id_support = ulid(); // Générer l'ID manuellement
-        support.nom_support = payload.support || 'CP 3,6mm Méranti';
+        support.nom_support = payload.support || 'CP';
         support.dimensions = payload.dimensions_souhaitees ?? null;
         support.gravure = gravureSauvegardee;
         try {

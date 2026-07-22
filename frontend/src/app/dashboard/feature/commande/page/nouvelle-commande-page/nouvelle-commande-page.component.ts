@@ -61,7 +61,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     Couleur.GRAVURE_PEINTE
   ];
   
-  supportParDefaut: string = 'CP 3,6mm Méranti';
+  supportParDefaut: string = 'CP';
 
   // Exposer StatutCommande pour l'utiliser dans le template
   readonly StatutCommande = StatutCommande;

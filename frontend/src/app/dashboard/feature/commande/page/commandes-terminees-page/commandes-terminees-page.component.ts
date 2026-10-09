@@ -101,6 +101,37 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
     return count === 1 ? 'Non payé' : `${count} non payés`;
   }
 
+  onPayeChange(commande: Commande, event: Event): void {
+    const target = event.target as HTMLInputElement;
+    const payeValue = target.checked;
+    const previousValue = !!commande.payé;
+
+    this.commandes.update(list =>
+      list.map(cmd =>
+        cmd.id_commande === commande.id_commande
+          ? { ...cmd, payé: payeValue }
+          : cmd
+      )
+    );
+
+    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${commande.id_commande}`, {
+      payé: payeValue
+    }).subscribe({
+      next: () => {},
+      error: (error) => {
+        console.error('Erreur lors de la mise à jour du statut payé:', error);
+        target.checked = previousValue;
+        this.commandes.update(list =>
+          list.map(cmd =>
+            cmd.id_commande === commande.id_commande
+              ? { ...cmd, payé: previousValue }
+              : cmd
+          )
+        );
+      }
+    });
+  }
+
   ngOnInit(): void {
     // Sauvegarder la position de scroll avant le rechargement
     window.addEventListener('beforeunload', this.saveScrollPosition);

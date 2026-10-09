@@ -111,11 +111,6 @@
               class="commande-card"
               [title]="commande.produit || 'Commande #' + commande.id_commande"
               (click)="onCommandeClick(commande)">
-              <span
-                class="payment-indicator payment-indicator--unpaid"
-                *ngIf="!commande['payé'] && commande.prix_final && commande.prix_final > 0">
-                Non payé
-              </span>
               <div class="commande-header">
                 <h3 class="commande-title">
                   {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
@@ -152,6 +147,21 @@
                   <strong>Montant HTVA :</strong>
                   &nbsp;{{ getMontantHtvaPourTotaux(commande) | number:'1.2-2' }} €
                 </p>
+              </div>
+              <div class="paye-toggle-bottom-right" (click)="$event.stopPropagation()">
+                <label
+                  class="toggle-switch-small"
+                  [class.toggle-vert]="commande['payé']"
+                  [class.toggle-rouge]="!commande['payé']"
+                  [attr.title]="commande['payé'] ? 'Marquer comme non payé' : 'Marquer comme payé'">
+                  <input
+                    type="checkbox"
+                    [checked]="!!commande['payé']"
+                    (change)="onPayeChange(commande, $event)"
+                    class="toggle-input">
+                  <span class="toggle-slider"></span>
+                  <span class="toggle-label-small">{{ commande['payé'] ? 'Payé' : 'Non payé' }}</span>
+                </label>
               </div>
             </div>
           </div>

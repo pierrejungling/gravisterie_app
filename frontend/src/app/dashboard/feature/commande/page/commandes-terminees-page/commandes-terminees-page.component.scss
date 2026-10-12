@@ -479,7 +479,6 @@
   border: 1px solid var(--color-input-border);
   border-radius: 12px;
   padding: 1.5rem;
-  padding-bottom: 2.75rem;
   transition: all 0.3s ease;
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -487,6 +486,10 @@
   flex-direction: column;
   gap: 1rem;
   position: relative;
+}
+
+.commande-card--with-paye-toggle {
+  padding-bottom: 2.75rem;
 }
 
 .commande-card:hover {
@@ -782,8 +785,11 @@
 
   .commande-card {
     padding: 1.25rem;
-    padding-bottom: 2.75rem;
     min-height: 44px;
+  }
+
+  .commande-card--with-paye-toggle {
+    padding-bottom: 2.75rem;
   }
 
   .toggle-switch-small .toggle-slider {

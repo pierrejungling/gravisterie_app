@@ -109,6 +109,7 @@
             <div 
               *ngFor="let commande of group.commandes; trackBy: trackByCommandeId" 
               class="commande-card"
+              [class.commande-card--with-paye-toggle]="commande.prix_final && commande.prix_final > 0"
               [title]="commande.produit || 'Commande #' + commande.id_commande"
               (click)="onCommandeClick(commande)">
               <div class="commande-header">
@@ -148,7 +149,10 @@
                   &nbsp;{{ getMontantHtvaPourTotaux(commande) | number:'1.2-2' }} €
                 </p>
               </div>
-              <div class="paye-toggle-bottom-right" (click)="$event.stopPropagation()">
+              <div
+                class="paye-toggle-bottom-right"
+                *ngIf="commande.prix_final && commande.prix_final > 0"
+                (click)="$event.stopPropagation()">
                 <label
                   class="toggle-switch-small"
                   [class.toggle-vert]="commande['payé']"

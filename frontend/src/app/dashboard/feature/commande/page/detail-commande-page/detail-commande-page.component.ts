@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, HostListener, inject, signal, WritableSignal, computed, ElementRef, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, HostListener, inject, signal, WritableSignal, computed, ElementRef, ViewChild, NgZone } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -45,7 +45,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   commande: WritableSignal<Commande | null> = signal(null);
   isLoading: WritableSignal<boolean> = signal(false);
   isEditMode: WritableSignal<boolean> = signal(false);
-  showPrixFields: WritableSignal<boolean> = signal(false);
+  showPrixFields: WritableSignal<boolean> = signal(true);
   showDeleteConfirm: WritableSignal<boolean> = signal(false);
   isDuplicating: WritableSignal<boolean> = signal(false);
   showAdresseMap: WritableSignal<boolean> = signal(false);
@@ -121,6 +121,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private previewImagePanStartTranslateY = 0;
   private previewImageIsPinching = false;
   private previewImageIsPanning = false;
+  private previewSwipeStartX = 0;
+  private previewSwipeStartY = 0;
+  private previewSwipeTracking = false;
+  private previewSwipeMoved = false;
   private readonly previewImageMinScale = 1;
   private readonly previewImageMaxScale = 4;
   private readonly onPreviewImageTouchMoveBound = (event: TouchEvent) => this.onPreviewImageTouchMove(event);
@@ -169,6 +173,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private readonly router: Router = inject(Router);
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly hostEl: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
+  private readonly ngZone: NgZone = inject(NgZone);
   private scrollKey: string = '';
   private routeSubscription?: Subscription;
   private adresseTrajetSubscription?: Subscription;
@@ -368,6 +373,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   ngOnDestroy(): void {
+    this.unbindPreviewSwipe();
     window.removeEventListener('beforeunload', this.saveScrollPosition);
     this.routeSubscription?.unsubscribe();
     this.adresseTrajetSubscription?.unsubscribe();
@@ -1091,6 +1097,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
   openPreviewForFichier(fichier: CommandeFichier): void {
     if (!this.isPreviewableFichier(fichier)) return;
+    this.bindPreviewSwipe();
     this.previewFichier.set(fichier);
     this.resetPreviewMedia();
     if (this.isPreviewableImageFichier(fichier)) {
@@ -1128,15 +1135,16 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return this.previewableFichiers().length > 1 && this.previewIndex() >= 0;
   }
 
-  canPreviewNavigate(delta: number): boolean {
-    const index = this.previewIndex();
-    const next = index + delta;
-    return index >= 0 && next >= 0 && next < this.previewableFichiers().length;
+  canPreviewNavigate(_delta: number): boolean {
+    return this.previewableFichiers().length > 1 && this.previewIndex() >= 0;
   }
 
   previewNavigate(delta: number): void {
-    if (!this.canPreviewNavigate(delta)) return;
-    const next = this.previewableFichiers()[this.previewIndex() + delta];
+    const list = this.previewableFichiers();
+    const index = this.previewIndex();
+    if (list.length < 2 || index < 0) return;
+    const nextIndex = (index + delta + list.length) % list.length;
+    const next = list[nextIndex];
     if (next) this.openPreviewForFichier(next);
   }
 
@@ -1149,6 +1157,12 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   onPreviewSwipeStart(event: TouchEvent): void {
+    const target = event.target as Node | null;
+    const overlay = document.querySelector('.preview-overlay');
+    if (!overlay || !target || !overlay.contains(target)) {
+      this.previewSwipeTracking = false;
+      return;
+    }
     if (event.touches.length !== 1 || (this.previewImageUrl() && this.previewImageScale() > 1)) {
       this.previewSwipeTracking = false;
       return;
@@ -1167,9 +1181,33 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     if (!touch) return;
     const dx = touch.clientX - this.previewSwipeStartX;
     const dy = touch.clientY - this.previewSwipeStartY;
-    if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy)) return;
+    if (Math.abs(dx) < 40 || Math.abs(dx) <= Math.abs(dy) * 1.2) return;
     this.previewSwipeMoved = true;
-    this.previewNavigate(dx < 0 ? 1 : -1);
+    window.setTimeout(() => {
+      this.previewSwipeMoved = false;
+    }, 500);
+    this.ngZone.run(() => this.previewNavigate(dx < 0 ? 1 : -1));
+  }
+
+  private readonly onPreviewDocTouchStart = (event: TouchEvent) => this.onPreviewSwipeStart(event);
+  private readonly onPreviewDocTouchEnd = (event: TouchEvent) => this.onPreviewSwipeEnd(event);
+  private previewTouchBound = false;
+
+  private bindPreviewSwipe(): void {
+    if (this.previewTouchBound) return;
+    document.addEventListener('touchstart', this.onPreviewDocTouchStart, { capture: true, passive: true });
+    document.addEventListener('touchend', this.onPreviewDocTouchEnd, { capture: true, passive: true });
+    document.addEventListener('touchcancel', this.onPreviewDocTouchEnd, { capture: true, passive: true });
+    this.previewTouchBound = true;
+  }
+
+  private unbindPreviewSwipe(): void {
+    if (!this.previewTouchBound) return;
+    document.removeEventListener('touchstart', this.onPreviewDocTouchStart, true);
+    document.removeEventListener('touchend', this.onPreviewDocTouchEnd, true);
+    document.removeEventListener('touchcancel', this.onPreviewDocTouchEnd, true);
+    this.previewTouchBound = false;
+    this.previewSwipeTracking = false;
   }
 
   openPreviewPdf(fichier: CommandeFichier): void {
@@ -1289,14 +1327,15 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       next: (blob) => {
         blob.arrayBuffer().then((buffer) => {
           if (this.previewFichier()?.id_fichier !== fichier.id_fichier) return;
+          this.render3d(buffer, this.preview3dType());
+        }).catch((err) => console.error('Erreur lecture fichier 3D:', err));
+      },
+      error: (err) => console.error('Erreur chargement fichier 3D:', err)
     });
   }
 
   closePreview(): void {
-    const pdfUrl = this.previewPdfUrl();
-    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-    const aiUrl = this.previewAiUrl();
-    if (aiUrl) URL.revokeObjectURL(aiUrl);
+    this.unbindPreviewSwipe();
     this.resetPreviewMedia();
     this.previewFichier.set(null);
     this.previewSwipeTracking = false;
@@ -1338,6 +1377,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
     event.preventDefault();
     this.previewNavigate(event.key === 'ArrowLeft' ? -1 : 1);
+  }
+
+  private threeRenderer: THREE.WebGLRenderer | null = null;
+  private threeScene: THREE.Scene | null = null;
   private threeCamera: THREE.PerspectiveCamera | null = null;
   private threeControls: OrbitControls | null = null;
   private threeAnimId: number | null = null;
@@ -2322,6 +2365,14 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   // Helper pour vérifier si le prix est unitaire pour un support
   isPrixUnitaire(supportGroup: FormGroup): boolean {
     return supportGroup.get('prix_unitaire')?.value === true;
+  }
+
+  adjustNombreUnites(supportGroup: FormGroup, delta: number): void {
+    const control = supportGroup.get('nombre_unites');
+    if (!control || control.disabled) return;
+    const current = parseInt(String(control.value ?? 1), 10);
+    const next = Math.max(1, (Number.isFinite(current) ? current : 1) + delta);
+    control.setValue(next);
   }
 
   // Helper pour vérifier si le support est actif (inclus dans le tableau Détails des frais)

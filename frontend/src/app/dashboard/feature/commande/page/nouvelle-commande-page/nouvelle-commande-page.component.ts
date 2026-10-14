@@ -37,7 +37,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   isDragOver: boolean = false;
   private windowFileDragDepth = 0;
   private scrollRestored: boolean = false;
-  showPrixFields: WritableSignal<boolean> = signal(false);
+  showPrixFields: WritableSignal<boolean> = signal(true);
   isVente: WritableSignal<boolean> = signal(false);
   private readonly ventePrefix = 'Vente | ';
   private isAdjustingNom = false;
@@ -762,6 +762,14 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   // Helper pour vérifier si le prix est unitaire pour un support
   isPrixUnitaire(supportGroup: FormGroup): boolean {
     return supportGroup.get('prix_unitaire')?.value === true;
+  }
+
+  adjustNombreUnites(supportGroup: FormGroup, delta: number): void {
+    const control = supportGroup.get('nombre_unites');
+    if (!control || control.disabled) return;
+    const current = parseInt(String(control.value ?? 1), 10);
+    const next = Math.max(1, (Number.isFinite(current) ? current : 1) + delta);
+    control.setValue(next);
   }
 
   // Helper pour vérifier si le support est actif (inclus dans le tableau Détails des frais)

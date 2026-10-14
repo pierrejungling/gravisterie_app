@@ -1062,13 +1062,20 @@
                 <!-- Texte "Le prix ci-dessus correspond à X unité(s)" (en dessous du champ prix support total) -->
                 <div class="support-prix-pour-unites" *ngIf="!isPrixUnitaire($any(supportControl))">
                   <span>Le prix ci-dessus correspond à</span>
-                  <input
-                    type="number"
-                    formControlName="nombre_unites"
-                    class="nombre-unites-input"
-                    [disabled]="!isEditMode() || isPrixUnitaire($any(supportControl))"
-                    placeholder="X"
-                    min="1">
+                  <div class="support-unites-counter">
+                    <input
+                      *ngIf="isEditMode()"
+                      type="number"
+                      formControlName="nombre_unites"
+                      class="support-unites-input"
+                      min="1"
+                      placeholder="X">
+                    <span *ngIf="!isEditMode()" class="support-unites-input support-unites-input--readonly">{{ $any(supportControl).get('nombre_unites')?.value || 1 }}</span>
+                    <div class="support-unites-buttons" *ngIf="isEditMode()">
+                      <button type="button" class="support-unites-btn" (click)="adjustNombreUnites($any(supportControl), -1)" title="Diminuer">−</button>
+                      <button type="button" class="support-unites-btn" (click)="adjustNombreUnites($any(supportControl), 1)" title="Augmenter">+</button>
+                    </div>
+                  </div>
                   <span>unité(s)</span>
                 </div>
 
@@ -1181,18 +1188,17 @@
                   </tr>
                 </ng-container>
 
-                <tr class="recap-separator">
-                  <td colspan="4"><span class="recap-separator-label">Remises</span></td>
-                </tr>
-                <tr *ngFor="let remise of recapRemises()" class="recap-remise">
-                  <td>{{ remise.nom }}</td>
-                  <td class="price-cell">{{ remise.pourcentage !== null ? (remise.pourcentage | number:'1.0-2') + ' %' : '—' }}</td>
-                  <td class="quantity-cell">—</td>
-                  <td class="total-cell montant-negatif">−{{ remise.montant | number:'1.2-2' }} €</td>
-                </tr>
-                <tr *ngIf="recapRemises().length === 0" class="empty-row">
-                  <td colspan="4" class="empty-message">Aucune remise</td>
-                </tr>
+                <ng-container *ngIf="recapRemises().length > 0">
+                  <tr class="recap-separator">
+                    <td colspan="4"><span class="recap-separator-label">Remises</span></td>
+                  </tr>
+                  <tr *ngFor="let remise of recapRemises()" class="recap-remise">
+                    <td>{{ remise.nom }}</td>
+                    <td class="price-cell">{{ remise.pourcentage !== null ? (remise.pourcentage | number:'1.0-2') + ' %' : '—' }}</td>
+                    <td class="quantity-cell">—</td>
+                    <td class="total-cell montant-negatif">−{{ remise.montant | number:'1.2-2' }} €</td>
+                  </tr>
+                </ng-container>
 
                 <tr class="recap-separator">
                   <td colspan="4"><span class="recap-separator-label">Récapitulatif</span></td>

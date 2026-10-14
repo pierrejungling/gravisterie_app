@@ -472,12 +472,14 @@
           <div formArrayName="lignes_prix" class="supports-list">
             <div *ngFor="let ligneControl of lignesPrixFormArray.controls; let i = index"
                  [formGroupName]="i"
-                 class="support-item">
+                 class="support-item"
+                 [class.support-item--remise]="estRemise($any(ligneControl))">
+              <span class="remise-badge" *ngIf="estRemise($any(ligneControl))">Remise</span>
               <ng-container [formGroup]="$any(ligneControl)">
                 <div class="input-wrapper">
                   <ng-container *ngIf="isEditMode(); else ligneNomCopyField">
                     <app-floating-label-input
-                      [label]="'Nom'"
+                      [label]="estRemise($any(ligneControl)) ? 'Nom de la remise' : 'Nom'"
                       [control]="$any(ligneControl).get('nom')!"
                       [formGroup]="$any(ligneControl)"
                       [readonly]="false">
@@ -486,7 +488,7 @@
                   <ng-template #ligneNomCopyField>
                     <div class="copy-field-readonly">
                       <div class="copy-field-content">
-                        <span class="copy-field-label">Nom</span>
+                        <span class="copy-field-label">{{ estRemise($any(ligneControl)) ? 'Nom de la remise' : 'Nom' }}</span>
                         <span class="copy-field-value">{{ $any(ligneControl).get('nom')?.value || '-' }}</span>
                       </div>
                       <button
@@ -499,7 +501,7 @@
                     </div>
                   </ng-template>
                 </div>
-                <div class="prix-quantity-group">
+                <div class="prix-quantity-group" *ngIf="!estRemise($any(ligneControl))">
                   <div class="input-wrapper">
                     <ng-container *ngIf="isEditMode(); else ligneQteCopyField">
                       <app-floating-label-input
@@ -583,26 +585,110 @@
                     </ng-template>
                   </div>
                 </div>
+                <div class="remise-montant" *ngIf="estRemise($any(ligneControl))">
+                  <ng-container *ngIf="isEditMode(); else remiseModeCopy">
+                    <div class="support-toggle-row">
+                      <label
+                        class="toggle-switch-small"
+                        [class.toggle-vert]="estRemisePourcentage($any(ligneControl))"
+                        [class.toggle-rouge]="!estRemisePourcentage($any(ligneControl))">
+                        <input
+                          type="checkbox"
+                          formControlName="remise_pourcentage"
+                          class="toggle-input">
+                        <span class="toggle-slider"></span>
+                        <span class="toggle-label-small">{{ estRemisePourcentage($any(ligneControl)) ? 'Pourcentage' : 'Montant fixe' }}</span>
+                      </label>
+                    </div>
+                    <div class="input-wrapper" *ngIf="!estRemisePourcentage($any(ligneControl))">
+                      <app-floating-label-input
+                        [label]="'Montant'"
+                        [control]="$any(ligneControl).get('prix_final')!"
+                        [formGroup]="$any(ligneControl)"
+                        type="number"
+                        step="0.01"
+                        suffix="€"
+                        [readonly]="false">
+                      </app-floating-label-input>
+                    </div>
+                    <ng-container *ngIf="estRemisePourcentage($any(ligneControl))">
+                      <div class="input-wrapper">
+                        <app-floating-label-input
+                          [label]="'Pourcentage'"
+                          [control]="$any(ligneControl).get('prix_unitaire')!"
+                          [formGroup]="$any(ligneControl)"
+                          type="number"
+                          step="0.01"
+                          suffix="%"
+                          [readonly]="false">
+                        </app-floating-label-input>
+                      </div>
+                      <p class="remise-calculee" *ngIf="hasMontantRemise($any(ligneControl))">
+                        Soit {{ $any(ligneControl).get('prix_final')?.value | number:'1.2-2' }} € sur le total des prix
+                      </p>
+                    </ng-container>
+                  </ng-container>
+                  <ng-template #remiseModeCopy>
+                    <div class="copy-field-readonly" *ngIf="!estRemisePourcentage($any(ligneControl))">
+                      <div class="copy-field-content">
+                        <span class="copy-field-label">Montant fixe</span>
+                        <span class="copy-field-value">{{ hasMontantRemise($any(ligneControl)) ? ($any(ligneControl).get('prix_final')?.value | number:'1.2-2') + ' €' : '-' }}</span>
+                      </div>
+                      <button
+                        type="button"
+                        class="copy-field-copy-btn"
+                        (click)="copyTextValue(toCopyText($any(ligneControl).get('prix_final')?.value), 'ligne_remise_' + i)"
+                        [disabled]="!hasMontantRemise($any(ligneControl))">
+                        {{ copyFeedbackField() === 'ligne_remise_' + i ? 'Copié !' : '' }}
+                      </button>
+                    </div>
+                    <ng-container *ngIf="estRemisePourcentage($any(ligneControl))">
+                      <div class="copy-field-readonly">
+                        <div class="copy-field-content">
+                          <span class="copy-field-label">Pourcentage</span>
+                          <span class="copy-field-value">{{ $any(ligneControl).get('prix_unitaire')?.value || '-' }} %</span>
+                        </div>
+                        <button
+                          type="button"
+                          class="copy-field-copy-btn"
+                          (click)="copyTextValue(toCopyText($any(ligneControl).get('prix_unitaire')?.value), 'ligne_remise_pct_' + i)"
+                          [disabled]="!$any(ligneControl).get('prix_unitaire')?.value">
+                          {{ copyFeedbackField() === 'ligne_remise_pct_' + i ? 'Copié !' : '' }}
+                        </button>
+                      </div>
+                      <p class="remise-calculee" *ngIf="hasMontantRemise($any(ligneControl))">
+                        Soit {{ $any(ligneControl).get('prix_final')?.value | number:'1.2-2' }} € sur le total des prix
+                      </p>
+                    </ng-container>
+                  </ng-template>
+                </div>
               </ng-container>
               <button
                 type="button"
                 class="btn-remove-support"
                 (click)="removeLignePrix(i)"
-                [disabled]="!isEditMode() || lignesPrixFormArray.length <= 1"
-                *ngIf="isEditMode() && lignesPrixFormArray.length > 1">
+                *ngIf="isEditMode() && (estRemise($any(ligneControl)) || countLignesPrix() > 1)">
                 Supprimer
               </button>
             </div>
           </div>
-          <button
-            type="button"
-            class="btn-add-support"
-            (click)="addLignePrix()"
-            *ngIf="isEditMode()">
-            + Ajouter un prix
-          </button>
+          <div class="lignes-prix-actions" *ngIf="isEditMode()">
+            <button
+              type="button"
+              class="btn-add-support"
+              (click)="addLignePrix()">
+              + Ajouter un prix
+            </button>
+            <button
+              type="button"
+              class="btn-add-support btn-add-remise"
+              (click)="addLigneRemise()">
+              + Ajouter une remise
+            </button>
+          </div>
           <div class="lignes-prix-total">
             <span>Quantité totale : <strong>{{ get('quantité').value || 0 }}</strong></span>
+            <span class="remise-total" *ngIf="getRemiseTotale() > 0">Remises : <strong>−{{ getRemiseTotale() | number:'1.2-2' }} €</strong></span>
             <span>Prix final : <strong>{{ (get('prix_final').value || 0) | number:'1.2-2' }} €</strong></span>
           </div>
         </div>
@@ -798,31 +884,56 @@
                  class="support-item"
                  [class.support-item--inactif]="!isSupportActif($any(supportControl))">
               <ng-container [formGroup]="$any(supportControl)">
-                <!-- Nom du support -->
-                <div class="input-wrapper">
-                  <ng-container *ngIf="isEditMode(); else supportNomCopyField">
-                    <app-floating-label-input
-                      [label]="'Nom du support / frais'"
-                      [control]="$any(supportControl).get('nom_support')!"
-                      [formGroup]="$any(supportControl)"
-                      [readonly]="false">
-                    </app-floating-label-input>
-                  </ng-container>
-                  <ng-template #supportNomCopyField>
-                    <div class="copy-field-readonly">
-                      <div class="copy-field-content">
-                        <span class="copy-field-label">Nom du support / frais</span>
-                        <span class="copy-field-value">{{ $any(supportControl).get('nom_support')?.value || '-' }}</span>
+                <div class="support-nom-ligne-row">
+                  <div class="input-wrapper">
+                    <ng-container *ngIf="isEditMode(); else supportNomCopyField">
+                      <app-floating-label-input
+                        [label]="'Nom du support / frais'"
+                        [control]="$any(supportControl).get('nom_support')!"
+                        [formGroup]="$any(supportControl)"
+                        [readonly]="false">
+                      </app-floating-label-input>
+                    </ng-container>
+                    <ng-template #supportNomCopyField>
+                      <div class="copy-field-readonly">
+                        <div class="copy-field-content">
+                          <span class="copy-field-label">Nom du support / frais</span>
+                          <span class="copy-field-value">{{ $any(supportControl).get('nom_support')?.value || '-' }}</span>
+                        </div>
+                        <button
+                          type="button"
+                          class="copy-field-copy-btn"
+                          (click)="copyTextValue(toCopyText($any(supportControl).get('nom_support')?.value), 'support_nom_' + i)"
+                          [disabled]="!$any(supportControl).get('nom_support')?.value">
+                          {{ copyFeedbackField() === ('support_nom_' + i) ? 'Copié !' : '' }}
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        class="copy-field-copy-btn"
-                        (click)="copyTextValue(toCopyText($any(supportControl).get('nom_support')?.value), 'support_nom_' + i)"
-                        [disabled]="!$any(supportControl).get('nom_support')?.value">
-                        {{ copyFeedbackField() === ('support_nom_' + i) ? 'Copié !' : '' }}
-                      </button>
-                    </div>
-                  </ng-template>
+                    </ng-template>
+                  </div>
+
+                  <div class="input-wrapper ligne-prix-field">
+                    <ng-container *ngIf="isEditMode(); else lignePrixLienCopy">
+                      <label class="ligne-prix-select-label">Ligne de prix</label>
+                      <select class="ligne-prix-select" formControlName="id_ligne_prix">
+                        <option *ngFor="let option of lignesPrixOptions()" [value]="option.id">{{ option.label }}</option>
+                      </select>
+                    </ng-container>
+                    <ng-template #lignePrixLienCopy>
+                      <div class="copy-field-readonly">
+                        <div class="copy-field-content">
+                          <span class="copy-field-label">Ligne de prix</span>
+                          <span class="copy-field-value">{{ libelleLignePrix($any(supportControl).get('id_ligne_prix')?.value) }}</span>
+                        </div>
+                        <button
+                          type="button"
+                          class="copy-field-copy-btn"
+                          (click)="copyTextValue(libelleLignePrix($any(supportControl).get('id_ligne_prix')?.value), 'support_ligne_' + i)"
+                          [disabled]="libelleLignePrix($any(supportControl).get('id_ligne_prix')?.value) === '-'">
+                          {{ copyFeedbackField() === ('support_ligne_' + i) ? 'Copié !' : '' }}
+                        </button>
+                      </div>
+                    </ng-template>
+                  </div>
                 </div>
 
                 <!-- Toggle Actif : inclus dans le tableau Détails des frais -->
@@ -993,52 +1104,86 @@
             <table class="recap-table">
               <thead>
                 <tr>
-                  <th>Support / Frais</th>
+                  <th>Détail</th>
                   <th>Prix unitaire</th>
                   <th>Quantité</th>
-                  <th>Prix total</th>
+                  <th>Montant</th>
                 </tr>
               </thead>
               <tbody>
-                <ng-container *ngFor="let supportControl of supportsFormArray.controls; let i = index">
-                  <tr *ngIf="isSupportActif($any(supportControl))">
-                    <td class="support-name-cell">
-                      {{ $any(supportControl).get('nom_support')?.value || 'Support ' + (i + 1) }}
-                    </td>
-                    <td class="price-cell">
-                      {{ ($any(supportControl).get('prix_support_unitaire')?.value || 0) | number:'1.2-2' }} €
-                    </td>
-                    <td class="quantity-cell">
-                      {{ get('quantité').value || 1 }}
-                    </td>
-                    <td class="total-cell">
-                      {{ (($any(supportControl).get('prix_support_unitaire')?.value || 0) * (get('quantité').value || 1)) | number:'1.2-2' }} €
-                    </td>
+                <ng-container *ngFor="let ligne of recapLignesPrix(); let first = first">
+                  <tr *ngIf="!first" class="recap-separator" aria-hidden="true"><td colspan="4"></td></tr>
+                  <tr class="recap-section recap-section--prix">
+                    <td>{{ ligne.nom }}</td>
+                    <td class="price-cell">{{ ligne.prixUnitaire !== null ? (ligne.prixUnitaire | number:'1.2-2') + ' €' : '—' }}</td>
+                    <td class="quantity-cell">{{ ligne.quantite }}</td>
+                    <td class="total-cell">{{ ligne.prixFinal | number:'1.2-2' }} €</td>
+                  </tr>
+                  <tr *ngFor="let frais of ligne.frais" class="recap-fee">
+                    <td class="support-name-cell">{{ frais.nom }}</td>
+                    <td class="price-cell">{{ frais.prixUnitaire | number:'1.2-2' }} €</td>
+                    <td class="quantity-cell">{{ frais.quantite }}</td>
+                    <td class="total-cell">{{ frais.total | number:'1.2-2' }} €</td>
+                  </tr>
+                  <tr *ngIf="ligne.frais.length === 0" class="empty-row">
+                    <td colspan="4" class="empty-message">Aucun frais lié</td>
+                  </tr>
+                  <tr class="recap-subtotal" *ngIf="ligne.frais.length > 0">
+                    <td class="total-label" colspan="3">Frais liés</td>
+                    <td class="total-cell">{{ ligne.totalFrais | number:'1.2-2' }} €</td>
+                  </tr>
+                  <tr class="recap-reste-ligne" [class.benefit-row]="ligne.resteUnitaire >= 0" [class.loss-row]="ligne.resteUnitaire < 0">
+                    <td class="total-label" colspan="3">{{ ligne.resteUnitaire < 0 ? 'Perte' : 'Bénéfice' }} {{ ligne.nom }} unitaire</td>
+                    <td class="total-cell">{{ ligne.resteUnitaire | number:'1.2-2' }} €</td>
+                  </tr>
+                  <tr class="recap-reste-ligne" [class.benefit-row]="ligne.reste >= 0" [class.loss-row]="ligne.reste < 0">
+                    <td class="total-label" colspan="3">{{ ligne.reste < 0 ? 'Perte' : 'Bénéfice' }} {{ ligne.nom }} (x{{ ligne.quantite }})</td>
+                    <td class="total-cell">{{ ligne.reste | number:'1.2-2' }} €</td>
                   </tr>
                 </ng-container>
-                <tr *ngIf="getSupportsActifsCount() === 0" class="empty-row">
-                  <td colspan="4" class="empty-message">{{ supportsFormArray.length === 0 ? 'Aucun support' : 'Aucun support / frais actif' }}</td>
+
+                <ng-container *ngIf="recapFraisOrphelins().length > 0">
+                  <tr class="recap-separator">
+                    <td colspan="4"><span class="recap-separator-label">Frais non rattachés</span></td>
+                  </tr>
+                  <tr *ngFor="let frais of recapFraisOrphelins()" class="recap-fee">
+                    <td class="support-name-cell">{{ frais.nom }}</td>
+                    <td class="price-cell">{{ frais.prixUnitaire | number:'1.2-2' }} €</td>
+                    <td class="quantity-cell">{{ frais.quantite }}</td>
+                    <td class="total-cell">{{ frais.total | number:'1.2-2' }} €</td>
+                  </tr>
+                </ng-container>
+
+                <tr class="recap-separator">
+                  <td colspan="4"><span class="recap-separator-label">Remises</span></td>
                 </tr>
-                <tr class="total-row">
-                  <td class="total-label"><strong>Total</strong></td>
-                  <td class="total-cell"><strong>{{ get('prix_final_supports_unitaires').value || '0.00' }} €</strong></td>
-                  <td class="quantity-cell"><strong>{{ get('quantité').value || 1 }}</strong></td>
-                  <td class="total-cell"><strong>{{ get('prix_final_supports').value || '0.00' }} €</strong></td>
+                <tr *ngFor="let remise of recapRemises()" class="recap-remise">
+                  <td>{{ remise.nom }}</td>
+                  <td class="price-cell">{{ remise.pourcentage !== null ? (remise.pourcentage | number:'1.0-2') + ' %' : '—' }}</td>
+                  <td class="quantity-cell">—</td>
+                  <td class="total-cell montant-negatif">−{{ remise.montant | number:'1.2-2' }} €</td>
+                </tr>
+                <tr *ngIf="recapRemises().length === 0" class="empty-row">
+                  <td colspan="4" class="empty-message">Aucune remise</td>
+                </tr>
+
+                <tr class="recap-separator">
+                  <td colspan="4"><span class="recap-separator-label">Récapitulatif</span></td>
+                </tr>
+                <tr class="recap-prix-vente">
+                  <td class="total-label" colspan="3">Prix de vente</td>
+                  <td class="total-cell">{{ (get('prix_final').value || 0) | number:'1.2-2' }} €</td>
+                </tr>
+                <tr class="recap-subtotal">
+                  <td class="total-label" colspan="3">Total des frais</td>
+                  <td class="total-cell">{{ (get('prix_final_supports').value || 0) | number:'1.2-2' }} €</td>
+                </tr>
+                <tr class="total-row" [class.benefit-row]="!isPrixBeneficeNegatif()" [class.loss-row]="isPrixBeneficeNegatif()">
+                  <td class="total-label" colspan="3"><strong>{{ isPrixBeneficeNegatif() ? 'Perte' : 'Bénéfice' }}</strong></td>
+                  <td class="total-cell"><strong>{{ getPrixBeneficeDisplayValue() | number:'1.2-2' }} €</strong></td>
                 </tr>
               </tbody>
             </table>
-            <div class="recap-summary">
-              <div class="recap-summary-item">
-                <span class="recap-label"><strong>Prix final de vente :</strong></span>
-                <span class="recap-value"><strong>{{ get('prix_final').value || '0.00' }} €</strong></span>
-              </div>
-              <div class="recap-summary-item" [class.benefit-item]="!isPrixBeneficeNegatif()" [class.loss-item]="isPrixBeneficeNegatif()">
-                <span class="recap-label"><strong>{{ isPrixBeneficeNegatif() ? 'Perte :' : 'Bénéfice :' }}</strong></span>
-                <span class="recap-value" [class.benefit-value]="!isPrixBeneficeNegatif()" [class.loss-value]="isPrixBeneficeNegatif()">
-                  <strong>{{ getPrixBeneficeDisplayValue() | number:'1.2-2' }} €</strong>
-                </span>
-              </div>
-            </div>
           </div>
         </div>
       </section>

@@ -11,6 +11,12 @@ export class CommandeLignePrix {
     @JoinColumn({ name: 'id_commande' })
     commande: Commande;
 
+    @Column({ type: 'boolean', default: false })
+    remise: boolean;
+
+    @Column({ type: 'boolean', default: false })
+    remise_pourcentage: boolean;
+
     @Column({ type: 'varchar', nullable: true })
     nom: string | null;
 

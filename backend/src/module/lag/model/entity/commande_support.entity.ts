@@ -31,4 +31,8 @@ export class CommandeSupport {
 
     @Column({type: 'boolean', default: true})
     actif: boolean; // true = inclus dans le tableau Détails des frais et dans les totaux
+
+    /** Identifiant de la ligne de prix dont la quantité sert au calcul de ce frais. */
+    @Column({ type: 'varchar', length: 26, nullable: true })
+    id_ligne_prix: string | null;
 }

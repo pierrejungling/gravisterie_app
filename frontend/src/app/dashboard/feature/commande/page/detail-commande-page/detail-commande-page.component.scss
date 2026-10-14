@@ -2135,6 +2135,12 @@
   margin-bottom: 1.5rem;
 }
 
+.lignes-prix-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .lignes-prix-total {
   display: flex;
   justify-content: space-between;
@@ -2144,6 +2150,83 @@
   border: 1px solid #e0e0e0;
   border-radius: 8px;
   background: #f8f9fa;
+}
+
+.remise-total {
+  color: #6b3fa0;
+}
+
+.remise-calculee {
+  margin: 0.35rem 0 0;
+  color: #6b3fa0;
+  font-size: 0.9rem;
+}
+
+.remise-montant {
+  margin-top: 0.25rem;
+}
+
+.remise-badge {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: #f3e8ff;
+  color: #6b3fa0;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.support-item--remise {
+  background: #faf5ff;
+  border-color: #d4b4f0;
+}
+
+.support-nom-ligne-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: end;
+
+  > .input-wrapper {
+    min-width: 0;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ligne-prix-field {
+  position: relative;
+}
+
+.ligne-prix-select-label {
+  position: absolute;
+  left: 0.75rem;
+  top: 0;
+  margin: 0;
+  padding: 0 0.25rem;
+  font-size: 0.85rem;
+  line-height: 1;
+  color: var(--color-text-light);
+  background: var(--color-secondary, #fff);
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.ligne-prix-select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.875rem 0.75rem;
+  border: 1px solid var(--color-input-border, #dee2e6);
+  border-radius: var(--border-radius, 6px);
+  background: var(--color-secondary, #fff);
+  color: var(--color-text);
+  font-size: 1rem;
+  font-family: inherit;
 }
 
 .input-wrapper.frais-commission-wrapper {
@@ -2716,6 +2799,11 @@
     opacity: 0.65;
     background: #eef0f2;
   }
+
+  &--remise {
+    background: #faf5ff;
+    border-color: #d4b4f0;
+  }
 }
 
 .support-price-url-row {
@@ -2885,6 +2973,16 @@
   }
 }
 
+.btn-add-support.btn-add-remise {
+  background: #f3e8ff;
+  border-color: #c9a6e8;
+  color: #6b3fa0;
+
+  &:hover:not(:disabled) {
+    background: #e9d5ff;
+  }
+}
+
 /* Mode sombre : bouton ajouter support */
 :host-context([data-theme="dark"]) .btn-add-support {
   background: #1565c0;
@@ -2999,16 +3097,16 @@
 .prix-recapitulatif {
   margin-top: 1.5rem;
   padding: 1rem;
-  background: #e7f3ff;
+  background: #f8f9fa;
   border-radius: 8px;
-  border: 1px solid #b3d9ff;
+  border: 1px solid #e0e0e0;
 }
 
 .recap-title {
   margin: 0 0 1rem 0;
   font-size: 1.125rem;
   font-weight: 600;
-  color: #0056b3;
+  color: #495057;
 }
 
 .recap-table {
@@ -3017,7 +3115,7 @@
   font-size: 0.9375rem;
 
   thead {
-    background: #cfe2ff;
+    background: #f8f9fa;
     border-radius: 4px 4px 0 0;
   }
 
@@ -3025,9 +3123,10 @@
     padding: 0.75rem 0.5rem;
     text-align: left;
     font-weight: 600;
-    color: #0056b3;
+    color: #495057;
     font-size: 0.875rem;
-    border-bottom: 2px solid #b3d9ff;
+    border-bottom: 2px solid #e0e0e0;
+    white-space: nowrap;
 
     &:nth-child(2),
     &:nth-child(3),
@@ -3038,10 +3137,10 @@
 
   tbody {
     tr {
-      border-bottom: 1px solid #d0e7ff;
+      border-bottom: 1px solid #e0e0e0;
 
       &:hover {
-        background: #f0f7ff;
+        background: #f8f9fa;
       }
     }
 
@@ -3076,8 +3175,8 @@
     }
 
     .total-row {
-      background: #f0f7ff;
-      border-top: 2px solid #b3d9ff;
+      background: #f8f9fa;
+      border-top: 2px solid #e0e0e0;
       border-bottom: none;
 
       td {
@@ -3103,6 +3202,115 @@
           font-size: 1rem;
         }
       }
+    }
+
+    tr:has(+ .recap-separator) {
+      border-bottom-color: transparent;
+    }
+
+    .recap-separator {
+      border-bottom: none;
+
+      &:hover {
+        background: transparent;
+      }
+
+      td {
+        position: relative;
+        padding: 0.7rem 0;
+        background: #f8f9fa;
+        border: none;
+        color: #222;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        line-height: 1.2;
+        text-align: left;
+
+        &::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          right: 0;
+          top: 50%;
+          height: 1px;
+          background: #4a4a4a;
+          transform: translateY(-50%);
+        }
+      }
+    }
+
+    .recap-separator-label {
+      position: relative;
+      z-index: 1;
+      display: inline-block;
+      padding-right: 0.75rem;
+      background: #f8f9fa;
+      color: #222;
+    }
+
+    .recap-section td {
+      background: #d6e8ff;
+      font-weight: 700;
+      color: #0056b3;
+    }
+
+    .recap-section--prix td,
+    .recap-prix-vente td {
+      background: #d6e8ff;
+      color: #0056b3;
+    }
+
+    .recap-section--frais td,
+    .recap-fee td,
+    .recap-subtotal td,
+    .recap-fee td.total-cell,
+    .recap-subtotal td.total-cell {
+      background: transparent;
+      color: var(--color-text);
+    }
+
+    .recap-section--benef td {
+      background: #d8f3e2;
+      color: #146c36;
+    }
+
+    .recap-section--remise td,
+    .recap-remise td {
+      background: #f3e8ff;
+      color: #6b3fa0;
+    }
+
+    .recap-fee .support-name-cell {
+      padding-left: 1.5rem;
+    }
+
+    .recap-subtotal td,
+    .recap-reste-ligne td {
+      font-weight: 600;
+    }
+
+    .montant-negatif {
+      color: #6b3fa0 !important;
+    }
+
+    .benefit-row td {
+      background: #d4edda;
+      color: #1e7e34;
+    }
+
+    .loss-row td {
+      background: #fde2e1;
+      color: #c62828;
+    }
+
+    .total-row.benefit-row td.total-label,
+    .total-row.benefit-row td.total-cell {
+      color: #1e7e34;
+    }
+
+    .total-row.loss-row td.total-label,
+    .total-row.loss-row td.total-cell {
+      color: #c62828;
     }
   }
 }
@@ -3175,6 +3383,34 @@
   border-color: var(--color-border) !important;
 }
 
+:host-context([data-theme="dark"]) .support-item--remise {
+  background: rgba(147, 51, 234, 0.14) !important;
+  border-color: rgba(196, 181, 253, 0.55) !important;
+}
+
+:host-context([data-theme="dark"]) .remise-total,
+:host-context([data-theme="dark"]) .remise-calculee,
+:host-context([data-theme="dark"]) .remise-badge {
+  color: #e9d5ff !important;
+}
+
+:host-context([data-theme="dark"]) .remise-badge {
+  background: rgba(147, 51, 234, 0.28) !important;
+}
+
+:host-context([data-theme="dark"]) .btn-add-remise {
+  background: #6b3fa0 !important;
+  border-color: #c4b5fd !important;
+  color: #ffffff !important;
+}
+
+:host-context([data-theme="dark"]) .ligne-prix-select,
+:host-context([data-theme="dark"]) .ligne-prix-select-label {
+  background: var(--color-secondary) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
 :host-context([data-theme="dark"]) .support-item {
   background: var(--color-secondary) !important;
   border-color: var(--color-border) !important;
@@ -3182,6 +3418,11 @@
   &--inactif {
     opacity: 0.6;
     background: rgba(0, 0, 0, 0.15) !important;
+  }
+
+  &--remise {
+    background: rgba(147, 51, 234, 0.14) !important;
+    border-color: rgba(196, 181, 253, 0.55) !important;
   }
 }
 
@@ -3208,6 +3449,20 @@
   border-bottom-color: var(--color-border) !important;
 }
 
+:host-context([data-theme="dark"]) .recap-table tbody tr.recap-separator td {
+  background: var(--color-background-light) !important;
+  color: var(--color-text) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody tr.recap-separator td::before {
+  background: #b3b3b3;
+}
+
+:host-context([data-theme="dark"]) .recap-separator-label {
+  background: var(--color-background-light) !important;
+  color: var(--color-text) !important;
+}
+
 :host-context([data-theme="dark"]) .recap-table tbody tr:hover {
   background: var(--color-background) !important;
 }
@@ -3215,6 +3470,39 @@
 :host-context([data-theme="dark"]) .recap-table tbody .total-row {
   background: var(--color-secondary) !important;
   border-top-color: var(--color-border) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody .recap-section td {
+  background: var(--color-secondary) !important;
+  color: var(--color-text) !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody .recap-section--prix td,
+:host-context([data-theme="dark"]) .recap-table tbody .recap-prix-vente td {
+  background: rgba(59, 130, 246, 0.22) !important;
+  color: #bfdbfe !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody .recap-section--benef td {
+  background: rgba(34, 197, 94, 0.22) !important;
+  color: #86efac !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody .recap-section--remise td,
+:host-context([data-theme="dark"]) .recap-table tbody .recap-remise td,
+:host-context([data-theme="dark"]) .recap-table tbody .montant-negatif {
+  background: rgba(147, 51, 234, 0.22) !important;
+  color: #e9d5ff !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody .benefit-row td {
+  background: rgba(34, 197, 94, 0.15) !important;
+  color: #86efac !important;
+}
+
+:host-context([data-theme="dark"]) .recap-table tbody .loss-row td {
+  background: rgba(239, 68, 68, 0.18) !important;
+  color: #fca5a5 !important;
 }
 
 :host-context([data-theme="dark"]) .recap-title {

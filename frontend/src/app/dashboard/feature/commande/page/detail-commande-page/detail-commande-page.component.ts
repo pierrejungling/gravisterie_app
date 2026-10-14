@@ -1493,6 +1493,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       this.updateVenteFraisComputedFields();
     });
     
+    this.rattacherFraisSansLigne();
+
     // Calcul initial : si prix_final existe, calculer PU, sinon si PU existe, calculer PF
     const prixFinal = this.formGroup.get('prix_final')?.value;
     const prixUnitaireInit = this.formGroup.get('prix_unitaire_final')?.value;
@@ -1505,6 +1507,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     // Toujours recalculer les supports et bénéfice à l'initialisation pour s'assurer que les valeurs sont correctes
     // même en mode lecture et même si le prix final est 0
     this.recalculateSupportsAndBenefice();
+    if (!this.isVente()) {
+      this.syncTotauxLignesPrix();
+    }
     this.updateVenteFraisComputedFields();
     this.refreshQuantiteProduitCompteursStructureControls();
 
@@ -1768,6 +1773,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     
     const group = new FormGroup({
       nom_support: new FormControl({ value: support.nom_support || '', disabled: !isEdit }),
+      id_ligne_prix: new FormControl({ value: support.id_ligne_prix || '', disabled: !isEdit }),
       prix_support: new FormControl({ value: prixSupport, disabled: !isEdit }),
       url_support: new FormControl({ value: support.url_support || '', disabled: !isEdit }),
       prix_unitaire: new FormControl({ value: prixUnitaire, disabled: !isEdit }),
@@ -1780,6 +1786,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     group.get('prix_support')?.valueChanges.subscribe(() => this.recalculateSupportUnitaire(group));
     group.get('nombre_unites')?.valueChanges.subscribe(() => this.recalculateSupportUnitaire(group));
     group.get('actif')?.valueChanges.subscribe(() => this.recalculateSupportsAndBenefice());
+    group.get('id_ligne_prix')?.valueChanges.subscribe(() => this.recalculateSupportsAndBenefice());
     group.get('prix_unitaire')?.valueChanges.subscribe(() => {
       const prixUnitaireValue = group.get('prix_unitaire')?.value;
       if (prixUnitaireValue) {
@@ -1855,14 +1862,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     if (!this.formGroup) return;
     
     const prixFinalValue = this.formGroup.get('prix_final')?.value;
-    const quantiteValue = this.formGroup.get('quantité')?.value;
     // Utiliser parseFloat avec gestion des valeurs null/undefined/chaînes vides
     const prixFinal = prixFinalValue !== null && prixFinalValue !== undefined && prixFinalValue !== '' 
       ? parseFloat(String(prixFinalValue)) || 0 
       : 0;
-    const quantite = quantiteValue !== null && quantiteValue !== undefined && quantiteValue !== '' 
-      ? parseFloat(String(quantiteValue)) || 1 
-      : 1;
     
     // Calculer prix final des supports
     const supportsArray = this.formGroup.get('supports') as FormArray;
@@ -1878,7 +1881,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         ? parseFloat(String(prixSupportUnitaireValue)) || 0
         : 0;
       prixFinalSupportsUnitaires += prixSupportUnitaire;
-      prixFinalSupports += prixSupportUnitaire * quantite;
+      prixFinalSupports += prixSupportUnitaire * this.quantiteLignePrix(supportGroup);
     });
     
     // Stocker le prix final des supports unitaires dans le formulaire
@@ -1994,9 +1997,15 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   createLignePrixFormGroup(ligne: any = {}, isEdit: boolean): FormGroup {
     let calculating = false;
     const group = new FormGroup({
+      id: new FormControl(ligne.id || this.newLignePrixId()),
+      remise: new FormControl(ligne.remise === true),
+      remise_pourcentage: new FormControl({ value: ligne.remise_pourcentage === true, disabled: !isEdit }),
       nom: new FormControl({ value: ligne.nom || '', disabled: !isEdit }),
-      quantite: new FormControl({ value: ligne.quantite ?? 1, disabled: !isEdit }),
-      prix_unitaire: new FormControl({ value: ligne.prix_unitaire ?? '', disabled: !isEdit }),
+      quantite: new FormControl({ value: ligne.remise === true ? (ligne.quantite ?? '') : (ligne.quantite ?? 1), disabled: !isEdit }),
+      prix_unitaire: new FormControl({
+        value: ligne.remise === true && ligne.remise_pourcentage !== true ? '' : (ligne.prix_unitaire ?? ''),
+        disabled: !isEdit,
+      }),
       prix_final: new FormControl({ value: ligne.prix_final ?? '', disabled: !isEdit }),
     });
 
@@ -2013,8 +2022,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       }
     };
 
+    const estRemiseLigne = () => group.get('remise')?.value === true;
+
     group.get('quantite')?.valueChanges.subscribe(() => {
-      if (calculating) return;
+      if (estRemiseLigne() || calculating) return;
       calculating = true;
       const prixUnitaire = group.get('prix_unitaire')?.value;
       const prixFinal = group.get('prix_final')?.value;
@@ -2027,6 +2038,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       this.syncTotauxLignesPrix();
     });
     group.get('prix_unitaire')?.valueChanges.subscribe(() => {
+      if (estRemiseLigne()) {
+        this.syncTotauxLignesPrix();
+        return;
+      }
       if (calculating) return;
       calculating = true;
       applyFromUnitaire();
@@ -2034,11 +2049,20 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       this.syncTotauxLignesPrix();
     });
     group.get('prix_final')?.valueChanges.subscribe(() => {
+      if (estRemiseLigne()) {
+        if (!group.get('remise_pourcentage')?.value) {
+          this.syncTotauxLignesPrix();
+        }
+        return;
+      }
       if (calculating) return;
       calculating = true;
       applyFromFinal();
       calculating = false;
       this.syncTotauxLignesPrix();
+    });
+    group.get('remise_pourcentage')?.valueChanges.subscribe(() => {
+      if (estRemiseLigne()) this.syncTotauxLignesPrix();
     });
 
     return group;
@@ -2057,8 +2081,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     if (!this.formGroup || this.isVente()) return;
 
     const controls = this.lignesPrixFormArray?.controls ?? [];
-    const renseignees = controls.filter((control) => this.lignePrixEstRenseignee(control as FormGroup));
-    const source = renseignees.length > 0 ? renseignees : controls.slice(0, 1);
+    const prixControls = controls.filter((control) => !this.estRemise(control as FormGroup));
+    const remiseControls = controls.filter((control) => this.estRemise(control as FormGroup));
+    const renseignees = prixControls.filter((control) => this.lignePrixEstRenseignee(control as FormGroup));
+    const source = renseignees.length > 0 ? renseignees : prixControls.slice(0, 1);
 
     let quantiteTotale = 0;
     let prixFinalTotal = 0;
@@ -2076,6 +2102,28 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         hasPrix = true;
         prixFinalTotal += prixFinal;
       }
+    });
+
+    const basePrix = prixFinalTotal;
+    remiseControls.forEach((control) => {
+      const group = control as FormGroup;
+      if (group.get('remise_pourcentage')?.value === true) {
+        const pctRaw = group.get('prix_unitaire')?.value;
+        if (pctRaw === null || pctRaw === undefined || pctRaw === '') {
+          group.get('prix_final')?.setValue('', { emitEvent: false });
+          return;
+        }
+        const amount = (basePrix * (parseFloat(String(pctRaw)) || 0)) / 100;
+        const rounded = Math.round(amount * 100) / 100;
+        group.get('prix_final')?.setValue(rounded.toFixed(2), { emitEvent: false });
+        hasPrix = true;
+        prixFinalTotal -= rounded;
+        return;
+      }
+      const prixFinalRaw = group.get('prix_final')?.value;
+      if (prixFinalRaw === null || prixFinalRaw === undefined || prixFinalRaw === '') return;
+      hasPrix = true;
+      prixFinalTotal -= parseFloat(String(prixFinalRaw)) || 0;
     });
 
     const quantite = Math.max(1, quantiteTotale || 1);
@@ -2096,9 +2144,25 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.syncTotauxLignesPrix();
   }
 
+  addLigneRemise(): void {
+    if (!this.isEditMode()) return;
+    this.lignesPrixFormArray.push(this.createLignePrixFormGroup({ remise: true, nom: '' }, true));
+    this.syncTotauxLignesPrix();
+  }
+
   removeLignePrix(index: number): void {
-    if (!this.isEditMode() || this.lignesPrixFormArray.length <= 1) return;
+    if (!this.isEditMode()) return;
+    const group = this.lignesPrixFormArray.at(index) as FormGroup | null;
+    if (!group) return;
+    if (!this.estRemise(group) && this.countLignesPrix() <= 1) return;
+    const removedId = group.get('id')?.value;
     this.lignesPrixFormArray.removeAt(index);
+    const fallback = (this.lignesPrixFormArray.controls.find((control) => !this.estRemise(control as FormGroup)) as FormGroup | undefined)?.get('id')?.value || '';
+    this.supportsFormArray?.controls.forEach((control) => {
+      if (control.get('id_ligne_prix')?.value === removedId) {
+        control.get('id_ligne_prix')?.setValue(fallback, { emitEvent: false });
+      }
+    });
     this.syncTotauxLignesPrix();
   }
 
@@ -2106,27 +2170,41 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return this.formGroup.get('lignes_prix') as FormArray;
   }
 
-  private mapLignesPrixPayload(lignes: any[]): Array<{ nom: string | null; quantite: number | null; prix_unitaire: number | null; prix_final: number | null }> {
+  private mapLignesPrixPayload(lignes: any[]): Array<{ id: string; remise: boolean; remise_pourcentage: boolean; nom: string | null; quantite: number | null; prix_unitaire: number | null; prix_final: number | null }> {
     if (!Array.isArray(lignes)) return [];
+    const referenced = new Set(
+      (this.supportsFormArray?.controls ?? [])
+        .map((control) => (control as FormGroup).get('id_ligne_prix')?.value)
+        .filter(Boolean)
+    );
     return lignes
       .filter((ligne) => {
         const nom = String(ligne?.nom || '').trim();
         const hasPrixUnitaire = ligne?.prix_unitaire !== null && ligne?.prix_unitaire !== undefined && ligne?.prix_unitaire !== '';
         const hasPrixFinal = ligne?.prix_final !== null && ligne?.prix_final !== undefined && ligne?.prix_final !== '';
-        return !!nom || hasPrixUnitaire || hasPrixFinal;
+        return referenced.has(ligne?.id) || !!nom || hasPrixUnitaire || hasPrixFinal;
       })
-      .map((ligne) => ({
-        nom: String(ligne?.nom || '').trim() || null,
-        quantite: ligne?.quantite !== null && ligne?.quantite !== undefined && ligne?.quantite !== ''
-          ? parseInt(String(ligne.quantite), 10)
-          : 1,
-        prix_unitaire: ligne?.prix_unitaire !== null && ligne?.prix_unitaire !== undefined && ligne?.prix_unitaire !== ''
-          ? parseFloat(String(ligne.prix_unitaire))
-          : null,
-        prix_final: ligne?.prix_final !== null && ligne?.prix_final !== undefined && ligne?.prix_final !== ''
-          ? parseFloat(String(ligne.prix_final))
-          : null,
-      }));
+      .map((ligne) => {
+        const remise = ligne?.remise === true;
+        const pourcentage = remise && ligne?.remise_pourcentage === true;
+        const prixUnitaireRenseigne = ligne?.prix_unitaire !== null && ligne?.prix_unitaire !== undefined && ligne?.prix_unitaire !== '';
+        const prixFinalRenseigne = ligne?.prix_final !== null && ligne?.prix_final !== undefined && ligne?.prix_final !== '';
+        return {
+          id: ligne?.id || this.newLignePrixId(),
+          remise,
+          remise_pourcentage: pourcentage,
+          nom: String(ligne?.nom || '').trim() || null,
+          quantite: remise
+            ? null
+            : (ligne?.quantite !== null && ligne?.quantite !== undefined && ligne?.quantite !== ''
+              ? parseInt(String(ligne.quantite), 10)
+              : 1),
+          prix_unitaire: remise
+            ? (pourcentage && prixUnitaireRenseigne ? parseFloat(String(ligne.prix_unitaire)) : null)
+            : (prixUnitaireRenseigne ? parseFloat(String(ligne.prix_unitaire)) : null),
+          prix_final: prixFinalRenseigne ? parseFloat(String(ligne.prix_final)) : null,
+        };
+      });
   }
 
   // Ajouter un nouveau support
@@ -2134,6 +2212,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const supportsArray = this.formGroup.get('supports') as FormArray;
     const isEdit = this.isEditMode();
     supportsArray.push(this.createSupportFormGroup({}, isEdit));
+    this.rattacherFraisSansLigne();
     this.recalculateSupportsAndBenefice();
   }
 
@@ -2162,6 +2241,173 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   getSupportsActifsCount(): number {
     if (!this.supportsFormArray) return 0;
     return this.supportsFormArray.controls.filter((c) => this.isSupportActif(c as FormGroup)).length;
+  }
+
+  estRemise(group: FormGroup): boolean {
+    return group.get('remise')?.value === true;
+  }
+
+  estRemisePourcentage(group: FormGroup): boolean {
+    return group.get('remise_pourcentage')?.value === true;
+  }
+
+  hasMontantRemise(group: FormGroup): boolean {
+    const raw = group.get('prix_final')?.value;
+    return raw !== null && raw !== undefined && raw !== '';
+  }
+
+  countLignesPrix(): number {
+    return (this.lignesPrixFormArray?.controls ?? []).filter((control) => !this.estRemise(control as FormGroup)).length;
+  }
+
+  getRemiseTotale(): number {
+    return (this.lignesPrixFormArray?.controls ?? []).reduce((total, control) => {
+      const group = control as FormGroup;
+      if (!this.estRemise(group)) return total;
+      const raw = group.get('prix_final')?.value;
+      if (raw === null || raw === undefined || raw === '') return total;
+      return total + (parseFloat(String(raw)) || 0);
+    }, 0);
+  }
+
+  recapLignesPrix(): Array<{
+    nom: string;
+    quantite: number;
+    prixUnitaire: number | null;
+    prixFinal: number;
+    frais: Array<{ nom: string; prixUnitaire: number; quantite: number; total: number }>;
+    totalFrais: number;
+    resteUnitaire: number;
+    reste: number;
+  }> {
+    const lignes = (this.lignesPrixFormArray?.controls ?? []).filter((control) => !this.estRemise(control as FormGroup)) as FormGroup[];
+    const ids = new Set(lignes.map((group) => String(group.get('id')?.value || '')));
+    return lignes.map((group, index) => {
+      const id = String(group.get('id')?.value || '');
+      const nom = String(group.get('nom')?.value || '').trim() || `Prix ${index + 1}`;
+      const quantite = this.quantitePositive(group.get('quantite')?.value);
+      const prixUnitaire = this.montantOptionnel(group.get('prix_unitaire')?.value);
+      const prixFinal = this.montantChamp(group, 'prix_final');
+      const frais = this.fraisActifsPourLigne(id, ids);
+      const totalFrais = frais.reduce((total, item) => total + item.total, 0);
+      const reste = prixFinal - totalFrais;
+      return { nom, quantite, prixUnitaire, prixFinal, frais, totalFrais, resteUnitaire: reste / quantite, reste };
+    });
+  }
+
+  recapFraisOrphelins(): Array<{ nom: string; prixUnitaire: number; quantite: number; total: number }> {
+    const ids = new Set(
+      (this.lignesPrixFormArray?.controls ?? [])
+        .filter((control) => !this.estRemise(control as FormGroup))
+        .map((control) => String((control as FormGroup).get('id')?.value || ''))
+    );
+    return this.fraisActifsPourLigne(null, ids);
+  }
+
+  recapRemises(): Array<{ nom: string; pourcentage: number | null; montant: number }> {
+    return (this.lignesPrixFormArray?.controls ?? [])
+      .filter((control) => this.estRemise(control as FormGroup))
+      .map((control, index) => {
+        const group = control as FormGroup;
+        const pourcentage = group.get('remise_pourcentage')?.value === true
+          ? (parseFloat(String(group.get('prix_unitaire')?.value || 0)) || 0)
+          : null;
+        return {
+          nom: String(group.get('nom')?.value || '').trim() || `Remise ${index + 1}`,
+          pourcentage,
+          montant: this.montantChamp(group, 'prix_final'),
+        };
+      })
+      .filter((remise) => remise.montant !== 0 || remise.pourcentage !== null || remise.nom.startsWith('Remise') === false);
+  }
+
+  private fraisActifsPourLigne(
+    ligneId: string | null,
+    idsLignes: Set<string>
+  ): Array<{ nom: string; prixUnitaire: number; quantite: number; total: number }> {
+    return (this.supportsFormArray?.controls ?? [])
+      .map((control, index) => ({ group: control as FormGroup, index }))
+      .filter(({ group }) => {
+        if (!this.isSupportActif(group)) return false;
+        const id = String(group.get('id_ligne_prix')?.value || '');
+        if (ligneId === null) return !idsLignes.has(id);
+        return id === ligneId;
+      })
+      .map(({ group, index }) => {
+        const prixUnitaire = parseFloat(String(group.get('prix_support_unitaire')?.value || 0)) || 0;
+        const quantite = this.quantiteLignePrix(group);
+        return {
+          nom: String(group.get('nom_support')?.value || '').trim() || `Support ${index + 1}`,
+          prixUnitaire,
+          quantite,
+          total: prixUnitaire * quantite,
+        };
+      });
+  }
+
+  private quantitePositive(value: unknown): number {
+    const quantite = parseInt(String(value ?? 1), 10);
+    return Number.isFinite(quantite) && quantite > 0 ? quantite : 1;
+  }
+
+  private montantOptionnel(value: unknown): number | null {
+    if (value === null || value === undefined || value === '') return null;
+    const montant = parseFloat(String(value));
+    return Number.isFinite(montant) ? montant : null;
+  }
+
+  private montantChamp(group: FormGroup, name: string): number {
+    return this.montantOptionnel(group.get(name)?.value) ?? 0;
+  }
+
+  lignesPrixOptions(): Array<{ id: string; label: string }> {
+    return (this.lignesPrixFormArray?.controls ?? [])
+      .filter((control) => !this.estRemise(control as FormGroup))
+      .map((control, index) => {
+        const group = control as FormGroup;
+        const nom = String(group.get('nom')?.value || '').trim();
+        const quantite = group.get('quantite')?.value ?? 1;
+        return {
+          id: String(group.get('id')?.value || ''),
+          label: nom ? `${nom} (× ${quantite})` : `Prix ${index + 1} (× ${quantite})`,
+        };
+      });
+  }
+
+  libelleLignePrix(id: string | null | undefined): string {
+    return this.lignesPrixOptions().find((option) => option.id === id)?.label || 'Prix 1';
+  }
+
+  quantiteLignePrix(supportGroup: FormGroup): number {
+    const id = supportGroup.get('id_ligne_prix')?.value;
+    const ligne = this.lignesPrixFormArray?.controls.find((control) => (control as FormGroup).get('id')?.value === id) as FormGroup | undefined;
+    const quantite = parseInt(String(ligne?.get('quantite')?.value ?? 1), 10);
+    return Number.isFinite(quantite) && quantite > 0 ? quantite : 1;
+  }
+
+  getQuantiteFraisTotaleLabel(): string {
+    const actifs = (this.supportsFormArray?.controls ?? []).filter((control) => this.isSupportActif(control as FormGroup)) as FormGroup[];
+    if (actifs.length === 0) return '—';
+    const quantites = actifs.map((control) => this.quantiteLignePrix(control));
+    return new Set(quantites).size === 1 ? String(quantites[0]) : '—';
+  }
+
+  private rattacherFraisSansLigne(): void {
+    const options = this.lignesPrixOptions();
+    const fallback = options[0]?.id || '';
+    this.supportsFormArray?.controls.forEach((control) => {
+      const current = control.get('id_ligne_prix')?.value;
+      if (!options.some((option) => option.id === current)) {
+        control.get('id_ligne_prix')?.setValue(fallback, { emitEvent: false });
+      }
+    });
+  }
+
+  private newLignePrixId(): string {
+    const alphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+    const bytes = new Uint8Array(26);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('');
   }
 
   private newCompteurClientId(): string {
@@ -2462,7 +2708,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       const supportsArray = this.formGroup.get('supports') as FormArray;
       supportsArray.controls.forEach((supportControl) => {
         const supportGroup = supportControl as FormGroup;
-        ['nom_support', 'prix_support', 'url_support', 'prix_unitaire', 'nombre_unites', 'actif'].forEach(controlName => {
+        ['nom_support', 'id_ligne_prix', 'prix_support', 'url_support', 'prix_unitaire', 'nombre_unites', 'actif'].forEach(controlName => {
           const control = supportGroup.get(controlName);
           if (control) {
             if (newEditMode) {
@@ -2477,7 +2723,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       const lignesPrixArray = this.formGroup.get('lignes_prix') as FormArray;
       lignesPrixArray?.controls.forEach((ligneControl) => {
         const ligneGroup = ligneControl as FormGroup;
-        ['nom', 'quantite', 'prix_unitaire', 'prix_final'].forEach(controlName => {
+        ['nom', 'quantite', 'prix_unitaire', 'prix_final', 'remise_pourcentage'].forEach(controlName => {
           const control = ligneGroup.get(controlName);
           if (control) {
             if (newEditMode) {
@@ -2603,6 +2849,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
               nombre_unites: s.nombre_unites !== null && s.nombre_unites !== undefined && s.nombre_unites !== '' ? parseInt(String(s.nombre_unites), 10) : undefined,
               prix_support_unitaire: s.prix_support_unitaire !== null && s.prix_support_unitaire !== undefined && s.prix_support_unitaire !== '' ? parseFloat(String(s.prix_support_unitaire)) : undefined,
               actif: s.actif !== undefined ? Boolean(s.actif) : true,
+              id_ligne_prix: s.id_ligne_prix || undefined,
             }))
         : [],
       personnalisation: {
@@ -2671,6 +2918,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
               nombre_unites: s.nombre_unites !== null && s.nombre_unites !== undefined && s.nombre_unites !== '' ? parseInt(String(s.nombre_unites), 10) : undefined,
               prix_support_unitaire: s.prix_support_unitaire !== null && s.prix_support_unitaire !== undefined && s.prix_support_unitaire !== '' ? parseFloat(String(s.prix_support_unitaire)) : undefined,
               actif: s.actif !== undefined ? Boolean(s.actif) : true,
+              id_ligne_prix: s.id_ligne_prix || undefined,
             }))
         : [],
       personnalisation: {
@@ -3499,11 +3747,21 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       lignes.forEach((control, index) => {
         const ligneGroup = control as FormGroup;
         if (!this.lignePrixEstRenseignee(ligneGroup)) return;
-        const nom = ligneGroup.get('nom')?.value || `Prix ${index + 1}`;
-        const quantite = ligneGroup.get('quantite')?.value ?? 1;
-        const prixUnitaire = ligneGroup.get('prix_unitaire')?.value ?? 0;
-        const prixFinal = ligneGroup.get('prix_final')?.value ?? 0;
-        lines.push(`- ${nom}: ${quantite} × ${prixUnitaire} € = ${prixFinal} €`);
+        const remise = this.estRemise(ligneGroup);
+        const nom = ligneGroup.get('nom')?.value || (remise ? `Remise ${index + 1}` : `Prix ${index + 1}`);
+        if (remise && this.estRemisePourcentage(ligneGroup)) {
+          const pourcentage = ligneGroup.get('prix_unitaire')?.value ?? 0;
+          const montant = ligneGroup.get('prix_final')?.value ?? 0;
+          lines.push(`- Remise — ${nom}: ${pourcentage} % (−${montant} €)`);
+        } else if (remise) {
+          const montant = ligneGroup.get('prix_final')?.value ?? 0;
+          lines.push(`- Remise — ${nom}: −${montant} €`);
+        } else {
+          const quantite = ligneGroup.get('quantite')?.value ?? 1;
+          const prixUnitaire = ligneGroup.get('prix_unitaire')?.value ?? 0;
+          const prixFinal = ligneGroup.get('prix_final')?.value ?? 0;
+          lines.push(`- ${nom}: ${quantite} × ${prixUnitaire} € = ${prixFinal} €`);
+        }
       });
       append('Quantité totale', this.getFieldDisplayValue('quantité'));
       append('Prix final', formatEuroField('prix_final'));
@@ -3527,7 +3785,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
           const supportGroup = control as FormGroup;
           const nom = supportGroup.get('nom_support')?.value || `Support ${index + 1}`;
           const prixUnitaire = supportGroup.get('prix_support_unitaire')?.value ?? 0;
-          lines.push(`- ${nom}: ${prixUnitaire} € / unité`);
+          const quantite = this.quantiteLignePrix(supportGroup);
+          const ligne = this.libelleLignePrix(supportGroup.get('id_ligne_prix')?.value);
+          lines.push(`- ${nom} (${ligne}): ${prixUnitaire} € / unité × ${quantite}`);
         });
         append('Total supports (unitaires)', formatEuroField('prix_final_supports_unitaires'));
         append('Total supports', formatEuroField('prix_final_supports'));

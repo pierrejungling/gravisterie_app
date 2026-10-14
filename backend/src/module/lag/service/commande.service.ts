@@ -363,6 +363,7 @@ export class CommandeService {
                 commandeSupport.nombre_unites = supportData.nombre_unites || null;
                 commandeSupport.prix_support_unitaire = supportData.prix_support_unitaire || null;
                 commandeSupport.actif = supportData.actif !== undefined ? Boolean(supportData.actif) : true;
+                commandeSupport.id_ligne_prix = this.normalizeLignePrixId(supportData.id_ligne_prix);
                 return commandeSupport;
             });
             await this.commandeSupportRepository.save(supportsToCreate);
@@ -485,7 +486,8 @@ export class CommandeService {
             prix_unitaire: cs.prix_unitaire,
             nombre_unites: cs.nombre_unites,
             prix_support_unitaire: cs.prix_support_unitaire,
-            actif: cs.actif !== undefined ? cs.actif : true
+            actif: cs.actif !== undefined ? cs.actif : true,
+            id_ligne_prix: cs.id_ligne_prix
         })) : [];
 
         // Retourner un objet avec les propriétés explicitement listées pour éviter les conflits de type
@@ -569,7 +571,8 @@ export class CommandeService {
             prix_unitaire: cs.prix_unitaire,
             nombre_unites: cs.nombre_unites,
             prix_support_unitaire: cs.prix_support_unitaire,
-            actif: cs.actif !== undefined ? cs.actif : true
+            actif: cs.actif !== undefined ? cs.actif : true,
+            id_ligne_prix: cs.id_ligne_prix
         })) : [];
 
         const originalNom = commande.produit || 'Commande sans nom';
@@ -760,6 +763,7 @@ export class CommandeService {
                     commandeSupport.nombre_unites = supportData.nombre_unites !== null && supportData.nombre_unites !== undefined && supportData.nombre_unites !== '' ? parseInt(String(supportData.nombre_unites), 10) : null;
                     commandeSupport.prix_support_unitaire = supportData.prix_support_unitaire !== null && supportData.prix_support_unitaire !== undefined && supportData.prix_support_unitaire !== '' ? Number(supportData.prix_support_unitaire) : null;
                     commandeSupport.actif = supportData.actif !== undefined ? Boolean(supportData.actif) : true;
+                    commandeSupport.id_ligne_prix = this.normalizeLignePrixId(supportData.id_ligne_prix);
                     return commandeSupport;
                 });
                 await this.commandeSupportRepository.save(supportsToCreate);
@@ -815,7 +819,9 @@ export class CommandeService {
             url_support: cs.url_support,
             prix_unitaire: cs.prix_unitaire,
             nombre_unites: cs.nombre_unites,
-            prix_support_unitaire: cs.prix_support_unitaire
+            prix_support_unitaire: cs.prix_support_unitaire,
+            actif: cs.actif !== undefined ? cs.actif : true,
+            id_ligne_prix: cs.id_ligne_prix
         })) : [];
 
         // Retourner un objet avec les propriétés explicitement listées pour éviter les conflits de type
@@ -1063,6 +1069,9 @@ export class CommandeService {
     /** Convertit les lignes de prix pour la réponse API. */
     private toLignesPrixDto(lignes?: CommandeLignePrix[] | null) {
         return (lignes ?? []).map((ligne) => ({
+            id: ligne.id_commande_ligne_prix,
+            remise: !!ligne.remise,
+            remise_pourcentage: !!ligne.remise_pourcentage,
             nom: ligne.nom,
             quantite: ligne.quantite !== null && ligne.quantite !== undefined ? Number(ligne.quantite) : null,
             prix_unitaire: ligne.prix_unitaire !== null && ligne.prix_unitaire !== undefined ? Number(ligne.prix_unitaire) : null,
@@ -1083,8 +1092,10 @@ export class CommandeService {
 
         const lignesToCreate = lignes.map((ligneData: any) => {
             const ligne = new CommandeLignePrix();
-            ligne.id_commande_ligne_prix = ulid();
+            ligne.id_commande_ligne_prix = this.resolveLignePrixId(ligneData?.id);
             ligne.commande = commande;
+            ligne.remise = ligneData?.remise === true;
+            ligne.remise_pourcentage = ligne.remise && ligneData?.remise_pourcentage === true;
             ligne.nom = ligneData?.nom?.trim() || null;
             const quantite = ligneData?.quantite;
             ligne.quantite = quantite !== null && quantite !== undefined && quantite !== ''
@@ -1098,9 +1109,25 @@ export class CommandeService {
             ligne.prix_final = prixFinal !== null && prixFinal !== undefined && prixFinal !== ''
                 ? Number(prixFinal)
                 : null;
+            if (ligne.remise) {
+                ligne.quantite = null;
+                if (!ligne.remise_pourcentage) {
+                    ligne.prix_unitaire = null;
+                }
+            }
             return ligne;
         });
 
         await this.commandeLignePrixRepository.save(lignesToCreate);
+    }
+
+    private resolveLignePrixId(raw: unknown): string {
+        const value = typeof raw === 'string' ? raw.trim() : '';
+        return /^[0-9A-Za-z]{26}$/.test(value) ? value : ulid();
+    }
+
+    private normalizeLignePrixId(raw: unknown): string | null {
+        const value = typeof raw === 'string' ? raw.trim() : '';
+        return /^[0-9A-Za-z]{26}$/.test(value) ? value : null;
     }
 }

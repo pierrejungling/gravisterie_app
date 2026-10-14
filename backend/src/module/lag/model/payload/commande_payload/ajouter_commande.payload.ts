@@ -144,6 +144,9 @@ export class AjouterCommandePayload {
     @IsOptional()
     @IsArray()
     lignes_prix?: Array<{
+        id?: string | null;
+        remise?: boolean | null;
+        remise_pourcentage?: boolean | null;
         nom?: string | null;
         quantite?: number | null;
         prix_unitaire?: number | null;
@@ -161,6 +164,7 @@ export class AjouterCommandePayload {
         nombre_unites?: number;
         prix_support_unitaire?: number;
         actif?: boolean;
+        id_ligne_prix?: string | null;
     }>;
 
     @ApiProperty({ required: false })

@@ -119,6 +119,9 @@ export function getCommandeSiteDisplayTitle(commande: Pick<Commande, 'id_command
 }
 
 export interface CommandeLignePrix {
+  id?: string | null;
+  remise?: boolean | null;
+  remise_pourcentage?: boolean | null;
   nom?: string | null;
   quantite?: number | null;
   prix_unitaire?: number | null;
@@ -158,6 +161,7 @@ export interface Commande {
     nombre_unites?: number; // X unités si prix_unitaire = false
     prix_support_unitaire?: number; // Calculé automatiquement
     actif?: boolean; // true = inclus dans le tableau Détails des frais et dans les totaux
+    id_ligne_prix?: string | null;
   }>;
   prix_unitaire_final?: number; // Prix unitaire final de vente
   lignes_prix?: CommandeLignePrix[];

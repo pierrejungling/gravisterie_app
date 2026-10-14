@@ -414,7 +414,10 @@
       <div
         class="preview-overlay"
         *ngIf="previewImageUrl() || previewPdfUrl() || previewDocxBlob() || previewAiUrl() || previewAiMessage() || preview3dVisible()"
-        (click)="closePreview()"
+        (click)="onPreviewOverlayClick()"
+        (touchstart)="onPreviewSwipeStart($event)"
+        (touchend)="onPreviewSwipeEnd($event)"
+        (touchcancel)="onPreviewSwipeEnd($event)"
         role="button"
         tabindex="0"
         aria-label="Fermer l'aperçu">
@@ -427,6 +430,30 @@
           [title]="getFichierDownloadTitle(previewFichier()!)">
           Enregistrer
         </button>
+        <button
+          *ngIf="showPreviewNav()"
+          type="button"
+          class="preview-nav preview-nav--prev"
+          [disabled]="!canPreviewNavigate(-1)"
+          (click)="previewNavigate(-1); $event.stopPropagation()"
+          title="Pièce jointe précédente"
+          aria-label="Pièce jointe précédente">‹</button>
+        <button
+          *ngIf="showPreviewNav()"
+          type="button"
+          class="preview-nav preview-nav--next"
+          [disabled]="!canPreviewNavigate(1)"
+          (click)="previewNavigate(1); $event.stopPropagation()"
+          title="Pièce jointe suivante"
+          aria-label="Pièce jointe suivante">›</button>
+        <div
+          *ngIf="showPreviewNav()"
+          class="preview-swipe-zone preview-swipe-zone--prev"
+          (click)="$event.stopPropagation()"></div>
+        <div
+          *ngIf="showPreviewNav()"
+          class="preview-swipe-zone preview-swipe-zone--next"
+          (click)="$event.stopPropagation()"></div>
         <div
           class="preview-content"
           [class.preview-content--image]="!!previewImageUrl()"

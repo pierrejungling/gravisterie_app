@@ -1045,11 +1045,17 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       this.previewImageIsPinching = false;
     }
 
+    const wasGesture = this.previewImageIsPinching || this.previewImageIsPanning || this.previewImageScale() > 1;
+    if (event.touches.length < 2) {
+      this.previewImageIsPinching = false;
+    }
+
     if (event.touches.length === 0) {
       this.previewImageIsPanning = false;
       if (this.previewImageScale() <= 1) {
         this.resetPreviewImageZoom();
       }
+      if (wasGesture) event.stopPropagation();
       return;
     }
 
@@ -1060,6 +1066,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       this.previewImagePanStartTranslateX = this.previewImageTranslateX();
       this.previewImagePanStartTranslateY = this.previewImageTranslateY();
     }
+    if (wasGesture) event.stopPropagation();
   }
 
   private bindPreviewImageTouchMove(el: HTMLElement | null): void {
@@ -1083,6 +1090,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   openPreviewForFichier(fichier: CommandeFichier): void {
+    if (!this.isPreviewableFichier(fichier)) return;
+    this.previewFichier.set(fichier);
+    this.resetPreviewMedia();
     if (this.isPreviewableImageFichier(fichier)) {
       this.openPreview(fichier);
       return;
@@ -1101,8 +1111,65 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     }
     if (this.isAiFichier(fichier)) {
       this.openPreviewAi(fichier);
+    }
+  }
+
+  previewableFichiers(): CommandeFichier[] {
+    return this.commandeFichiersSorted().filter((fichier) => this.isPreviewableFichier(fichier));
+  }
+
+  previewIndex(): number {
+    const id = this.previewFichier()?.id_fichier;
+    if (!id) return -1;
+    return this.previewableFichiers().findIndex((fichier) => fichier.id_fichier === id);
+  }
+
+  showPreviewNav(): boolean {
+    return this.previewableFichiers().length > 1 && this.previewIndex() >= 0;
+  }
+
+  canPreviewNavigate(delta: number): boolean {
+    const index = this.previewIndex();
+    const next = index + delta;
+    return index >= 0 && next >= 0 && next < this.previewableFichiers().length;
+  }
+
+  previewNavigate(delta: number): void {
+    if (!this.canPreviewNavigate(delta)) return;
+    const next = this.previewableFichiers()[this.previewIndex() + delta];
+    if (next) this.openPreviewForFichier(next);
+  }
+
+  onPreviewOverlayClick(): void {
+    if (this.previewSwipeMoved) {
+      this.previewSwipeMoved = false;
       return;
     }
+    this.closePreview();
+  }
+
+  onPreviewSwipeStart(event: TouchEvent): void {
+    if (event.touches.length !== 1 || (this.previewImageUrl() && this.previewImageScale() > 1)) {
+      this.previewSwipeTracking = false;
+      return;
+    }
+    this.previewSwipeTracking = true;
+    this.previewSwipeStartX = event.touches[0].clientX;
+    this.previewSwipeStartY = event.touches[0].clientY;
+  }
+
+  onPreviewSwipeEnd(event: TouchEvent): void {
+    if (!this.previewSwipeTracking) return;
+    this.previewSwipeTracking = false;
+    if (this.previewImageIsPinching || this.previewImageIsPanning) return;
+    if (this.previewImageUrl() && this.previewImageScale() > 1) return;
+    const touch = event.changedTouches[0];
+    if (!touch) return;
+    const dx = touch.clientX - this.previewSwipeStartX;
+    const dy = touch.clientY - this.previewSwipeStartY;
+    if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy)) return;
+    this.previewSwipeMoved = true;
+    this.previewNavigate(dx < 0 ? 1 : -1);
   }
 
   openPreviewPdf(fichier: CommandeFichier): void {
@@ -1114,6 +1181,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.previewDocxBlob.set(null);
     this.apiService.getBlob(COMMANDE_FICHIER_DOWNLOAD(id, fichier.id_fichier)).subscribe({
       next: (blob) => {
+        if (this.previewFichier()?.id_fichier !== fichier.id_fichier) return;
         const url = URL.createObjectURL(blob);
         this.previewPdfUrl.set(url);
       },
@@ -1128,8 +1196,12 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.previewDocxBlob.set(null);
     this.apiService.getBlob(COMMANDE_FICHIER_DOWNLOAD(id, fichier.id_fichier)).subscribe({
       next: (blob) => {
+        if (this.previewFichier()?.id_fichier !== fichier.id_fichier) return;
         this.previewDocxBlob.set(blob);
-        setTimeout(() => this.renderDocxPreview(blob), 50);
+        setTimeout(() => {
+          if (this.previewFichier()?.id_fichier !== fichier.id_fichier) return;
+          this.renderDocxPreview(blob);
+        }, 50);
       },
       error: (err) => console.error('Erreur chargement DOCX:', err)
     });
@@ -1161,7 +1233,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.previewAiMessage.set(null);
     this.apiService.getBlob(COMMANDE_FICHIER_DOWNLOAD(id, fichier.id_fichier)).subscribe({
       next: (blob) => {
+        if (this.previewFichier()?.id_fichier !== fichier.id_fichier) return;
         this.isPdfCompatibleBlob(blob).then((isPdf) => {
+          if (this.previewFichier()?.id_fichier !== fichier.id_fichier) return;
           // Beaucoup de .ai sont “PDF-compatible” → on les affiche comme PDF (beaucoup plus fiable)
           if (isPdf) {
             const pdfBlob = blob.type === 'application/pdf' ? blob : new Blob([blob], { type: 'application/pdf' });
@@ -1214,10 +1288,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.apiService.getBlob(COMMANDE_FICHIER_DOWNLOAD(id, fichier.id_fichier)).subscribe({
       next: (blob) => {
         blob.arrayBuffer().then((buffer) => {
-          this.render3d(buffer, this.preview3dType());
-        }).catch((err) => console.error('Erreur lecture fichier 3D:', err));
-      },
-      error: (err) => console.error('Erreur chargement fichier 3D:', err)
+          if (this.previewFichier()?.id_fichier !== fichier.id_fichier) return;
     });
   }
 
@@ -1226,8 +1297,18 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     const aiUrl = this.previewAiUrl();
     if (aiUrl) URL.revokeObjectURL(aiUrl);
-    this.previewImageUrl.set(null);
+    this.resetPreviewMedia();
     this.previewFichier.set(null);
+    this.previewSwipeTracking = false;
+    this.previewSwipeMoved = false;
+  }
+
+  private resetPreviewMedia(): void {
+    const pdfUrl = this.previewPdfUrl();
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    const aiUrl = this.previewAiUrl();
+    if (aiUrl) URL.revokeObjectURL(aiUrl);
+    this.previewImageUrl.set(null);
     this.resetPreviewImageZoom();
     this.previewPdfUrl.set(null);
     this.previewDocxBlob.set(null);
@@ -1238,15 +1319,25 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.dispose3d();
   }
 
+  private isPreviewOpen(): boolean {
+    return !!(this.previewImageUrl() || this.previewPdfUrl() || this.previewDocxBlob() || this.previewAiUrl() || this.previewAiMessage() || this.preview3dVisible());
+  }
+
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    if (this.previewImageUrl() || this.previewPdfUrl() || this.previewDocxBlob() || this.previewAiUrl() || this.previewAiMessage() || this.preview3dVisible()) {
+    if (this.isPreviewOpen()) {
       this.closePreview();
     }
   }
 
-  private threeRenderer: THREE.WebGLRenderer | null = null;
-  private threeScene: THREE.Scene | null = null;
+  @HostListener('document:keydown', ['$event'])
+  onPreviewArrowKey(event: KeyboardEvent): void {
+    if (!this.isPreviewOpen()) return;
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const target = event.target as HTMLElement | null;
+    if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+    event.preventDefault();
+    this.previewNavigate(event.key === 'ArrowLeft' ? -1 : 1);
   private threeCamera: THREE.PerspectiveCamera | null = null;
   private threeControls: OrbitControls | null = null;
   private threeAnimId: number | null = null;

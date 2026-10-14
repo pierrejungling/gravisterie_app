@@ -231,6 +231,8 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     // Créer un FormArray pour les supports avec un support vide par défaut
     const supportsArray = new FormArray<FormGroup>([]);
     supportsArray.push(this.createSupportFormGroup({}));
+    const lignesPrixArray = new FormArray<FormGroup>([]);
+    lignesPrixArray.push(this.createLignePrixFormGroup({}));
 
     this.formGroup = new FormGroup({
       nom_commande: new FormControl<string>('', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]),
@@ -255,6 +257,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       payé: new FormControl<boolean>(false),
       commentaire_paye: new FormControl<string>(''),
       attente_reponse: new FormControl<boolean>(false),
+      lignes_prix: lignesPrixArray,
       supports: supportsArray,
       prix_final_supports_unitaires: new FormControl({ value: 0, disabled: true }),
       prix_final_supports: new FormControl({ value: 0, disabled: true }),
@@ -376,6 +379,144 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     void el.offsetHeight; // force reflow
     el.style.height = `${el.scrollHeight + 2}px`;
     el.style.transition = previousTransition;
+  }
+
+  // Créer un FormGroup pour une ligne de prix
+  createLignePrixFormGroup(ligne: any = {}): FormGroup {
+    let calculating = false;
+    const group = new FormGroup({
+      nom: new FormControl(ligne.nom || ''),
+      quantite: new FormControl(ligne.quantite ?? 1),
+      prix_unitaire: new FormControl(ligne.prix_unitaire ?? ''),
+      prix_final: new FormControl(ligne.prix_final ?? ''),
+    });
+
+    const applyFromUnitaire = () => {
+      const prixUnitaire = parseFloat(String(group.get('prix_unitaire')?.value || 0)) || 0;
+      const quantite = parseFloat(String(group.get('quantite')?.value || 1)) || 1;
+      group.get('prix_final')?.setValue((prixUnitaire * quantite).toFixed(2), { emitEvent: false });
+    };
+    const applyFromFinal = () => {
+      const prixFinal = parseFloat(String(group.get('prix_final')?.value || 0)) || 0;
+      const quantite = parseFloat(String(group.get('quantite')?.value || 1)) || 1;
+      if (quantite > 0) {
+        group.get('prix_unitaire')?.setValue((prixFinal / quantite).toFixed(2), { emitEvent: false });
+      }
+    };
+
+    group.get('quantite')?.valueChanges.subscribe(() => {
+      if (calculating) return;
+      calculating = true;
+      const prixUnitaire = group.get('prix_unitaire')?.value;
+      const prixFinal = group.get('prix_final')?.value;
+      if (prixUnitaire !== null && prixUnitaire !== undefined && prixUnitaire !== '') {
+        applyFromUnitaire();
+      } else if (prixFinal !== null && prixFinal !== undefined && prixFinal !== '') {
+        applyFromFinal();
+      }
+      calculating = false;
+      this.syncTotauxLignesPrix();
+    });
+    group.get('prix_unitaire')?.valueChanges.subscribe(() => {
+      if (calculating) return;
+      calculating = true;
+      applyFromUnitaire();
+      calculating = false;
+      this.syncTotauxLignesPrix();
+    });
+    group.get('prix_final')?.valueChanges.subscribe(() => {
+      if (calculating) return;
+      calculating = true;
+      applyFromFinal();
+      calculating = false;
+      this.syncTotauxLignesPrix();
+    });
+
+    return group;
+  }
+
+  private lignePrixEstRenseignee(group: FormGroup): boolean {
+    const nom = String(group.get('nom')?.value || '').trim();
+    const prixUnitaire = group.get('prix_unitaire')?.value;
+    const prixFinal = group.get('prix_final')?.value;
+    const hasPrixUnitaire = prixUnitaire !== null && prixUnitaire !== undefined && prixUnitaire !== '' && !Number.isNaN(Number(prixUnitaire));
+    const hasPrixFinal = prixFinal !== null && prixFinal !== undefined && prixFinal !== '' && !Number.isNaN(Number(prixFinal));
+    return !!nom || hasPrixUnitaire || hasPrixFinal;
+  }
+
+  syncTotauxLignesPrix(): void {
+    if (!this.formGroup || this.isVente()) return;
+
+    const controls = this.lignesPrixFormArray?.controls ?? [];
+    const renseignees = controls.filter((control) => this.lignePrixEstRenseignee(control as FormGroup));
+    const source = renseignees.length > 0 ? renseignees : controls.slice(0, 1);
+
+    let quantiteTotale = 0;
+    let prixFinalTotal = 0;
+    let hasPrix = false;
+
+    source.forEach((control) => {
+      const group = control as FormGroup;
+      const quantite = parseInt(String(group.get('quantite')?.value ?? 1), 10);
+      const prixFinalRaw = group.get('prix_final')?.value;
+      const prixFinal = prixFinalRaw !== null && prixFinalRaw !== undefined && prixFinalRaw !== ''
+        ? parseFloat(String(prixFinalRaw)) || 0
+        : 0;
+      quantiteTotale += Number.isNaN(quantite) ? 0 : quantite;
+      if (prixFinalRaw !== null && prixFinalRaw !== undefined && prixFinalRaw !== '') {
+        hasPrix = true;
+        prixFinalTotal += prixFinal;
+      }
+    });
+
+    const quantite = Math.max(1, quantiteTotale || 1);
+    this.formGroup.get('quantité')?.setValue(quantite, { emitEvent: false });
+    if (hasPrix) {
+      this.formGroup.get('prix_final')?.setValue(prixFinalTotal.toFixed(2), { emitEvent: false });
+      this.formGroup.get('prix_unitaire_final')?.setValue((prixFinalTotal / quantite).toFixed(2), { emitEvent: false });
+    } else {
+      this.formGroup.get('prix_final')?.setValue(null, { emitEvent: false });
+      this.formGroup.get('prix_unitaire_final')?.setValue(null, { emitEvent: false });
+    }
+    this.recalculateSupportsAndBenefice();
+  }
+
+  addLignePrix(): void {
+    this.lignesPrixFormArray.push(this.createLignePrixFormGroup({}));
+    this.syncTotauxLignesPrix();
+  }
+
+  removeLignePrix(index: number): void {
+    if (this.lignesPrixFormArray.length <= 1) return;
+    this.lignesPrixFormArray.removeAt(index);
+    this.syncTotauxLignesPrix();
+  }
+
+  get lignesPrixFormArray(): FormArray {
+    return this.formGroup.get('lignes_prix') as FormArray;
+  }
+
+  private mapLignesPrixPayload(lignes: any[]): Array<{ nom: string | null; quantite: number | null; prix_unitaire: number | null; prix_final: number | null }> {
+    if (!Array.isArray(lignes)) return [];
+    return lignes
+      .filter((ligne) => {
+        const nom = String(ligne?.nom || '').trim();
+        const hasPrixUnitaire = ligne?.prix_unitaire !== null && ligne?.prix_unitaire !== undefined && ligne?.prix_unitaire !== '';
+        const hasPrixFinal = ligne?.prix_final !== null && ligne?.prix_final !== undefined && ligne?.prix_final !== '';
+        return !!nom || hasPrixUnitaire || hasPrixFinal;
+      })
+      .map((ligne) => ({
+        nom: String(ligne?.nom || '').trim() || null,
+        quantite: ligne?.quantite !== null && ligne?.quantite !== undefined && ligne?.quantite !== ''
+          ? parseInt(String(ligne.quantite), 10)
+          : 1,
+        prix_unitaire: ligne?.prix_unitaire !== null && ligne?.prix_unitaire !== undefined && ligne?.prix_unitaire !== ''
+          ? parseFloat(String(ligne.prix_unitaire))
+          : null,
+        prix_final: ligne?.prix_final !== null && ligne?.prix_final !== undefined && ligne?.prix_final !== ''
+          ? parseFloat(String(ligne.prix_final))
+          : null,
+      }));
   }
 
   // Créer un FormGroup pour un support
@@ -802,6 +943,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
         mode_contact: formValue.mode_contact || null,
         prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : null,
         prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : null,
+        lignes_prix: isVente ? undefined : this.mapLignesPrixPayload(formValue.lignes_prix),
         frais_pourcentage: isVente && formValue.frais_pourcentage !== null && formValue.frais_pourcentage !== undefined && formValue.frais_pourcentage !== ''
           ? parseFloat(String(formValue.frais_pourcentage))
           : null,

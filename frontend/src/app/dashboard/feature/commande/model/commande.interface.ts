@@ -118,6 +118,13 @@ export function getCommandeSiteDisplayTitle(commande: Pick<Commande, 'id_command
   return stripped || raw;
 }
 
+export interface CommandeLignePrix {
+  nom?: string | null;
+  quantite?: number | null;
+  prix_unitaire?: number | null;
+  prix_final?: number | null;
+}
+
 export interface Commande {
   id_commande: string;
   date_commande: string;
@@ -153,6 +160,7 @@ export interface Commande {
     actif?: boolean; // true = inclus dans le tableau Détails des frais et dans les totaux
   }>;
   prix_unitaire_final?: number; // Prix unitaire final de vente
+  lignes_prix?: CommandeLignePrix[];
   frais_pourcentage?: number; // Frais/commission en % pour les ventes
   frais_commission_id?: string | null;
   frais_commission_libelle?: string | null;

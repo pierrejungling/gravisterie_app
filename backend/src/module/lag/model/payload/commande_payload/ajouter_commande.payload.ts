@@ -143,6 +143,16 @@ export class AjouterCommandePayload {
     @ApiProperty({ required: false, type: [Object] })
     @IsOptional()
     @IsArray()
+    lignes_prix?: Array<{
+        nom?: string | null;
+        quantite?: number | null;
+        prix_unitaire?: number | null;
+        prix_final?: number | null;
+    }>;
+
+    @ApiProperty({ required: false, type: [Object] })
+    @IsOptional()
+    @IsArray()
     supports?: Array<{
         nom_support?: string;
         prix_support?: number;

@@ -1430,6 +1430,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       prix_support: new FormControl({ value: cmd.support?.prix_support || '', disabled: !isEdit }),
       url_support: new FormControl({ value: cmd.support?.url_support || '', disabled: !isEdit }),
       supports: this.createSupportsFormArray(cmd, isEdit),
+      lignes_prix: this.createLignesPrixFormArray(cmd, isEdit),
       prix_final_supports_unitaires: new FormControl({ value: 0, disabled: true }), // Read-only, calculé
       prix_final_supports: new FormControl({ value: 0, disabled: true }), // Read-only, calculé
       prix_benefice: new FormControl({ value: 0, disabled: true }), // Read-only, calculé
@@ -1972,6 +1973,162 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     return Math.abs(this.getPrixBeneficeValue());
   }
 
+  createLignesPrixFormArray(cmd: Commande, isEdit: boolean): FormArray {
+    const lignesArray = new FormArray<FormGroup>([]);
+    if (!this.isVente() && cmd.lignes_prix && cmd.lignes_prix.length > 0) {
+      cmd.lignes_prix.forEach((ligne) => {
+        lignesArray.push(this.createLignePrixFormGroup(ligne, isEdit));
+      });
+    } else if (!this.isVente()) {
+      lignesArray.push(this.createLignePrixFormGroup({
+        quantite: cmd.quantité || 1,
+        prix_unitaire: cmd.prix_unitaire_final ?? '',
+        prix_final: cmd.prix_final ?? '',
+      }, isEdit));
+    } else {
+      lignesArray.push(this.createLignePrixFormGroup({}, isEdit));
+    }
+    return lignesArray;
+  }
+
+  createLignePrixFormGroup(ligne: any = {}, isEdit: boolean): FormGroup {
+    let calculating = false;
+    const group = new FormGroup({
+      nom: new FormControl({ value: ligne.nom || '', disabled: !isEdit }),
+      quantite: new FormControl({ value: ligne.quantite ?? 1, disabled: !isEdit }),
+      prix_unitaire: new FormControl({ value: ligne.prix_unitaire ?? '', disabled: !isEdit }),
+      prix_final: new FormControl({ value: ligne.prix_final ?? '', disabled: !isEdit }),
+    });
+
+    const applyFromUnitaire = () => {
+      const prixUnitaire = parseFloat(String(group.get('prix_unitaire')?.value || 0)) || 0;
+      const quantite = parseFloat(String(group.get('quantite')?.value || 1)) || 1;
+      group.get('prix_final')?.setValue((prixUnitaire * quantite).toFixed(2), { emitEvent: false });
+    };
+    const applyFromFinal = () => {
+      const prixFinal = parseFloat(String(group.get('prix_final')?.value || 0)) || 0;
+      const quantite = parseFloat(String(group.get('quantite')?.value || 1)) || 1;
+      if (quantite > 0) {
+        group.get('prix_unitaire')?.setValue((prixFinal / quantite).toFixed(2), { emitEvent: false });
+      }
+    };
+
+    group.get('quantite')?.valueChanges.subscribe(() => {
+      if (calculating) return;
+      calculating = true;
+      const prixUnitaire = group.get('prix_unitaire')?.value;
+      const prixFinal = group.get('prix_final')?.value;
+      if (prixUnitaire !== null && prixUnitaire !== undefined && prixUnitaire !== '') {
+        applyFromUnitaire();
+      } else if (prixFinal !== null && prixFinal !== undefined && prixFinal !== '') {
+        applyFromFinal();
+      }
+      calculating = false;
+      this.syncTotauxLignesPrix();
+    });
+    group.get('prix_unitaire')?.valueChanges.subscribe(() => {
+      if (calculating) return;
+      calculating = true;
+      applyFromUnitaire();
+      calculating = false;
+      this.syncTotauxLignesPrix();
+    });
+    group.get('prix_final')?.valueChanges.subscribe(() => {
+      if (calculating) return;
+      calculating = true;
+      applyFromFinal();
+      calculating = false;
+      this.syncTotauxLignesPrix();
+    });
+
+    return group;
+  }
+
+  private lignePrixEstRenseignee(group: FormGroup): boolean {
+    const nom = String(group.get('nom')?.value || '').trim();
+    const prixUnitaire = group.get('prix_unitaire')?.value;
+    const prixFinal = group.get('prix_final')?.value;
+    const hasPrixUnitaire = prixUnitaire !== null && prixUnitaire !== undefined && prixUnitaire !== '' && !Number.isNaN(Number(prixUnitaire));
+    const hasPrixFinal = prixFinal !== null && prixFinal !== undefined && prixFinal !== '' && !Number.isNaN(Number(prixFinal));
+    return !!nom || hasPrixUnitaire || hasPrixFinal;
+  }
+
+  syncTotauxLignesPrix(): void {
+    if (!this.formGroup || this.isVente()) return;
+
+    const controls = this.lignesPrixFormArray?.controls ?? [];
+    const renseignees = controls.filter((control) => this.lignePrixEstRenseignee(control as FormGroup));
+    const source = renseignees.length > 0 ? renseignees : controls.slice(0, 1);
+
+    let quantiteTotale = 0;
+    let prixFinalTotal = 0;
+    let hasPrix = false;
+
+    source.forEach((control) => {
+      const group = control as FormGroup;
+      const quantite = parseInt(String(group.get('quantite')?.value ?? 1), 10);
+      const prixFinalRaw = group.get('prix_final')?.value;
+      const prixFinal = prixFinalRaw !== null && prixFinalRaw !== undefined && prixFinalRaw !== ''
+        ? parseFloat(String(prixFinalRaw)) || 0
+        : 0;
+      quantiteTotale += Number.isNaN(quantite) ? 0 : quantite;
+      if (prixFinalRaw !== null && prixFinalRaw !== undefined && prixFinalRaw !== '') {
+        hasPrix = true;
+        prixFinalTotal += prixFinal;
+      }
+    });
+
+    const quantite = Math.max(1, quantiteTotale || 1);
+    this.formGroup.get('quantité')?.setValue(quantite, { emitEvent: false });
+    if (hasPrix) {
+      this.formGroup.get('prix_final')?.setValue(prixFinalTotal.toFixed(2), { emitEvent: false });
+      this.formGroup.get('prix_unitaire_final')?.setValue((prixFinalTotal / quantite).toFixed(2), { emitEvent: false });
+    } else {
+      this.formGroup.get('prix_final')?.setValue('', { emitEvent: false });
+      this.formGroup.get('prix_unitaire_final')?.setValue('', { emitEvent: false });
+    }
+    this.recalculateSupportsAndBenefice();
+  }
+
+  addLignePrix(): void {
+    if (!this.isEditMode()) return;
+    this.lignesPrixFormArray.push(this.createLignePrixFormGroup({}, true));
+    this.syncTotauxLignesPrix();
+  }
+
+  removeLignePrix(index: number): void {
+    if (!this.isEditMode() || this.lignesPrixFormArray.length <= 1) return;
+    this.lignesPrixFormArray.removeAt(index);
+    this.syncTotauxLignesPrix();
+  }
+
+  get lignesPrixFormArray(): FormArray {
+    return this.formGroup.get('lignes_prix') as FormArray;
+  }
+
+  private mapLignesPrixPayload(lignes: any[]): Array<{ nom: string | null; quantite: number | null; prix_unitaire: number | null; prix_final: number | null }> {
+    if (!Array.isArray(lignes)) return [];
+    return lignes
+      .filter((ligne) => {
+        const nom = String(ligne?.nom || '').trim();
+        const hasPrixUnitaire = ligne?.prix_unitaire !== null && ligne?.prix_unitaire !== undefined && ligne?.prix_unitaire !== '';
+        const hasPrixFinal = ligne?.prix_final !== null && ligne?.prix_final !== undefined && ligne?.prix_final !== '';
+        return !!nom || hasPrixUnitaire || hasPrixFinal;
+      })
+      .map((ligne) => ({
+        nom: String(ligne?.nom || '').trim() || null,
+        quantite: ligne?.quantite !== null && ligne?.quantite !== undefined && ligne?.quantite !== ''
+          ? parseInt(String(ligne.quantite), 10)
+          : 1,
+        prix_unitaire: ligne?.prix_unitaire !== null && ligne?.prix_unitaire !== undefined && ligne?.prix_unitaire !== ''
+          ? parseFloat(String(ligne.prix_unitaire))
+          : null,
+        prix_final: ligne?.prix_final !== null && ligne?.prix_final !== undefined && ligne?.prix_final !== ''
+          ? parseFloat(String(ligne.prix_final))
+          : null,
+      }));
+  }
+
   // Ajouter un nouveau support
   addSupport(): void {
     const supportsArray = this.formGroup.get('supports') as FormArray;
@@ -2316,6 +2473,21 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
           }
         });
       });
+
+      const lignesPrixArray = this.formGroup.get('lignes_prix') as FormArray;
+      lignesPrixArray?.controls.forEach((ligneControl) => {
+        const ligneGroup = ligneControl as FormGroup;
+        ['nom', 'quantite', 'prix_unitaire', 'prix_final'].forEach(controlName => {
+          const control = ligneGroup.get(controlName);
+          if (control) {
+            if (newEditMode) {
+              control.enable();
+            } else {
+              control.disable();
+            }
+          }
+        });
+      });
       
       controlsToDisable.forEach(controlName => {
         const control = this.formGroup.get(controlName);
@@ -2402,6 +2574,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       mode_contact: formValue.mode_contact || null,
       prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : null,
       prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : null,
+      lignes_prix: this.isVente() ? undefined : this.mapLignesPrixPayload(formValue.lignes_prix),
       frais_pourcentage: formValue.frais_pourcentage !== null && formValue.frais_pourcentage !== undefined && formValue.frais_pourcentage !== '' ? parseFloat(String(formValue.frais_pourcentage)) : null,
       frais_commission_id: formValue.frais_commission_id || null,
       frais_commission_libelle: formValue.frais_commission_libelle?.trim() || null,
@@ -2468,6 +2641,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       mode_contact: formValue.mode_contact || undefined,
       prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : undefined,
       prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : undefined,
+      lignes_prix: this.isVente() ? currentCommande.lignes_prix : this.mapLignesPrixPayload(formValue.lignes_prix),
       frais_pourcentage: formValue.frais_pourcentage !== null && formValue.frais_pourcentage !== undefined && formValue.frais_pourcentage !== '' ? parseFloat(String(formValue.frais_pourcentage)) : undefined,
       frais_commission_id: formValue.frais_commission_id || null,
       frais_commission_libelle: formValue.frais_commission_libelle?.trim() || undefined,
@@ -3321,8 +3495,17 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
     appendSection('Prix et paiement');
     if (!vente) {
-      append('Quantité', this.getFieldDisplayValue('quantité'));
-      append('Prix unitaire final', formatEuroField('prix_unitaire_final'));
+      const lignes = this.lignesPrixFormArray?.controls ?? [];
+      lignes.forEach((control, index) => {
+        const ligneGroup = control as FormGroup;
+        if (!this.lignePrixEstRenseignee(ligneGroup)) return;
+        const nom = ligneGroup.get('nom')?.value || `Prix ${index + 1}`;
+        const quantite = ligneGroup.get('quantite')?.value ?? 1;
+        const prixUnitaire = ligneGroup.get('prix_unitaire')?.value ?? 0;
+        const prixFinal = ligneGroup.get('prix_final')?.value ?? 0;
+        lines.push(`- ${nom}: ${quantite} × ${prixUnitaire} € = ${prixFinal} €`);
+      });
+      append('Quantité totale', this.getFieldDisplayValue('quantité'));
       append('Prix final', formatEuroField('prix_final'));
     } else {
       append('Prix final', formatEuroField('prix_final'));

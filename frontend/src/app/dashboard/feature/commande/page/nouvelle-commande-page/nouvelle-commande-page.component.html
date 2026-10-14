@@ -320,38 +320,68 @@
       <section class="form-section">
         <h2 class="section-title">Prix et Frais</h2>
 
-        <!-- Quantité et Prix -->
-        <div class="prix-quantity-group" *ngIf="!isVente()">
-          <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('quantité')">
-            <app-floating-label-input
-              [label]="'Quantité'"
-              [control]="get('quantité')"
-              [formGroup]="formGroup"
-              type="number">
-            </app-floating-label-input>
-            <p class="field-error" *ngIf="getFieldErrorMessage('quantité')">{{ getFieldErrorMessage('quantité') }}</p>
+        <!-- Prix : une ligne par tarif -->
+        <div class="lignes-prix" *ngIf="!isVente()">
+          <h3 class="supports-title">Prix</h3>
+          <div formArrayName="lignes_prix" class="supports-list">
+            <div *ngFor="let ligneControl of lignesPrixFormArray.controls; let i = index"
+                 [formGroupName]="i"
+                 class="support-item">
+              <ng-container [formGroup]="$any(ligneControl)">
+                <div class="input-wrapper">
+                  <app-floating-label-input
+                    [label]="'Nom'"
+                    [control]="$any(ligneControl).get('nom')!"
+                    [formGroup]="$any(ligneControl)">
+                  </app-floating-label-input>
+                </div>
+                <div class="prix-quantity-group">
+                  <div class="input-wrapper">
+                    <app-floating-label-input
+                      [label]="'Quantité'"
+                      [control]="$any(ligneControl).get('quantite')!"
+                      [formGroup]="$any(ligneControl)"
+                      type="number">
+                    </app-floating-label-input>
+                  </div>
+                  <div class="input-wrapper">
+                    <app-floating-label-input
+                      [label]="'Prix unitaire'"
+                      [control]="$any(ligneControl).get('prix_unitaire')!"
+                      [formGroup]="$any(ligneControl)"
+                      type="number"
+                      step="0.01"
+                      suffix="€">
+                    </app-floating-label-input>
+                  </div>
+                  <div class="input-wrapper">
+                    <app-floating-label-input
+                      [label]="'Prix final'"
+                      [control]="$any(ligneControl).get('prix_final')!"
+                      [formGroup]="$any(ligneControl)"
+                      type="number"
+                      step="0.01"
+                      suffix="€">
+                    </app-floating-label-input>
+                  </div>
+                </div>
+              </ng-container>
+              <button
+                type="button"
+                class="btn-remove-support"
+                (click)="removeLignePrix(i)"
+                [disabled]="lignesPrixFormArray.length <= 1"
+                *ngIf="lignesPrixFormArray.length > 1">
+                Supprimer
+              </button>
+            </div>
           </div>
-
-          <div class="input-wrapper">
-            <app-floating-label-input
-              [label]="'Prix unitaire final'"
-              [control]="get('prix_unitaire_final')"
-              [formGroup]="formGroup"
-              type="number"
-              step="0.01"
-              suffix="€">
-            </app-floating-label-input>
-          </div>
-
-          <div class="input-wrapper">
-            <app-floating-label-input
-              [label]="'Prix final'"
-              [control]="get('prix_final')"
-              [formGroup]="formGroup"
-              type="number"
-              step="0.01"
-              suffix="€">
-            </app-floating-label-input>
+          <button type="button" class="btn-add-support" (click)="addLignePrix()">
+            + Ajouter un prix
+          </button>
+          <div class="lignes-prix-total">
+            <span>Quantité totale : <strong>{{ get('quantité').value || 0 }}</strong></span>
+            <span>Prix final : <strong>{{ (get('prix_final').value || 0) | number:'1.2-2' }} €</strong></span>
           </div>
         </div>
 

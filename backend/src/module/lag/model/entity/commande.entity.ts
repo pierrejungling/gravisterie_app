@@ -3,6 +3,7 @@ import { ulid } from "ulid";
 import { StatutCommande } from "./enum";
 import { Client } from "./client.entity";
 import { CommandeSupport } from "./commande_support.entity";
+import { CommandeLignePrix } from "./commande_ligne_prix.entity";
 
 
 @Entity()
@@ -64,6 +65,9 @@ export class Commande {
 
     @OneToMany(() => CommandeSupport, (commandeSupport) => commandeSupport.commande, { cascade: true })
     supports: CommandeSupport[];
+
+    @OneToMany(() => CommandeLignePrix, (ligne) => ligne.commande, { cascade: true })
+    lignes_prix: CommandeLignePrix[];
 
     @Column({type: 'boolean', default: false})
     payé: boolean;

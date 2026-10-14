@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Commande, Client, Gravure, Personnalisation, Support, CommandeSupport } from '../model/entity';
+import { Commande, Client, Gravure, Personnalisation, Support, CommandeSupport, CommandeLignePrix } from '../model/entity';
 import { AjouterCommandePayload, CreateOrderFromWebhookDto } from '../model/payload';
 import { StatutCommande } from '../model/entity/enum';
 import { ulid } from 'ulid';
@@ -20,6 +20,7 @@ export class CommandeService {
         @InjectRepository(Personnalisation) private readonly personnalisationRepository: Repository<Personnalisation>,
         @InjectRepository(Support) private readonly supportRepository: Repository<Support>,
         @InjectRepository(CommandeSupport) private readonly commandeSupportRepository: Repository<CommandeSupport>,
+        @InjectRepository(CommandeLignePrix) private readonly commandeLignePrixRepository: Repository<CommandeLignePrix>,
         private readonly commandeFichierService: CommandeFichierService,
     ) {}
 
@@ -367,6 +368,8 @@ export class CommandeService {
             await this.commandeSupportRepository.save(supportsToCreate);
         }
 
+        await this.replaceLignesPrix(commandeSauvegardee, payload.lignes_prix);
+
         return commandeSauvegardee;
     }
 
@@ -448,7 +451,7 @@ export class CommandeService {
     async getCommandeById(idCommande: string): Promise<any> {
         const commande = await this.commandeRepository.findOne({
             where: { id_commande: idCommande },
-            relations: ['client', 'supports']
+            relations: ['client', 'supports', 'lignes_prix']
         });
 
         if (!commande) {
@@ -512,6 +515,7 @@ export class CommandeService {
             source_web: Boolean(commande.source_web),
             site_traitee: Boolean(commande.site_traitee),
             client: commande.client,
+            lignes_prix: this.toLignesPrixDto(commande.lignes_prix),
             supports: supports as any,
             support: support ? {
                 nom_support: support.nom_support,
@@ -533,7 +537,7 @@ export class CommandeService {
     async dupliquerCommande(idCommande: string): Promise<any> {
         const commande = await this.commandeRepository.findOne({
             where: { id_commande: idCommande },
-            relations: ['client', 'supports']
+            relations: ['client', 'supports', 'lignes_prix']
         });
 
         if (!commande) {
@@ -602,6 +606,7 @@ export class CommandeService {
             mode_contact: commande.mode_contact ?? undefined,
             statut_initial: isVente ? StatutCommande.TERMINE : StatutCommande.EN_ATTENTE_INFORMATION,
             supports: supports as any,
+            lignes_prix: isVente ? undefined : this.toLignesPrixDto(commande.lignes_prix),
             forcer_nouveau_client: true,
             prix_final: isVente ? (commande.prix_final ?? undefined) : undefined,
             prix_unitaire_final: isVente ? (commande.prix_unitaire_final ?? undefined) : undefined,
@@ -760,6 +765,8 @@ export class CommandeService {
                 await this.commandeSupportRepository.save(supportsToCreate);
             }
         }
+
+        await this.replaceLignesPrix(commandeUpdated, payload.lignes_prix);
         
         // Recharger avec les relations pour retourner le format complet
         // Utiliser une requête séparée pour forcer le rechargement des supports
@@ -777,6 +784,10 @@ export class CommandeService {
             where: { commande: { id_commande: idCommande } }
         });
         commandeReloaded.supports = supportsReloaded;
+        const lignesPrixReloaded = await this.commandeLignePrixRepository.find({
+            where: { commande: { id_commande: idCommande } }
+        });
+        commandeReloaded.lignes_prix = lignesPrixReloaded;
 
         // Retourner le même format que getCommandeById pour cohérence
         const gravureReloaded = await this.gravureRepository.findOne({
@@ -834,6 +845,7 @@ export class CommandeService {
             source_web: Boolean(commandeReloaded.source_web),
             site_traitee: Boolean(commandeReloaded.site_traitee),
             client: commandeReloaded.client,
+            lignes_prix: this.toLignesPrixDto(commandeReloaded.lignes_prix),
             supports: supports as any,
             support: support ? {
                 nom_support: support.nom_support,
@@ -1046,5 +1058,49 @@ export class CommandeService {
 
         // Supprimer la commande
         await this.commandeRepository.remove(commande);
+    }
+
+    /** Convertit les lignes de prix pour la réponse API. */
+    private toLignesPrixDto(lignes?: CommandeLignePrix[] | null) {
+        return (lignes ?? []).map((ligne) => ({
+            nom: ligne.nom,
+            quantite: ligne.quantite !== null && ligne.quantite !== undefined ? Number(ligne.quantite) : null,
+            prix_unitaire: ligne.prix_unitaire !== null && ligne.prix_unitaire !== undefined ? Number(ligne.prix_unitaire) : null,
+            prix_final: ligne.prix_final !== null && ligne.prix_final !== undefined ? Number(ligne.prix_final) : null,
+        }));
+    }
+
+    private async replaceLignesPrix(commande: Commande, lignes: any[] | undefined): Promise<void> {
+        if (lignes === undefined) {
+            return;
+        }
+
+        await this.commandeLignePrixRepository.delete({ commande: { id_commande: commande.id_commande } });
+
+        if (!Array.isArray(lignes) || lignes.length === 0) {
+            return;
+        }
+
+        const lignesToCreate = lignes.map((ligneData: any) => {
+            const ligne = new CommandeLignePrix();
+            ligne.id_commande_ligne_prix = ulid();
+            ligne.commande = commande;
+            ligne.nom = ligneData?.nom?.trim() || null;
+            const quantite = ligneData?.quantite;
+            ligne.quantite = quantite !== null && quantite !== undefined && quantite !== ''
+                ? parseInt(String(quantite), 10)
+                : null;
+            const prixUnitaire = ligneData?.prix_unitaire;
+            ligne.prix_unitaire = prixUnitaire !== null && prixUnitaire !== undefined && prixUnitaire !== ''
+                ? Number(prixUnitaire)
+                : null;
+            const prixFinal = ligneData?.prix_final;
+            ligne.prix_final = prixFinal !== null && prixFinal !== undefined && prixFinal !== ''
+                ? Number(prixFinal)
+                : null;
+            return ligne;
+        });
+
+        await this.commandeLignePrixRepository.save(lignesToCreate);
     }
 }

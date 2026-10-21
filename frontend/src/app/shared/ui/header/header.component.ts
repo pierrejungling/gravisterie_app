@@ -2,7 +2,7 @@ import { Component, inject, computed, signal, effect, ViewChild, ElementRef, Des
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AppRoutes, AppNode, ThemeService } from '@shared';
-import { TokenService, ApiService, ApiURI, AuthSessionService } from '@api';
+import { TokenService, ApiService, ApiURI, AuthSessionService, RealtimeService } from '@api';
 import { filter, debounceTime, distinctUntilChanged, switchMap, catchError, map, finalize } from 'rxjs/operators';
 import { Subject, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -21,6 +21,7 @@ export class HeaderComponent {
   private readonly tokenService: TokenService = inject(TokenService);
   private readonly authSession: AuthSessionService = inject(AuthSessionService);
   private readonly apiService: ApiService = inject(ApiService);
+  private readonly realtime = inject(RealtimeService);
   private readonly themeService: ThemeService = inject(ThemeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly searchInput$ = new Subject<string>();
@@ -139,6 +140,10 @@ export class HeaderComponent {
       )
       .subscribe((results) => this.searchResults.set(results));
 
+    this.realtime.on('commande')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshOpenSearch());
+
     // Réinitialiser le fallback quand le thème change
     effect(() => {
       this.themeService.theme(); // S'abonner aux changements de thème
@@ -207,6 +212,24 @@ export class HeaderComponent {
     const value = (event.target as HTMLInputElement).value;
     this.searchQuery.set(value);
     this.searchInput$.next(value);
+  }
+
+  private refreshOpenSearch(): void {
+    const trimmed = this.searchQuery().trim();
+    if (!this.searchOpen() || trimmed.length < this.searchMinLength) {
+      return;
+    }
+    this.searchLoading.set(true);
+    this.apiService.getWithQuery(ApiURI.RECHERCHE_COMMANDES, {
+      q: trimmed,
+      limit: this.searchMaxResults,
+    }).subscribe({
+      next: (response) => {
+        this.searchResults.set(response.result && response.data ? response.data as Commande[] : []);
+        this.searchLoading.set(false);
+      },
+      error: () => this.searchLoading.set(false),
+    });
   }
 
   onSearchFocus(): void {

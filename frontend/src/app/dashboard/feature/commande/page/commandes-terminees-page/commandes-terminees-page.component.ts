@@ -1,9 +1,9 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, computed, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HeaderComponent } from '@shared';
-import { ApiService } from '@api';
-import { ApiURI } from '@api';
+import { ApiService, ApiURI, RealtimeService } from '@api';
 import { Commande, StatutCommande } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 
@@ -24,6 +24,8 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
   expandedPeriodKeys: WritableSignal<Set<string>> = signal(new Set<string>());
   
   private readonly apiService: ApiService = inject(ApiService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly router: Router = inject(Router);
   private readonly scrollKey = 'commandes-terminees-scroll';
   private readonly ventePrefix = 'Vente | ';
@@ -136,6 +138,9 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
     // Sauvegarder la position de scroll avant le rechargement
     window.addEventListener('beforeunload', this.saveScrollPosition);
     this.loadCommandes();
+    this.realtime.on('commande')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadCommandes(true));
   }
 
   ngAfterViewChecked(): void {
@@ -192,22 +197,30 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
     sessionStorage.setItem(this.scrollKey, window.scrollY.toString());
   }
 
-  loadCommandes(): void {
-    this.isLoading.set(true);
+  loadCommandes(silent = false): void {
+    if (!silent) {
+      this.isLoading.set(true);
+    }
     this.apiService.get(ApiURI.LISTE_COMMANDES).subscribe({
       next: (response) => {
         if (response.result && response.data) {
           this.commandes.set(response.data);
-          this.resetExpandedToCurrentPeriod();
+          if (!silent) {
+            this.resetExpandedToCurrentPeriod();
+          }
         }
-        this.isLoading.set(false);
-        // Réinitialiser le flag pour permettre la restauration après le chargement
-        this.scrollRestored = false;
+        if (!silent) {
+          this.isLoading.set(false);
+          // Réinitialiser le flag pour permettre la restauration après le chargement
+          this.scrollRestored = false;
+        }
       },
       error: (error) => {
         console.error('Erreur lors du chargement des commandes:', error);
-        this.isLoading.set(false);
-        this.scrollRestored = false;
+        if (!silent) {
+          this.isLoading.set(false);
+          this.scrollRestored = false;
+        }
       }
     });
   }

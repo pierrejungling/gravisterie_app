@@ -7,6 +7,7 @@ import { HealthController } from './health.controller';
 import { AccountModule } from '../feature/account/account.module';
 import { SecurityModule } from '../security/security.module';
 import { LagModule } from '../module/lag/lag.module';
+import { RealtimeModule } from '@common/realtime';
 import { JwtGuard } from '@security/jwt';
 import { APP_GUARD } from '@nestjs/core';
 
@@ -14,6 +15,7 @@ import { APP_GUARD } from '@nestjs/core';
         imports: [
             TypeOrmModule.forRoot(configManager.getTypeOrmConfig()),
             SecurityModule,
+            RealtimeModule,
             LagModule,
         ],
         controllers: [AppController, HealthController],

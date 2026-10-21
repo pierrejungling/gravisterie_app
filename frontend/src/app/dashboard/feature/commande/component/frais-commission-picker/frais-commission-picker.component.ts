@@ -8,12 +8,13 @@ import {
   inject,
   signal,
   WritableSignal,
+  DestroyRef,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
-import { ApiService } from '@api';
-import { ApiURI } from '@api';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ApiService, ApiURI, RealtimeService } from '@api';
 import { FloatingLabelInputComponent } from '@shared';
 import {
   FraisCommission,
@@ -50,6 +51,8 @@ export class FraisCommissionPickerComponent implements OnInit, OnChanges, OnDest
   nouveauPourcentageControl = new FormControl<number | null>(null);
 
   private readonly apiService = inject(ApiService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly subscriptions: Subscription[] = [];
   private isSyncing = false;
 
@@ -57,6 +60,13 @@ export class FraisCommissionPickerComponent implements OnInit, OnChanges, OnDest
     this.loadFraisCommissions();
     this.bindControlSubscriptions();
     this.syncSelectionFromValues();
+    this.realtime.on('frais')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        if (!this.isSavingPreset) {
+          this.loadFraisCommissions(true);
+        }
+      });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -77,16 +87,22 @@ export class FraisCommissionPickerComponent implements OnInit, OnChanges, OnDest
     this.clearSubscriptions();
   }
 
-  loadFraisCommissions(): void {
-    this.isLoading.set(true);
+  loadFraisCommissions(silent = false): void {
+    if (!silent) {
+      this.isLoading.set(true);
+    }
     this.apiService.get(ApiURI.LISTE_FRAIS_COMMISSIONS).subscribe({
       next: (response) => {
         this.fraisCommissions.set((response.data as FraisCommission[]) || []);
-        this.isLoading.set(false);
+        if (!silent) {
+          this.isLoading.set(false);
+        }
         this.syncSelectionFromValues();
       },
       error: () => {
-        this.isLoading.set(false);
+        if (!silent) {
+          this.isLoading.set(false);
+        }
         this.syncSelectionFromValues();
       },
     });

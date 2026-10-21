@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
-import { AuthSessionService } from '@api';
+import { AuthSessionService, RealtimeService } from '@api';
 import { Language, ThemeService } from '@shared';
 
 @Component({
@@ -19,6 +19,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private authSession = inject(AuthSessionService);
   private themeService = inject(ThemeService);
+  private realtime = inject(RealtimeService);
 
   /** Premier NavigationEnd = chargement initial (reload ou première visite) → ne pas scroller pour garder la restauration. Les suivants = navigation clic → scroller en haut. */
   private initialNavigation = true;
@@ -34,6 +35,7 @@ export class AppComponent implements OnInit, OnDestroy {
     });
 
   ngOnInit(): void {
+    this.realtime.start();
     this.translate.setDefaultLang(Language.FR);
     this.translate.use(Language.FR);
     this.authSession.persistCurrentRoute(this.router.url);

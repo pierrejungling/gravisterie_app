@@ -1,7 +1,9 @@
-import { Component, OnInit, computed, inject, signal, WritableSignal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, WritableSignal, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HeaderComponent } from '@shared';
+import { RealtimeService } from '@api';
 import { Bon, DureeValidite } from '../../model/bon.interface';
 import { BonService } from '../../service/bon.service';
 
@@ -27,6 +29,8 @@ interface BonFormValue {
 export class BonsCadeauxPageComponent implements OnInit {
   private readonly fb: FormBuilder = inject(FormBuilder);
   private readonly bonService: BonService = inject(BonService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   form!: FormGroup;
   isCreating: WritableSignal<boolean> = signal(false);
@@ -70,6 +74,9 @@ export class BonsCadeauxPageComponent implements OnInit {
   ngOnInit(): void {
     this.bonService.loadBons();
     this.isLoading.set(false);
+    this.realtime.on('bon')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.bonService.loadBons());
   }
 
   private createForm(numero = 'BG001'): FormGroup {

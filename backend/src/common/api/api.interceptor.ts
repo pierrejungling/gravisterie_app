@@ -16,7 +16,12 @@ export class ApiInterceptor implements NestInterceptor {
 
     intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
         const ctx = context.switchToHttp();
-        const path = ctx.getRequest().route.path;
+        const request = ctx.getRequest();
+        const url = String(request?.originalUrl || request?.url || '');
+        if (url.includes('/events')) {
+            return next.handle();
+        }
+        const path = request.route.path;
         return next
             .handle()
             .pipe(

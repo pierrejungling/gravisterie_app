@@ -1,11 +1,12 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, HostListener, inject, signal, WritableSignal, computed, ElementRef, ViewChild, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, HostListener, inject, signal, WritableSignal, computed, ElementRef, ViewChild, NgZone, DestroyRef } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, Payload } from '@shared';
-import { ApiService } from '@api';
+import { ApiService, RealtimeService } from '@api';
 import { ApiURI, COMMANDE_FICHIERS_LIST, COMMANDE_FICHIERS_UPLOAD, COMMANDE_FICHIER_DOWNLOAD, COMMANDE_DUPLIQUER } from '@api';
 import { forkJoin, merge, Subscription, debounceTime } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   Commande,
   CommandeFichier,
@@ -45,6 +46,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   commande: WritableSignal<Commande | null> = signal(null);
   isLoading: WritableSignal<boolean> = signal(false);
   isEditMode: WritableSignal<boolean> = signal(false);
+  majDistanteDisponible: WritableSignal<boolean> = signal(false);
   showPrixFields: WritableSignal<boolean> = signal(true);
   showDeleteConfirm: WritableSignal<boolean> = signal(false);
   isDuplicating: WritableSignal<boolean> = signal(false);
@@ -170,6 +172,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private readonly ventePrefix = 'Vente | ';
   
   private readonly apiService: ApiService = inject(ApiService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly router: Router = inject(Router);
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly hostEl: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
@@ -296,8 +300,13 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       // Réinitialiser l'état de scroll pour la nouvelle commande
       this.scrollRestored = false;
       this.isInitialLoad = true;
+      this.majDistanteDisponible.set(false);
       this.loadCommande(id);
     });
+
+    this.realtime.on('commande')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((event) => this.onCommandeDistante(event));
   }
 
   ngAfterViewChecked(): void {
@@ -400,14 +409,18 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
            (window.scrollY !== undefined ? window.scrollY : 0);
   }
 
-  loadCommande(id: string): void {
-    this.isLoading.set(true);
+  loadCommande(id: string, silent = false): void {
+    if (!silent) {
+      this.isLoading.set(true);
+    }
     this.apiService.get(`${ApiURI.GET_COMMANDE_BY_ID}/${id}`).subscribe({
       next: (response) => {
         if (response.result && response.data) {
           this.commande.set(response.data);
-          this.showAdresseMap.set(false);
-          this.clearTrajetResult();
+          if (!silent) {
+            this.showAdresseMap.set(false);
+            this.clearTrajetResult();
+          }
           try {
             const statut = (response.data as Commande).statut_commande;
             const returnPage = statut === StatutCommande.TERMINE || statut === StatutCommande.ANNULEE
@@ -421,14 +434,46 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
           // Auto-grow textarea (description / paiement) dès que le formulaire est en place
           this.scheduleGrowAllTextareas();
           this.loadFichiers(id);
+          this.majDistanteDisponible.set(false);
         }
-        this.isLoading.set(false);
+        if (!silent) {
+          this.isLoading.set(false);
+        }
       },
       error: (error) => {
         console.error('Erreur lors du chargement de la commande:', error);
-        this.isLoading.set(false);
+        if (!silent) {
+          this.isLoading.set(false);
+        }
       }
     });
+  }
+
+  private onCommandeDistante(event: { action: string; id?: string }): void {
+    const id = this.commande()?.id_commande;
+    if (!id || (event.id && event.id !== id)) {
+      return;
+    }
+    if (event.action === 'deleted') {
+      this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', this.returnPage]);
+      return;
+    }
+    if (this.isEditMode() || this.previewFichier()) {
+      this.majDistanteDisponible.set(true);
+      return;
+    }
+    this.loadCommande(id, true);
+  }
+
+  appliquerMajDistante(): void {
+    const id = this.commande()?.id_commande;
+    if (!id) {
+      return;
+    }
+    this.majDistanteDisponible.set(false);
+    this.isEditMode.set(false);
+    this.closePreview();
+    this.loadCommande(id, true);
   }
 
   private configurePdfJsWorker(): void {
@@ -1340,6 +1385,13 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.previewFichier.set(null);
     this.previewSwipeTracking = false;
     this.previewSwipeMoved = false;
+    if (this.majDistanteDisponible() && !this.isEditMode()) {
+      const id = this.commande()?.id_commande;
+      if (id) {
+        this.majDistanteDisponible.set(false);
+        this.loadCommande(id, true);
+      }
+    }
   }
 
   private resetPreviewMedia(): void {
@@ -2832,6 +2884,12 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     // on réinitialise complètement le formulaire avec les dernières données
     // de la commande (qui incluent déjà les exceptions sauvegardées en live).
     if (!newEditMode) {
+      const id = this.commande()?.id_commande;
+      if (this.majDistanteDisponible() && id) {
+        this.majDistanteDisponible.set(false);
+        this.loadCommande(id, true);
+        return;
+      }
       this.initForm();
       return;
     }

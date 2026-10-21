@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, ViewChild, ElementRef, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, ViewChild, ElementRef, ChangeDetectorRef, NgZone, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { concatMap, from, last } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HeaderComponent } from '@shared';
-import { ApiService } from '@api';
+import { ApiService, RealtimeService } from '@api';
 import { ApiURI } from '@api';
 import {
   Commande,
@@ -75,6 +76,9 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   @ViewChild('mobileContainer', { static: false }) mobileContainerElement?: ElementRef<HTMLDivElement>;
   
   private readonly apiService: ApiService = inject(ApiService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
+  private refreshEnAttente = false;
   private readonly router: Router = inject(Router);
   private readonly scrollKey = 'commandes-en-cours-scroll';
   private readonly expandedSectionsKey = 'commandes-en-cours-expanded-sections';
@@ -229,6 +233,9 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   ngOnInit(): void {
     window.addEventListener('beforeunload', this.onBeforeUnload);
     this.loadCommandes();
+    this.realtime.on('commande')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadCommandes(true));
   }
 
   ngAfterViewChecked(): void {
@@ -405,25 +412,35 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
            (window.scrollY !== undefined ? window.scrollY : 0);
   }
 
-  loadCommandes(): void {
-    this.isLoading.set(true);
+  loadCommandes(silent = false): void {
+    if (silent && (this.pointerDrag || this.dragCommandeId)) {
+      this.refreshEnAttente = true;
+      return;
+    }
+    if (!silent) {
+      this.isLoading.set(true);
+    }
     this.apiService.get(ApiURI.LISTE_COMMANDES).subscribe({
       next: (response) => {
         if (response.result && response.data) {
           this.commandes.set(response.data);
           // Ne réappliquer la logique (fermer tout / restaurer) qu'au premier chargement
-          if (!this.initialExpandedStateApplied) {
+          if (!silent && !this.initialExpandedStateApplied) {
             this.setInitialExpandedSections();
             this.initialExpandedStateApplied = true;
           }
         }
-        this.isLoading.set(false);
-        this.scrollRestored = false;
+        if (!silent) {
+          this.isLoading.set(false);
+          this.scrollRestored = false;
+        }
       },
       error: (error) => {
         console.error('Erreur lors du chargement des commandes:', error);
-        this.isLoading.set(false);
-        this.scrollRestored = false;
+        if (!silent) {
+          this.isLoading.set(false);
+          this.scrollRestored = false;
+        }
       }
     });
   }
@@ -972,6 +989,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     }
 
     this.pointerDrag = null;
+    this.flushRemoteRefresh();
   }
 
   private activatePointerDrag(clientX: number, clientY: number): void {
@@ -1173,6 +1191,15 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
         this.draggedRecently = false;
       }, 150);
     }
+    this.flushRemoteRefresh();
+  }
+
+  private flushRemoteRefresh(): void {
+    if (!this.refreshEnAttente || this.pointerDrag || this.dragCommandeId) {
+      return;
+    }
+    this.refreshEnAttente = false;
+    this.loadCommandes(true);
   }
 
   private resolveDropTargetStatut(sourceStatut: StatutCommande, targetStatut: StatutCommande): StatutCommande {

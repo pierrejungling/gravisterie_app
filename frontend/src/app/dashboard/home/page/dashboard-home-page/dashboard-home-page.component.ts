@@ -1,10 +1,9 @@
-import { Component, OnInit, inject, computed, signal, effect } from '@angular/core';
+import { Component, OnInit, inject, computed, signal, effect, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HeaderComponent, ThemeService } from '@shared';
-import { ApiService } from '@api';
-import { ApiURI } from '@api';
-import { ApiResponse } from '@api';
+import { ApiService, ApiURI, ApiResponse, RealtimeService } from '@api';
 import { Commande, StatutCommande } from '../../../feature/commande/model/commande.interface';
 import { Bon } from '../../../feature/bon/model/bon.interface';
 import { BonService } from '../../../feature/bon/service/bon.service';
@@ -31,6 +30,8 @@ export class DashboardHomePageComponent implements OnInit {
   logoError = false;
   currentUser: string = 'Utilisateur';
   private readonly apiService: ApiService = inject(ApiService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly themeService: ThemeService = inject(ThemeService);
 
   // Liste des fichiers logo possibles à essayer (ordre de priorité)
@@ -129,6 +130,13 @@ export class DashboardHomePageComponent implements OnInit {
 
     // Charger les bons pour afficher le nombre de bons actifs
     this.loadBonsCount();
+
+    this.realtime.on('commande')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadCommandesCount());
+    this.realtime.on('bon')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadBonsCount());
 
     // Réinitialiser le fallback quand le thème change
     effect(() => {

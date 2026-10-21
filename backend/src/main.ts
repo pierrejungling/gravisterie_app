@@ -20,7 +20,7 @@ const bootstrap = async (): Promise<void> => {
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Client-Id'],
   });
   
   app.setGlobalPrefix(configManager.getValue(ConfigKey.APP_BASE_URL));

@@ -2,13 +2,17 @@ import { Body, Controller, Headers, Post, UnauthorizedException, UploadedFiles, 
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiHeader, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '@common/config/metadata/public.metadata';
+import { RealtimeService } from '@common/realtime';
 import { CommandeService } from '../service/commande.service';
 import { CreateOrderFromWebhookDto } from '../model/payload';
 
 @ApiTags('Webhook')
 @Controller('orders')
 export class WebhookController {
-    constructor(private readonly commandeService: CommandeService) {}
+    constructor(
+        private readonly commandeService: CommandeService,
+        private readonly realtime: RealtimeService,
+    ) {}
 
     @Public()
     @Post('webhook')
@@ -30,6 +34,8 @@ export class WebhookController {
         if (!expectedSecret || secret !== expectedSecret) {
             throw new UnauthorizedException('Webhook secret invalide');
         }
-        return await this.commandeService.creerCommandeDepuisWebhook(dto, files ?? []);
+        const commande = await this.commandeService.creerCommandeDepuisWebhook(dto, files ?? []);
+        this.realtime.publish({ resource: 'commande', action: 'created', id: commande.id_commande, origin: null });
+        return commande;
     }
 }

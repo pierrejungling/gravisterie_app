@@ -1204,6 +1204,18 @@
     border-color: var(--color-input-border);
   }
 
+  &.btn-remote-update {
+    background: #fff4d6;
+    border-color: #d4a017;
+    color: #5c4810;
+    font-weight: 600;
+
+    &:hover:not(:disabled) {
+      background: #ffe7a3;
+      border-color: #d4a017;
+    }
+  }
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -3113,6 +3125,12 @@
 }
 
 /* Mode sombre robuste : Modifier / Annuler / Enregistrer (barre + footer) */
+:host-context([data-theme="dark"]) .btn-action-bar.btn-remote-update {
+  background: #3d3420;
+  border-color: #d4a017;
+  color: #ffe8a3;
+}
+
 :host-context([data-theme="dark"]) .btn-action-bar.btn-edit,
 :host-context([data-theme="dark"]) .detail-actions-footer .btn-footer-edit,
 :host-context([data-theme="dark"]) .detail-actions-footer .btn-footer-cancel {
@@ -4284,6 +4302,13 @@
   .detail-actions-footer .btn-footer-edit:hover {
     background: #ffe0b2;
     border-color: #ffb74d;
+  }
+
+  .detail-actions-footer .btn-remote-update {
+    background: #fff4d6;
+    border: 1px solid #d4a017;
+    color: #5c4810;
+    font-weight: 600;
   }
 
   .detail-actions-footer .btn-footer-cancel {

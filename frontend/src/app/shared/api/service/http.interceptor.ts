@@ -6,6 +6,7 @@ import { catchError, switchMap } from 'rxjs/operators';
 import { environment } from '../../../../environment/environment';
 import { TokenService } from './token.service';
 import { AuthSessionService } from './auth-session.service';
+import { ClientIdService } from './client-id.service';
 import {
   AddTokenHeaderFn,
   HttpInterceptorHandlerFn,
@@ -21,10 +22,12 @@ const publicRoute: string[] = [
   `${baseURL}account/refresh`
 ];
 
-const setTokenInHeader: AddTokenHeaderFn = (req: HttpRequest<any>, token: string): HttpRequest<any> => {
-  return req.clone({
-    headers: req.headers.set('Authorization', `Bearer ${token}`)
-  });
+const setTokenInHeader: AddTokenHeaderFn = (req: HttpRequest<any>, token: string, clientId?: string): HttpRequest<any> => {
+  let headers = req.headers.set('Authorization', `Bearer ${token}`);
+  if (clientId) {
+    headers = headers.set('X-Client-Id', clientId);
+  }
+  return req.clone({ headers });
 };
 
 const handleError: HttpInterceptorHandlerFn = (
@@ -32,13 +35,14 @@ const handleError: HttpInterceptorHandlerFn = (
   req: HttpRequest<any>,
   next: HttpHandlerFn,
   tokenService: TokenService,
-  authSession: AuthSessionService
+  authSession: AuthSessionService,
+  clientId: string
 ): Observable<any> => {
   if (err.status === 401 || err.status === 403) {
     if (!tokenService.token().isEmpty) {
       return authSession.refreshAccessToken().pipe(
         switchMap((newToken) =>
-          next(setTokenInHeader(req, newToken.token)).pipe(
+          next(setTokenInHeader(req, newToken.token, clientId)).pipe(
             catchError((retryErr: HttpErrorResponse) => handleCommonError(retryErr))
           )
         ),
@@ -65,11 +69,12 @@ export const HttpInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
 
   const tokenService = inject(TokenService);
   const authSession = inject(AuthSessionService);
+  const clientId = inject(ClientIdService).clientId;
   const router = inject(Router);
 
   if (!tokenService.token().isEmpty) {
-    return next(setTokenInHeader(req, tokenService.token().token)).pipe(
-      catchError((err: HttpErrorResponse) => handleError(err, req, next, tokenService, authSession))
+    return next(setTokenInHeader(req, tokenService.token().token, clientId)).pipe(
+      catchError((err: HttpErrorResponse) => handleError(err, req, next, tokenService, authSession, clientId))
     );
   }
 

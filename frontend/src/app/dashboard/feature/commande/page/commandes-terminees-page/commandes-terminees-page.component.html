@@ -31,7 +31,12 @@
       <p>Chargement des commandes...</p>
     </div>
 
-    <div class="commandes-list" *ngIf="!isLoading()">
+    <div class="loading-area" *ngIf="!isLoading() && loadError()">
+      <p>{{ loadError() }}</p>
+      <button type="button" class="btn-navigation" (click)="loadCommandes()">Réessayer</button>
+    </div>
+
+    <div class="commandes-list" *ngIf="!isLoading() && !loadError()">
       <div class="group-mode group-mode--mobile-top">
         <button
           type="button"

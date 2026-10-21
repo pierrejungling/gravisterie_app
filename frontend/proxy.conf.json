@@ -3,8 +3,6 @@
     "target": "http://localhost:2023",
     "secure": false,
     "changeOrigin": true,
-    "logLevel": "debug",
-    "timeout": 0,
-    "proxyTimeout": 0
+    "logLevel": "debug"
   }
 }

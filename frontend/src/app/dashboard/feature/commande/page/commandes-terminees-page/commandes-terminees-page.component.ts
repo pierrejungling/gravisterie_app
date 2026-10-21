@@ -19,6 +19,7 @@ type PeriodSection = 'terminees' | 'annulees';
 export class CommandesTermineesPageComponent implements OnInit, OnDestroy, AfterViewChecked {
   commandes: WritableSignal<Commande[]> = signal([]);
   isLoading: WritableSignal<boolean> = signal(false);
+  loadError: WritableSignal<string | null> = signal(null);
   private scrollRestored: boolean = false;
   groupMode: WritableSignal<'year' | 'month'> = signal('month');
   expandedPeriodKeys: WritableSignal<Set<string>> = signal(new Set<string>());
@@ -203,11 +204,14 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
     }
     this.apiService.get(ApiURI.LISTE_COMMANDES).subscribe({
       next: (response) => {
-        if (response.result && response.data) {
+        if (response.result && Array.isArray(response.data)) {
           this.commandes.set(response.data);
+          this.loadError.set(null);
           if (!silent) {
             this.resetExpandedToCurrentPeriod();
           }
+        } else if (!silent || this.commandes().length === 0) {
+          this.loadError.set('Impossible de charger les commandes.');
         }
         if (!silent) {
           this.isLoading.set(false);
@@ -217,6 +221,9 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
       },
       error: (error) => {
         console.error('Erreur lors du chargement des commandes:', error);
+        if (!silent || this.commandes().length === 0) {
+          this.loadError.set('Impossible de charger les commandes.');
+        }
         if (!silent) {
           this.isLoading.set(false);
           this.scrollRestored = false;

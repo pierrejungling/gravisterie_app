@@ -28,8 +28,13 @@
       <p>Chargement des commandes...</p>
     </div>
 
+    <div class="loading-area" *ngIf="!isLoading() && loadError()">
+      <p>{{ loadError() }}</p>
+      <button type="button" class="btn-navigation" (click)="loadCommandes()">Réessayer</button>
+    </div>
+
     <!-- Vue desktop : tableau par statut (colonnes même hauteur) -->
-    <div class="table-container desktop-view" *ngIf="!isLoading()">
+    <div class="table-container desktop-view" *ngIf="!isLoading() && !loadError()">
       <div class="table-scroll" #tableScroll>
         <table
           class="commandes-table"
@@ -156,7 +161,7 @@
     </div>
 
     <!-- Vue mobile : sections repliables (style Rappels Apple) -->
-    <div class="mobile-view" *ngIf="!isLoading()">
+    <div class="mobile-view" *ngIf="!isLoading() && !loadError()">
       <div class="mobile-sections" *ngIf="hasAnyCommandeEnCours()">
         <section
           *ngFor="let statut of statuts"

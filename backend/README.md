@@ -110,3 +110,18 @@ Les endpoints existants (`/api/commande/*`) ne sont pas modifiés.
 ## Déploiement
 
 En production (Render), ajouter `WEBHOOK_SECRET` dans les variables d'environnement **avant** le déploiement. Le secret doit être identique à `GRAVISTERIE_API_WEBHOOK_SECRET` dans les scripts PHP du site vitrine.
+
+## Connecteur MCP pour Claude (lecture seule)
+
+Le module `src/module/mcp` expose un serveur MCP (transport Streamable HTTP, sans état) sur `POST {APP_BASE_URL}/mcp`, par exemple `https://api.gravisterie.be/api/mcp`.
+
+- **Lecture seule** : il n'appelle que des méthodes de consultation des services existants (aucune écriture en base, aucun accès en écriture à R2).
+- **Authentification indépendante** : en-tête `Authorization: Bearer <MCP_TOKEN>`. Ce token ne donne accès à aucune autre route de l'API, et le JWT de l'app ne donne pas accès au MCP.
+- **Désactivé par défaut** : sans variable `MCP_TOKEN`, le endpoint répond 503.
+
+Outils : `resume_activite`, `lister_commandes`, `rechercher_commandes`, `detail_commande`, `lister_fichiers_commande`, `lister_bons`, `lister_frais_commissions`.
+
+Mise en service :
+1. Générer un token : `openssl rand -hex 32`, puis l'ajouter dans Render comme variable `MCP_TOKEN`.
+2. Dans claude.ai : Personnaliser > Connecteurs > Ajouter un connecteur personnalisé. URL `https://api.gravisterie.be/api/mcp`, authentification "Pas de connexion", et dans les en-têtes de requête : `Authorization` = `Bearer <MCP_TOKEN>`.
+3. Pour révoquer l'accès : changer ou supprimer `MCP_TOKEN` dans Render.

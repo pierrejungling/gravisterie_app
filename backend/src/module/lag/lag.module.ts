@@ -10,6 +10,6 @@ import { CommandeController, BonController, FraisCommissionController, WebhookCo
     ],
     providers: [CommandeService, R2Service, CommandeFichierService, BonService, FraisCommissionService],
     controllers: [CommandeController, BonController, FraisCommissionController, WebhookController],
-    exports: [CommandeService, BonService, FraisCommissionService]
+    exports: [CommandeService, CommandeFichierService, BonService, FraisCommissionService]
 })
 export class LagModule {}

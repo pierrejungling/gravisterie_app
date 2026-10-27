@@ -7,6 +7,7 @@ import { HealthController } from './health.controller';
 import { AccountModule } from '../feature/account/account.module';
 import { SecurityModule } from '../security/security.module';
 import { LagModule } from '../module/lag/lag.module';
+import { McpModule } from '../module/mcp/mcp.module';
 import { RealtimeModule } from '@common/realtime';
 import { JwtGuard } from '@security/jwt';
 import { APP_GUARD } from '@nestjs/core';
@@ -17,6 +18,7 @@ import { APP_GUARD } from '@nestjs/core';
             SecurityModule,
             RealtimeModule,
             LagModule,
+            McpModule,
         ],
         controllers: [AppController, HealthController],
         providers: [AppService, {

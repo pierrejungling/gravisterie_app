@@ -1,39 +1,67 @@
-/* Styles globaux - Thème LA GRAVISTERIE */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/* Styles globaux - Thème LA GRAVISTERIE
+ * Jour  : blanc cassé, encre, terracotta (charte Studio)
+ * Nuit  : nuit profonde, rouge laser
+ * Motifs : lignes topographiques en fond, coins en équerre, numérotation 01/02
+ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Syne:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
-  --color-primary: #000000;
-  --color-secondary: #ffffff;
-  --color-text: #000000;
-  --color-text-light: #666666;
-  --color-border: #e5e7eb;
-  --color-border-dark: #000000;
-  --color-input-border: #999999;
-  --color-background: #ffffff;
-  --color-background-light: #f7f7f7;
-  --color-error: #dc2626;
-  --color-success: #16a34a;
+  /* Marque */
+  --gv-accent: #9c3b2f;
+  --gv-accent-contrast: #ffffff;
+  --gv-accent-soft: rgba(156, 59, 47, 0.10);
+  --gv-ink: #161412;
+  --gv-muted: #8a8278;
+  --gv-paper: #f6f4f1;
+  --gv-panel: #ffffff;
+  --gv-panel-glass: rgba(255, 255, 255, 0.86);
+  --gv-line: #e6e0d8;
+  --gv-line-strong: #161412;
+  --gv-warn: #b7791f;
+  --gv-ok: #3f7a4a;
+  --gv-glow: none;
+  --gv-blur: none;
+  --gv-topo: url('assets/images/motifs/topo-jour.svg');
+  --gv-shell-rail: 84px;
+  --gv-shell-top: 60px;
+  --gv-shell-bottom: 72px;
+  --font-title: 'Syne', 'Inter', sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Jetons historiques (utilisés par les pages) */
+  --color-primary: var(--gv-ink);
+  --color-secondary: var(--gv-panel);
+  --color-text: var(--gv-ink);
+  --color-text-light: #6f675e;
+  --color-border: var(--gv-line);
+  --color-border-dark: var(--gv-ink);
+  --color-input-border: #c9c1b6;
+  --color-background: var(--gv-paper);
+  --color-background-light: #efebe5;
+  --color-error: #b3261e;
+  --color-success: var(--gv-ok);
   --spacing-xs: 0.5rem;
   --spacing-sm: 1rem;
   --spacing-md: 1.5rem;
   --spacing-lg: 2rem;
   --spacing-xl: 3rem;
-  --border-radius: 4px;
-  --border-radius-lg: 8px;
-  --transition: all 0.3s ease;
+  --border-radius: 2px;
+  --border-radius-lg: 4px;
+  --transition: all 0.2s ease;
   /* Couleurs des boutons d'action */
-  --btn-toggle-prix-bg: #e3f2fd;
-  --btn-toggle-prix-border: #90caf9;
-  --btn-toggle-prix-color: #1976d2;
-  --btn-edit-bg: #fff3e0;
-  --btn-edit-border: #ffcc80;
-  --btn-edit-color: #e65100;
-  --btn-delete-bg: #ffebee;
-  --btn-delete-border: #ef9a9a;
-  --btn-delete-color: #c62828;
-  --btn-save-bg: #e8f5e9;
-  --btn-save-border: #4caf50;
-  --btn-save-color: #2e7d32;
+  --btn-toggle-prix-bg: #eef1f4;
+  --btn-toggle-prix-border: #b9c3cd;
+  --btn-toggle-prix-color: #2f4a63;
+  --btn-edit-bg: #f7efe6;
+  --btn-edit-border: #dfc3a3;
+  --btn-edit-color: #8a5a1f;
+  --btn-delete-bg: #f6e9e7;
+  --btn-delete-border: #d9aaa3;
+  --btn-delete-color: #9c3b2f;
+  --btn-save-bg: #ebf2ec;
+  --btn-save-border: #9fc2a6;
+  --btn-save-color: #2f6139;
   /* Drag glass — mode clair */
   --drag-glass-idle-bg: rgba(255, 255, 255, 0.42);
   --drag-glass-idle-border: rgba(255, 255, 255, 0.58);
@@ -43,39 +71,55 @@
   --drag-glass-active-blur: blur(28px) saturate(210%) brightness(1.06);
 }
 
-/* Dark mode */
+/* Mode nuit : nuit laser */
 :root[data-theme="dark"],
 [data-theme="dark"] {
-  --color-primary: #ffffff;
-  --color-secondary: #1a1a1a;
-  --color-text: #ffffff;
-  --color-text-light: #b3b3b3;
-  --color-border: #333333;
-  --color-border-dark: #ffffff;
-  --color-input-border: #4a4a4a;
-  --color-background: #1a1a1a;
-  --color-background-light: #2a2a2a;
-  --color-error: #ef4444;
-  --color-success: #22c55e;
-  /* Couleurs des boutons d'action en mode sombre (couleurs foncées) */
-  --btn-toggle-prix-bg: #1565c0;
-  --btn-toggle-prix-border: #0d47a1;
-  --btn-toggle-prix-color: #ffffff;
-  --btn-edit-bg: #e65100;
-  --btn-edit-border: #bf360c;
-  --btn-edit-color: #ffffff;
-  --btn-delete-bg: #c62828;
-  --btn-delete-border: #b71c1c;
-  --btn-delete-color: #ffffff;
-  --btn-save-bg: #2e7d32;
-  --btn-save-border: #1b5e20;
-  --btn-save-color: #ffffff;
-  /* Drag glass — mode sombre */
-  --drag-glass-idle-bg: rgba(26, 26, 26, 0.88);
-  --drag-glass-idle-border: rgba(255, 255, 255, 0.07);
+  --gv-accent: #ff5a3c;
+  --gv-accent-contrast: #0d0c0b;
+  --gv-accent-soft: rgba(255, 90, 60, 0.12);
+  --gv-ink: #f4efe9;
+  --gv-muted: #8f857a;
+  --gv-paper: #0d0c0b;
+  --gv-panel: #191614;
+  --gv-panel-glass: rgba(22, 19, 17, 0.82);
+  --gv-line: rgba(255, 110, 80, 0.16);
+  --gv-line-strong: rgba(255, 110, 80, 0.6);
+  --gv-warn: #ffb547;
+  --gv-ok: #8fe3a0;
+  --gv-glow: 0 0 18px rgba(255, 90, 60, 0.35);
+  --gv-blur: blur(10px);
+  --gv-topo: url('assets/images/motifs/topo-nuit.svg');
+
+  --color-primary: var(--gv-ink);
+  --color-secondary: var(--gv-panel);
+  --color-text: var(--gv-ink);
+  --color-text-light: #a89d91;
+  --color-border: rgba(255, 255, 255, 0.10);
+  --color-border-dark: var(--gv-ink);
+  --color-input-border: rgba(255, 255, 255, 0.18);
+  --color-background: var(--gv-paper);
+  --color-background-light: #1f1b18;
+  --color-error: #ff6b57;
+  --color-success: var(--gv-ok);
+  /* Couleurs des boutons d'action en mode nuit */
+  --btn-toggle-prix-bg: #1d2630;
+  --btn-toggle-prix-border: #36506a;
+  --btn-toggle-prix-color: #b9d4ee;
+  --btn-edit-bg: #2a1f14;
+  --btn-edit-border: #6a4a24;
+  --btn-edit-color: #ffcf8a;
+  --btn-delete-bg: #2b1512;
+  --btn-delete-border: #7a2a1f;
+  --btn-delete-color: #ff8f7c;
+  --btn-save-bg: #13241a;
+  --btn-save-border: #2f6a40;
+  --btn-save-color: #9fe6b0;
+  /* Drag glass — mode nuit */
+  --drag-glass-idle-bg: rgba(25, 22, 20, 0.88);
+  --drag-glass-idle-border: rgba(255, 110, 80, 0.12);
   --drag-glass-idle-blur: none;
-  --drag-glass-active-bg: rgba(42, 42, 42, 0.96);
-  --drag-glass-active-border: rgba(255, 255, 255, 0.09);
+  --drag-glass-active-bg: rgba(32, 28, 25, 0.96);
+  --drag-glass-active-border: rgba(255, 110, 80, 0.3);
   --drag-glass-active-blur: none;
 }
 
@@ -110,10 +154,10 @@ body.commande-pointer-drag-active {
   background: var(--color-secondary) !important;
   color: var(--color-text) !important;
   box-shadow:
-    0 0 0 1px #1976d2,
-    0 0 0 5px rgba(25, 118, 210, 0.28),
+    0 0 0 1px var(--gv-accent),
+    0 0 0 5px var(--gv-accent-soft),
     0 20px 44px rgba(0, 0, 0, 0.24) !important;
-  border: 3px solid #1976d2 !important;
+  border: 3px solid var(--gv-accent) !important;
   border-radius: 6px;
   cursor: grabbing !important;
   overflow: hidden;
@@ -136,7 +180,7 @@ body.commande-pointer-drag-active {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #fff;
-  background: #1976d2;
+  background: var(--gv-accent);
   border-radius: 999px;
   box-shadow: 0 2px 8px rgba(33, 150, 243, 0.55);
   white-space: nowrap;
@@ -158,11 +202,14 @@ body.commande-pointer-drag-active {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-background);
+  background-image: var(--gv-topo);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   color: var(--color-text);
   line-height: 1.6;
   overflow-x: hidden;
@@ -174,6 +221,7 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
   font-weight: 600;
   color: var(--color-text);
   line-height: 1.2;
@@ -233,4 +281,86 @@ a {
     min-height: 44px;
     min-width: 44px;
   }
+}
+
+
+/* ===== Socle Gravisterie : coquille (menu + barre du haut) ===== */
+body.gv-shell {
+  padding-left: calc(var(--gv-shell-rail) + env(safe-area-inset-left));
+}
+
+@media (max-width: 899px) {
+  body.gv-shell {
+    padding-left: env(safe-area-inset-left);
+    padding-bottom: calc(var(--gv-shell-bottom) + env(safe-area-inset-bottom));
+  }
+}
+
+/* Titres de page : Syne en capitales espacées */
+.page-title,
+h1.page-title {
+  font-family: var(--font-title);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+/* Utilitaires de marque */
+.gv-mono {
+  font-family: var(--font-mono);
+}
+
+.gv-eyebrow {
+  font-family: var(--font-title);
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gv-accent);
+}
+
+/* Coins en équerre (comme sur index_bis) */
+.gv-brackets {
+  position: relative;
+}
+
+.gv-brackets::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  pointer-events: none;
+  background:
+    linear-gradient(var(--gv-accent), var(--gv-accent)) top left / 12px 1px no-repeat,
+    linear-gradient(var(--gv-accent), var(--gv-accent)) top left / 1px 12px no-repeat,
+    linear-gradient(var(--gv-accent), var(--gv-accent)) bottom right / 12px 1px no-repeat,
+    linear-gradient(var(--gv-accent), var(--gv-accent)) bottom right / 1px 12px no-repeat;
+}
+
+::selection {
+  background: var(--gv-accent);
+  color: var(--gv-accent-contrast);
+}
+
+:focus-visible {
+  outline: 2px solid var(--gv-accent);
+  outline-offset: 2px;
+}
+
+/* Commandes en cours : la page occupe tout l'écran, on retire la barre du bas sur téléphone */
+@media (max-width: 899px) {
+  body.gv-shell .commandes-en-cours-wrapper {
+    height: calc(100dvh - var(--gv-shell-bottom) - env(safe-area-inset-bottom));
+  }
+}
+
+/* Fonds des pages transparents : le motif topographique reste visible sous le contenu */
+.detail-commande-wrapper,
+.nouvelle-commande-wrapper,
+.commandes-terminees-wrapper,
+.commandes-en-cours-wrapper,
+.bons-page,
+.settings-page,
+.dashboard-home,
+.sign-in-page,
+#sign-in-wrapper {
+  background: transparent !important;
 }

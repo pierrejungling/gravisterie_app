@@ -1,72 +1,126 @@
-<header class="header">
-  <div class="header__container">
-    <div class="header__logo" (click)="goToDashboard()" [style.cursor]="isAuthenticated() ? 'pointer' : 'default'">
-      <img 
-        [src]="logoPath()" 
-        alt="LA GRAVISTERIE" 
-        class="header__logo-image"
-        (load)="onLogoLoad()"
-        (error)="onLogoError()"
-        *ngIf="!showTextFallback()">
-      <span class="header__logo-text" *ngIf="showTextFallback()">LA GRAVISTERIE</span>
-    </div>
-    <div class="header__actions">
-      <div class="header__actions-auth" *ngIf="isAuthenticated()">
-        <button 
-          class="header__back-btn"
-          *ngIf="showBackButton()"
-          (click)="goBack()"
-          type="button"
-          title="Retour à la page précédente">
-          ← Retour
-        </button>
-        <div class="header__search" *ngIf="showSearchBar()">
-          <button
-            class="header__search-btn"
-            type="button"
-            title="Rechercher une commande"
-            (click)="toggleSearch()">
-            🔎
-          </button>
-        </div>
-        <button 
-          class="header__settings-btn"
-          (click)="goToSettings()"
-          type="button"
-          title="Paramètres">
-          ⚙️
-        </button>
-        <button 
-          class="header__logout-btn"
-          (click)="logout()"
-          type="button">
-          Se déconnecter
-        </button>
-      </div>
-      <button 
-        class="theme-toggle"
-        (click)="toggleTheme()"
-        type="button"
-        [attr.aria-label]="isDarkMode() ? 'Passer au thème clair' : 'Passer au thème sombre'"
-        title="Changer de thème">
-        <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" [style.display]="isDarkMode() ? 'none' : 'block'">
-          <circle cx="12" cy="12" r="5"/>
-          <line x1="12" y1="1" x2="12" y2="3"/>
-          <line x1="12" y1="21" x2="12" y2="23"/>
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-          <line x1="1" y1="12" x2="3" y2="12"/>
-          <line x1="21" y1="12" x2="23" y2="12"/>
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-        </svg>
-        <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" [style.display]="isDarkMode() ? 'block' : 'none'">
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-        </svg>
-      </button>
-    </div>
+<!-- Barre du haut : logo (mobile / hors connexion), repères, recherche, thème -->
+<header class="gv-top" [class.gv-top--shell]="isAuthenticated()">
+  <div class="gv-top__brand" (click)="goToDashboard()" [style.cursor]="isAuthenticated() ? 'pointer' : 'default'">
+    <img
+      [src]="logoPath()"
+      alt="LA GRAVISTERIE"
+      class="gv-top__logo"
+      (load)="onLogoLoad()"
+      (error)="onLogoError()"
+      *ngIf="!showTextFallback()">
+    <span class="gv-top__logo-text" *ngIf="showTextFallback()">LA GRAVISTERIE</span>
+  </div>
+
+  <div class="gv-top__meta" *ngIf="isAuthenticated()">
+    <span class="gv-top__date">{{ todayLabel }}</span>
+    <span class="gv-top__sep" aria-hidden="true">·</span>
+    <span class="gv-top__coords">50°29′N 5°51′E</span>
+  </div>
+
+  <div class="gv-top__actions">
+    <button
+      *ngIf="showSearchBar()"
+      class="gv-top__search"
+      type="button"
+      title="Rechercher une commande (Ctrl+K)"
+      (click)="toggleSearch()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span class="gv-top__search-label">Commande, client, produit…</span>
+      <span class="gv-top__kbd">{{ shortcutLabel }}</span>
+    </button>
+
+    <button
+      class="gv-icon-btn"
+      (click)="toggleTheme()"
+      type="button"
+      [attr.aria-label]="isDarkMode() ? 'Passer au thème jour' : 'Passer au thème nuit'"
+      [title]="isDarkMode() ? 'Thème jour' : 'Thème nuit'">
+      <svg *ngIf="!isDarkMode()" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <svg *ngIf="isDarkMode()" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.5"/>
+        <path d="M12 1.5v2.5M12 20v2.5M1.5 12H4M20 12h2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"/>
+      </svg>
+    </button>
   </div>
 </header>
+
+<!-- Menu latéral (ordinateur) -->
+<nav class="gv-rail" *ngIf="isAuthenticated()" aria-label="Navigation principale">
+  <a class="gv-rail__logo" (click)="goToDashboard()" title="Accueil">
+    <img [src]="logoPath()" alt="" aria-hidden="true">
+  </a>
+
+  <a
+    *ngFor="let item of navItems"
+    class="gv-rail__item"
+    [class.is-active]="isNavActive(item)"
+    (click)="navigate(item)"
+    [title]="item.label">
+    <svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="item.icon | gvSafeSvg"></svg>
+    <span>{{ item.label }}</span>
+  </a>
+
+  <div class="gv-rail__bottom">
+    <a class="gv-rail__item" [class.is-active]="isSettingsActive()" (click)="goToSettings()" title="Réglages">
+      <svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="iconSettings | gvSafeSvg"></svg>
+      <span>Réglages</span>
+    </a>
+    <a class="gv-rail__item" (click)="logout()" title="Se déconnecter">
+      <svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="iconLogout | gvSafeSvg"></svg>
+      <span>Sortir</span>
+    </a>
+    <svg class="gv-rail__ridge" viewBox="0 0 84 40" aria-hidden="true">
+      <path d="M0 38 L14 24 L20 28 L34 10 L42 18 L48 14 L62 30 L70 26 L84 38" fill="none"/>
+      <path class="gv-rail__beam" d="M42 0 V12"/>
+    </svg>
+    <div class="gv-rail__coords">50°29′N<br>5°51′E</div>
+  </div>
+</nav>
+
+<!-- Barre du bas (téléphone) -->
+<nav class="gv-bottom" *ngIf="isAuthenticated()" aria-label="Navigation">
+  <a class="gv-bottom__item" [class.is-active]="isNavActive(navItems[0])" (click)="navigate(navItems[0])">
+    <svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="navItems[0].icon | gvSafeSvg"></svg>
+    <span>Accueil</span>
+  </a>
+  <a class="gv-bottom__item" [class.is-active]="isNavActive(navItems[1])" (click)="navigate(navItems[1])">
+    <svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="navItems[1].icon | gvSafeSvg"></svg>
+    <span>En cours</span>
+  </a>
+  <button class="gv-bottom__fab" type="button" (click)="goToNouvelleCommande()" aria-label="Nouvelle commande">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+  <a class="gv-bottom__item" [class.is-active]="isNavActive(navItems[2])" (click)="navigate(navItems[2])">
+    <svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="navItems[2].icon | gvSafeSvg"></svg>
+    <span>Terminées</span>
+  </a>
+  <button class="gv-bottom__item" type="button" (click)="toggleMore()" [class.is-active]="moreOpen()">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>
+    <span>Plus</span>
+  </button>
+</nav>
+
+<!-- Menu « Plus » (téléphone) -->
+<div class="gv-sheet" *ngIf="moreOpen()">
+  <div class="gv-sheet__backdrop" (click)="toggleMore()"></div>
+  <div class="gv-sheet__panel" role="dialog" aria-label="Plus">
+    <div class="gv-sheet__grip" aria-hidden="true"></div>
+    <a class="gv-sheet__item" *ngFor="let item of navItems.slice(3)" (click)="navigate(item); toggleMore()">
+      <svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="item.icon | gvSafeSvg"></svg>{{ item.label }}
+    </a>
+    <a class="gv-sheet__item" (click)="toggleSearch(); toggleMore()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Rechercher
+    </a>
+    <a class="gv-sheet__item" (click)="goToSettings(); toggleMore()">
+      <svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="iconSettings | gvSafeSvg"></svg>Réglages
+    </a>
+    <a class="gv-sheet__item gv-sheet__item--muted" (click)="logout()">
+      <svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="iconLogout | gvSafeSvg"></svg>Se déconnecter
+    </a>
+  </div>
+</div>
+
+<!-- Recherche (Ctrl+K) -->
 <div class="header__search-overlay" *ngIf="searchOpen()">
   <div class="header__search-backdrop" (click)="toggleSearch()"></div>
   <div class="header__search-modal" role="dialog" aria-modal="true" aria-label="Recherche de commande">
@@ -87,6 +141,7 @@
         (focus)="onSearchFocus()"
         (blur)="onSearchBlur()"
         (keydown.enter)="onSearchEnter($event)"
+        (keydown.escape)="toggleSearch()"
         aria-label="Rechercher une commande">
     </div>
     <div class="header__search-results" *ngIf="showSearchResults()">

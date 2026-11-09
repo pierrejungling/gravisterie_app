@@ -1,4 +1,4 @@
-import { Component, inject, computed, signal, effect, ViewChild, ElementRef, DestroyRef } from '@angular/core';
+import { Component, inject, computed, signal, effect, ViewChild, ElementRef, DestroyRef, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AppRoutes, AppNode, ThemeService } from '@shared';
@@ -7,11 +7,20 @@ import { filter, debounceTime, distinctUntilChanged, switchMap, catchError, map,
 import { Subject, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Commande, StatutCommande } from '../../../dashboard/feature/commande/model/commande.interface';
+import { SafeSvgPipe } from './safe-svg.pipe';
+
+interface NavItem {
+  label: string;
+  path: string[];
+  match: string;
+  exact?: boolean;
+  icon: string;
+}
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, SafeSvgPipe],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })
@@ -28,6 +37,48 @@ export class HeaderComponent {
   private readonly searchMinLength = 2;
   private readonly searchMaxResults = 8;
   
+  /** Entrées du menu (ordinateur : menu latéral ; téléphone : barre du bas + « Plus »). */
+  readonly navItems: NavItem[] = [
+    {
+      label: 'Accueil',
+      path: ['/dashboard'],
+      match: '/dashboard',
+      exact: true,
+      icon: '<path d="M3 20 9.5 9l3.5 5 2.5-3.5L21 20z"/><path d="M12 3v4" stroke-dasharray="1.5 1.5"/>',
+    },
+    {
+      label: 'En cours',
+      path: ['/dashboard', 'commandes', 'en-cours'],
+      match: '/dashboard/commandes/en-cours',
+      icon: '<rect x="3" y="4" width="7" height="16"/><rect x="14" y="4" width="7" height="10"/>',
+    },
+    {
+      label: 'Terminées',
+      path: ['/dashboard', 'commandes', 'terminees'],
+      match: '/dashboard/commandes/terminees',
+      icon: '<path d="M4 12.5 9 17.5 20 6.5"/>',
+    },
+    {
+      label: 'Nouvelle',
+      path: ['/dashboard', 'commandes', 'nouvelle'],
+      match: '/dashboard/commandes/nouvelle',
+      icon: '<path d="M12 5v14M5 12h14"/>',
+    },
+    {
+      label: 'Bons',
+      path: ['/dashboard', 'bons'],
+      match: '/dashboard/bons',
+      icon: '<rect x="3" y="7" width="18" height="12"/><path d="M12 7v12M3 12h18"/>',
+    },
+  ];
+
+  readonly iconSettings = '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>';
+  readonly iconLogout = '<path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h11"/>';
+
+  readonly todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+  readonly shortcutLabel = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '⌘K' : 'Ctrl K';
+  moreOpen = signal<boolean>(false);
+
   // Signal pour le thème actuel
   isDarkMode = computed(() => this.themeService.isDarkMode());
   
@@ -150,6 +201,56 @@ export class HeaderComponent {
       this.fallbackLogoPath.set(''); // Réinitialiser le fallback
       this.logoLoaded = false; // Forcer le rechargement du logo
     });
+
+    // Décale le contenu des pages pour laisser la place au menu
+    effect(() => {
+      document.body.classList.toggle('gv-shell', this.isAuthenticated());
+    });
+  }
+
+  /** Ctrl+K / Cmd+K : ouvre la recherche de commande. Échap : ferme. */
+  @HostListener('document:keydown', ['$event'])
+  onGlobalKeydown(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      if (!this.showSearchBar()) return;
+      event.preventDefault();
+      if (!this.searchOpen()) {
+        this.toggleSearch();
+      }
+      return;
+    }
+    if (event.key === 'Escape') {
+      if (this.searchOpen()) this.toggleSearch();
+      if (this.moreOpen()) this.moreOpen.set(false);
+    }
+  }
+
+  isNavActive(item: NavItem): boolean {
+    const route = this.normalizeRoute(this.currentRoute());
+    if (item.exact) {
+      return route === item.match || route === `${item.match}/`;
+    }
+    // Le détail d'une commande reste rattaché à « En cours »
+    if (item.match === '/dashboard/commandes/en-cours' && route.startsWith('/dashboard/commandes/detail/')) {
+      return true;
+    }
+    return route.startsWith(item.match);
+  }
+
+  isSettingsActive(): boolean {
+    return this.normalizeRoute(this.currentRoute()).startsWith('/dashboard/settings');
+  }
+
+  navigate(item: NavItem): void {
+    this.router.navigate(item.path);
+  }
+
+  goToNouvelleCommande(): void {
+    this.router.navigate(['/dashboard', 'commandes', 'nouvelle']);
+  }
+
+  toggleMore(): void {
+    this.moreOpen.set(!this.moreOpen());
   }
   
   logout(): void {

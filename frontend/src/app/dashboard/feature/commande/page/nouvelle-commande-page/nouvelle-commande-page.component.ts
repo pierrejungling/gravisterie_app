@@ -1500,6 +1500,12 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     return now.toISOString().split('T')[0];
   }
 
+  /** Nom du client saisi, pour l'en-tête (comme le détail commande). */
+  nomClientSaisi(): string {
+    const v = (k: string) => String(this.formGroup?.get(k)?.value ?? '').trim();
+    return [v('prenom'), v('nom')].filter(Boolean).join(' ') || v('societe');
+  }
+
   onTypeToggle(event: Event): void {
     const target = event.target as HTMLInputElement;
     this.setVenteMode(target.checked);

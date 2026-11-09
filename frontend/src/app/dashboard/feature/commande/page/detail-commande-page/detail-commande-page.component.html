@@ -1218,7 +1218,6 @@
     <section [class.cmd-zone--off]="ongletActif() !== 'atelier'" class="cmd-zone cmd-zone--statuts statuts-section" *ngIf="!isVente()">
       <div class="statuts-section__title-row">
         <h2 class="section-title">Statuts de la commande</h2>
-        <div class="detail-status-badge detail-status-badge--terminee" *ngIf="isCommandeTerminee()">Terminée</div>
         <div class="detail-status-badge detail-status-badge--annulee" *ngIf="isCommandeAnnulee()">Annulée</div>
       </div>
       

@@ -1,43 +1,5 @@
 <app-header></app-header>
 
-<!-- Barre d'actions fixe (desktop) -->
-<div class="nouvelle-commande-actions-bar" *ngIf="formGroup">
-  <div class="nouvelle-commande-actions-bar__container">
-    <div class="nouvelle-commande-actions-bar__left">
-      <button 
-        *ngIf="!isVente()"
-        type="button" 
-        class="btn-action-bar btn-toggle-prix"
-        (click)="togglePrixFields()"
-        [title]="showPrixFields() ? 'Masquer les frais' : 'Afficher les frais'">
-        {{ showPrixFields() ? '💰 Masquer frais' : '💰 Afficher frais' }}
-      </button>
-      <button 
-        type="button" 
-        class="btn-action-bar btn-cancel"
-        (click)="onCancel()"
-        title="Annuler">
-        ✕ Annuler
-      </button>
-    </div>
-    <div class="nouvelle-commande-actions-bar__right">
-      <div class="attente-reponse-toggle-bar" *ngIf="!isVente()">
-        <label class="toggle-switch-small" [class.toggle-vert]="getAttenteReponseControl().value" [class.toggle-rouge]="!getAttenteReponseControl().value">
-          <input 
-            type="checkbox" 
-            [formControl]="getAttenteReponseControl()"
-            class="toggle-input">
-          <span class="toggle-slider"></span>
-          <span class="toggle-label-small">{{ getAttenteReponseControl().value ? 'Rien à faire' : 'Client attend' }}</span>
-        </label>
-      </div>
-      <button type="submit" form="nouvelleCommandeForm" class="btn-action-bar btn-save" [disabled]="!isFormValid()">
-        💾 Créer la {{ isVente() ? 'vente' : 'commande' }}
-      </button>
-    </div>
-  </div>
-</div>
-
 <div class="nouvelle-commande-wrapper">
   <div
     class="fichiers-window-drop-overlay"
@@ -79,32 +41,48 @@
       <p>{{ getGeneralError() }}</p>
     </div>
 
-    <div class="detail-header">
-      <div class="header-title-section">
-        <div class="commande-type-toggle commande-type-toggle--top-right">
-          <span class="commande-type-toggle__option" [class.active]="!isVente()">Commande</span>
-          <label class="toggle-switch-small toggle-switch-small--neutral">
-            <input
-              type="checkbox"
-              class="toggle-input"
-              [checked]="isVente()"
-              (change)="onTypeToggle($event)">
-            <span class="toggle-slider"></span>
-          </label>
-          <span class="commande-type-toggle__option" [class.active]="isVente()">Vente</span>
+    <!-- En-tête : même carte que le détail commande -->
+    <header class="cmd-head nc-head">
+      <div class="cmd-head__row">
+        <div class="cmd-head__titre">
+          <div class="cmd-head__eyebrow">
+            <span>Nouvelle {{ isVente() ? 'vente' : 'commande' }}</span>
+            <ng-container *ngIf="nomClientSaisi() as nomCli"><span class="sep">·</span><span class="cmd-head__client">{{ nomCli }}</span></ng-container>
+          </div>
+          <div class="cmd-head__edit">
+            <app-floating-label-input
+              [label]="isVente() ? 'Nom / Intitulé de la vente' : 'Nom / Intitulé de la commande'"
+              [control]="get('nom_commande')"
+              [formGroup]="formGroup"
+              [readonly]="false">
+            </app-floating-label-input>
+          </div>
         </div>
-        <h1 class="page-title">Nouvelle {{ isVente() ? 'Vente' : 'Commande' }}</h1>
-        <gv-evenement-lien class="evenement-lien" [idEvenement]="evenementLie()" (choisi)="evenementLie.set($event)"></gv-evenement-lien>
-        <div class="commande-title-edit">
-          <app-floating-label-input
-            [label]="isVente() ? 'Nom / Intitulé de la vente' : 'Nom / Intitulé de la commande'"
-            [control]="get('nom_commande')"
-            [formGroup]="formGroup"
-            [readonly]="false">
-          </app-floating-label-input>
+
+        <!-- Actions (écran large) -->
+        <div class="cmd-head__actions">
+          <label class="cmd-attente" *ngIf="!isVente()" [class.is-attend]="!getAttenteReponseControl().value" [title]="getAttenteReponseControl().value ? 'Rien à faire côté client' : 'Le client attend une réponse'">
+            <input type="checkbox" [formControl]="getAttenteReponseControl()">
+            <span class="cmd-attente__dot" aria-hidden="true"></span>
+            {{ getAttenteReponseControl().value ? 'Rien à faire' : 'Client attend' }}
+          </label>
+          <button *ngIf="!isVente()" type="button" class="cmd-ico" (click)="togglePrixFields()" [class.is-on]="showPrixFields()" [title]="showPrixFields() ? 'Masquer les frais' : 'Afficher les frais'">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 6.5A6.5 6.5 0 1 0 17 17.5M4 10h9M4 14h9"/></svg>
+          </button>
+          <button type="button" class="gv-btn gv-btn--ghost gv-btn--sm" (click)="onCancel()">Annuler</button>
+          <button type="submit" form="nouvelleCommandeForm" class="gv-btn gv-btn--primary gv-btn--sm" [disabled]="!isFormValid()">Créer la {{ isVente() ? 'vente' : 'commande' }}</button>
         </div>
       </div>
-    </div>
+
+      <!-- Résumé : type et événement -->
+      <div class="cmd-head__chips">
+        <div class="nc-type" role="group" aria-label="Type">
+          <button type="button" class="gv-chip cmd-chip-btn" [class.gv-chip--accent]="!isVente()" [attr.aria-pressed]="!isVente()" (click)="setVenteMode(false)">Commande</button>
+          <button type="button" class="gv-chip cmd-chip-btn" [class.gv-chip--accent]="isVente()" [attr.aria-pressed]="isVente()" (click)="setVenteMode(true)">Vente</button>
+        </div>
+        <gv-evenement-lien class="evenement-lien" [idEvenement]="evenementLie()" (choisi)="evenementLie.set($event)"></gv-evenement-lien>
+      </div>
+    </header>
 
     <form id="nouvelleCommandeForm" [formGroup]="formGroup" *ngIf="formGroup" (ngSubmit)="onSubmit()">
       <div class="nc-grille" [class.nc-grille--vente]="isVente()">
@@ -837,34 +815,17 @@
     </form>
   </div>
 
-  <!-- Footer fixe mobile/tablette : Afficher frais, Annuler, Créer la commande, + Toggle attente réponse -->
-  <footer class="form-actions-footer" *ngIf="formGroup">
-    <div class="form-actions-footer__buttons">
-      <div class="form-actions-footer__row">
-        <button 
-          *ngIf="!isVente()"
-          type="button"
-          class="btn-footer btn-footer-prix"
-          (click)="togglePrixFields()">
-          {{ showPrixFields() ? '💰 Masquer frais' : '💰 Afficher frais' }}
-        </button>
-        <button type="button" class="btn-footer btn-secondary" (click)="onCancel()">Annuler</button>
-      </div>
-      <div class="form-actions-footer__row">
-        <button type="submit" form="nouvelleCommandeForm" class="btn-footer btn-primary" [disabled]="!isFormValid()">
-          Créer la {{ isVente() ? 'vente' : 'commande' }}
-        </button>
-      </div>
-    </div>
-    <div class="form-actions-footer__toggle" *ngIf="!isVente()">
-      <label class="toggle-switch-small toggle-switch-small--footer" [class.toggle-vert]="getAttenteReponseControl().value" [class.toggle-rouge]="!getAttenteReponseControl().value">
-        <input
-          type="checkbox"
-          [formControl]="getAttenteReponseControl()"
-          class="toggle-input">
-        <span class="toggle-slider"></span>
-        <span class="toggle-label-small">{{ getAttenteReponseControl().value ? 'Rien à faire' : 'Client attend' }}</span>
-      </label>
-    </div>
+  <!-- Barre d'actions (écran étroit) : comme le détail commande -->
+  <footer class="cmd-foot" *ngIf="formGroup">
+    <label class="cmd-attente cmd-attente--foot" *ngIf="!isVente()" [class.is-attend]="!getAttenteReponseControl().value">
+      <input type="checkbox" [formControl]="getAttenteReponseControl()">
+      <span class="cmd-attente__dot" aria-hidden="true"></span>
+      {{ getAttenteReponseControl().value ? 'Rien à faire' : 'Client attend' }}
+    </label>
+    <button *ngIf="!isVente()" type="button" class="cmd-ico" (click)="togglePrixFields()" [class.is-on]="showPrixFields()" [attr.aria-label]="showPrixFields() ? 'Masquer les frais' : 'Afficher les frais'">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 6.5A6.5 6.5 0 1 0 17 17.5M4 10h9M4 14h9"/></svg>
+    </button>
+    <button type="button" class="gv-btn gv-btn--ghost cmd-foot__main" (click)="onCancel()">Annuler</button>
+    <button type="submit" form="nouvelleCommandeForm" class="gv-btn gv-btn--primary cmd-foot__main" [disabled]="!isFormValid()">Créer</button>
   </footer>
 </div>

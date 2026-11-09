@@ -4791,221 +4791,8 @@
   }
 }
 
-/* ---------- En-tête ---------- */
-.cmd-head {
-  position: sticky;
-  top: calc(var(--gv-shell-top) + var(--gv-tabs-h, 0px));
-  z-index: 30;
-  margin-bottom: 14px;
-  padding: 0.85rem 1.1rem 0.8rem;
-  background: var(--gv-panel-glass);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--gv-line);
-  border-left: 3px solid var(--gv-line-strong);
-  border-radius: var(--border-radius);
-
-  .deadline-warning & {
-    border-left-color: var(--gv-warn);
-  }
-
-  .deadline-danger & {
-    border-left-color: #c0392b;
-  }
-
-  &__row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-
-  &__titre {
-    min-width: 0;
-    flex: 1;
-  }
-
-  &__eyebrow {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    min-width: 0;
-    font-family: var(--font-title);
-    font-size: 0.66rem;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--gv-muted);
-
-    .sep {
-      color: var(--gv-line-strong);
-    }
-  }
-
-  &__client {
-    color: var(--gv-accent);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__h1 {
-    margin: 0.15rem 0 0;
-    font-family: var(--font-title);
-    font-size: clamp(1.25rem, 2vw, 1.75rem);
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    line-height: 1.15;
-    overflow-wrap: anywhere;
-  }
-
-  &__edit {
-    margin-top: 0.4rem;
-    max-width: 640px;
-  }
-
-  &__actions {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    flex-shrink: 0;
-  }
-
-  &__chips {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.35rem;
-    margin-top: 0.6rem;
-
-    .evenement-lien {
-      display: contents;
-    }
-  }
-}
-
-.cmd-chip-btn {
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.72rem;
-  min-height: 0;
-  min-width: 0;
-
-  &:hover {
-    border-color: var(--gv-accent);
-  }
-}
-
-.cmd-chip--danger {
-  color: #c0392b;
-  border-color: #c0392b;
-  background: rgba(192, 57, 43, 0.08);
-}
-
-.cmd-chip-progress {
-  display: inline-block;
-  width: 34px;
-  height: 5px;
-  margin-right: 0.4rem;
-  vertical-align: middle;
-  border-radius: 99px;
-  background: linear-gradient(90deg, currentColor calc(var(--p, 0) * 1%), var(--gv-line) 0);
-}
-
 .mono {
   font-family: var(--font-mono);
-}
-
-/* Interrupteur « Client attend » */
-.cmd-attente {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  height: 32px;
-  padding: 0 0.7rem;
-  border: 1px solid var(--gv-line);
-  border-radius: 99px;
-  font-size: 0.74rem;
-  font-weight: 600;
-  color: var(--gv-ok);
-  cursor: pointer;
-  white-space: nowrap;
-  user-select: none;
-
-  input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  &__dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-
-  &.is-attend {
-    color: #c0392b;
-    border-color: rgba(192, 57, 43, 0.45);
-    background: rgba(192, 57, 43, 0.06);
-
-    .cmd-attente__dot {
-      animation: cmd-pulse 1.6s ease-in-out infinite;
-    }
-  }
-}
-
-@keyframes cmd-pulse {
-  50% {
-    opacity: 0.25;
-  }
-}
-
-/* Boutons icône */
-.cmd-ico {
-  display: inline-grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  border: 1px solid var(--gv-line);
-  border-radius: var(--border-radius);
-  background: var(--gv-panel);
-  color: var(--gv-ink);
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
-
-  svg {
-    width: 17px;
-    height: 17px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.7;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-  }
-
-  &:hover:not(:disabled),
-  &.is-on {
-    border-color: var(--gv-accent);
-    color: var(--gv-accent);
-  }
-
-  &.is-ok {
-    color: var(--gv-ok);
-    border-color: var(--gv-ok);
-  }
-
-  &--danger:hover:not(:disabled) {
-    color: #c0392b;
-    border-color: #c0392b;
-  }
-}
-
-.cmd-maj {
-  border-color: var(--gv-accent);
-  color: var(--gv-accent);
 }
 
 /* ---------- Onglets (écran étroit) ---------- */
@@ -5257,38 +5044,6 @@
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   }
 
-  /* Barre d'actions : une ligne, au-dessus de la barre de navigation */
-  .cmd-foot {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 900;
-    display: flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
-    background: var(--gv-panel-glass);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border-top: 1px solid var(--gv-line);
-
-    .cmd-ico {
-      width: 40px;
-      height: 40px;
-    }
-
-    .cmd-attente {
-      height: 40px;
-    }
-
-    &__main {
-      flex: 1;
-      height: 40px;
-      justify-content: center;
-    }
-  }
-
   .cmd-sheet {
     position: fixed;
     inset: 0;
@@ -5346,12 +5101,35 @@
     top: calc(56px + var(--gv-tabs-h, 0px));
   }
 
-  .cmd-foot {
-    bottom: calc(var(--gv-shell-bottom) + env(safe-area-inset-bottom));
-    padding-bottom: 0.5rem;
-  }
-
   .cmd-sheet__panel {
     bottom: calc(var(--gv-shell-bottom) + 64px + 0.6rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* =====================================================================
+ * Harmonisation avec la carte du détail commande : boutons « Ajouter »
+ * aux couleurs de l'app (plus de bleu ni de violet)
+ * ===================================================================== */
+.btn-add-support,
+:host-context([data-theme="dark"]) .btn-add-support {
+  background: var(--gv-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--gv-accent) 55%, transparent);
+  color: var(--gv-accent);
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--gv-accent) 20%, transparent);
+    border-color: var(--gv-accent);
+  }
+}
+
+.btn-add-support.btn-add-remise,
+:host-context([data-theme="dark"]) .btn-add-support.btn-add-remise {
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--gv-ink) 35%, transparent);
+  color: var(--gv-ink);
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--gv-ink) 6%, transparent);
+    border-color: var(--gv-ink);
   }
 }

@@ -3314,3 +3314,62 @@
     }
   }
 }
+
+/* =====================================================================
+ * Harmonisation avec la carte du détail commande : boutons « Ajouter »
+ * aux couleurs de l'app (plus de bleu ni de violet)
+ * ===================================================================== */
+.btn-add-support,
+:host-context([data-theme="dark"]) .btn-add-support {
+  background: var(--gv-accent-soft);
+  border: 1px solid color-mix(in srgb, var(--gv-accent) 55%, transparent);
+  color: var(--gv-accent);
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--gv-accent) 20%, transparent);
+    border-color: var(--gv-accent);
+  }
+}
+
+.btn-add-support.btn-add-remise,
+:host-context([data-theme="dark"]) .btn-add-support.btn-add-remise {
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--gv-ink) 35%, transparent);
+  color: var(--gv-ink);
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--gv-ink) 6%, transparent);
+    border-color: var(--gv-ink);
+  }
+}
+
+/* En-tête de la nouvelle commande (carte partagée .cmd-head, voir styles.scss) */
+.nc-head {
+  top: var(--gv-shell-top, 60px);
+
+  .cmd-head__edit {
+    max-width: 760px;
+  }
+}
+
+.nc-type {
+  display: inline-flex;
+  gap: 0.25rem;
+}
+
+@media (max-width: 1099px) {
+  .nouvelle-commande-wrapper {
+    padding-bottom: calc(64px + 1.5rem);
+  }
+
+  .nc-head {
+    position: static;
+    margin-bottom: 0.7rem;
+  }
+}
+
+@media (max-width: 899px) {
+  .nouvelle-commande-wrapper {
+    padding-bottom: calc(var(--gv-shell-bottom) + 64px + 1.5rem + env(safe-area-inset-bottom));
+  }
+}

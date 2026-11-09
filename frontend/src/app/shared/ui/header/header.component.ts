@@ -1,4 +1,4 @@
-import { Component, inject, computed, signal, effect, ViewChild, ElementRef, DestroyRef, HostListener } from '@angular/core';
+import { Component, inject, computed, signal, effect, ViewChild, ElementRef, DestroyRef, HostListener, NgZone, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AppRoutes, AppNode, ThemeService } from '@shared';
@@ -26,7 +26,7 @@ interface NavItem {
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })
-export class HeaderComponent {
+export class HeaderComponent implements AfterViewInit {
   logoLoaded = false;
   logoError = false;
   private readonly tokenService: TokenService = inject(TokenService);
@@ -95,6 +95,27 @@ export class HeaderComponent {
   readonly iconLogout = '<path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h11"/>';
 
   readonly todayLabel = new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+  /** Timecode HH:MM:SS.mmm, mis à jour hors détection de changements (aucun coût pour Angular). */
+  @ViewChild('timecode') private timecodeRef?: ElementRef<HTMLElement>;
+  private readonly zone = inject(NgZone);
+  private timecodeFrame = 0;
+
+  ngAfterViewInit(): void {
+    this.zone.runOutsideAngular(() => {
+      const pad = (n: number, l = 2) => String(n).padStart(l, '0');
+      const tick = () => {
+        const el = this.timecodeRef?.nativeElement;
+        if (el) {
+          const d = new Date();
+          el.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`;
+        }
+        this.timecodeFrame = requestAnimationFrame(tick);
+      };
+      tick();
+    });
+    this.destroyRef.onDestroy(() => cancelAnimationFrame(this.timecodeFrame));
+  }
+
   readonly shortcutLabel = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '⌘K' : 'Ctrl K';
   moreOpen = signal<boolean>(false);
 
@@ -102,22 +123,19 @@ export class HeaderComponent {
   isDarkMode = computed(() => this.themeService.isDarkMode());
   
   // Liste des fichiers logo possibles à essayer (ordre de priorité)
+  // Logo carré en priorité (demande de Pierre, étape 6), puis les autres formats en secours
   private readonly possibleLogosLight = [
-    // Logo principal spécifié par l'utilisateur (mode clair)
-    'assets/images/Logo/La Gravisterie_N.svg',
-    // Fallback vers autres formats
-    'assets/images/Logo/La Gravisterie avec noir txt_N.svg',
     'assets/images/Logo/La Gravisterie carré_N.svg',
-    'assets/images/Logo/logo_carre.png'
+    'assets/images/Logo/logo_carre.png',
+    'assets/images/Logo/La Gravisterie_N.svg',
+    'assets/images/Logo/La Gravisterie avec noir txt_N.svg',
   ];
 
   private readonly possibleLogosDark = [
-    // Logo blanc pour mode nuit
+    'assets/images/Logo/La Gravisterie  blanc carré.svg',
     'assets/images/Logo/La Gravisterie Blanc.svg',
-    // Fallback vers autres formats blancs
     'assets/images/Logo/La Gravisterie blanc sans fond copie.svg',
-    'assets/images/Logo/La Gravisterie blanc carré.svg',
-    'assets/images/Logo/La Gravisterie avec txt blanc sans fond copie.svg'
+    'assets/images/Logo/La Gravisterie avec txt blanc sans fond copie.svg',
   ];
 
   // Signal pour le logo de fallback (en cas d'erreur)

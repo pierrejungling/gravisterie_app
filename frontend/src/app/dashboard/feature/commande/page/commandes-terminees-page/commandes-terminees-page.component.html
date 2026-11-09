@@ -1,277 +1,142 @@
 <app-header></app-header>
 
-<div class="commandes-terminees-wrapper">
-  <div class="commandes-terminees-container">
-    <div class="page-header">
-      <h1 class="page-title">Commandes et ventes<br>terminées / annulées</h1>
-      <div class="page-header__actions">
-        <div class="group-mode group-mode--desktop">
-          <button
-            type="button"
-            class="group-mode__btn"
-            [class.active]="groupMode() === 'month'"
-            (click)="setGroupMode('month')">
-            Par mois
-          </button>
-          <button
-            type="button"
-            class="group-mode__btn"
-            [class.active]="groupMode() === 'year'"
-            (click)="setGroupMode('year')">
-            Par année
-          </button>
-        </div>
-        <button class="btn-navigation" (click)="navigateToEnCours()">
-          Voir les commandes en cours
-        </button>
+<div class="gv-page ct">
+  <!-- Barre du haut : titre, recherche, filtres, actions -->
+  <header class="ct-bar">
+    <div class="ct-bar__titre">
+      <h1>Terminées</h1>
+      <span class="ct-bar__nb">
+        @if (filtreActif()) { {{ nbAffichees() }} / }{{ section() === 'terminees' ? commandesTerminees().length : commandesAnnulees().length }}
+      </span>
+    </div>
+
+    <div class="ct-bar__filtres">
+      <div class="ct-cherche">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></svg>
+        <input
+          type="search"
+          class="gv-input"
+          placeholder="Produit, client, société"
+          aria-label="Filtrer les commandes"
+          [value]="filtre()"
+          (input)="filtre.set($any($event.target).value)" />
       </div>
+      @if (section() === 'terminees') {
+        <button type="button" class="ct-filtre" [class.is-on]="filtreNonPaye()" [attr.aria-pressed]="filtreNonPaye()" (click)="filtreNonPaye.set(!filtreNonPaye())">
+          Non payé <b>{{ nbNonPayees() }}</b>
+        </button>
+      }
+      @if (filtreActif()) {
+        <button type="button" class="ct-efface" (click)="effacerFiltres()">Effacer</button>
+      }
     </div>
 
-    <div class="loading-area" *ngIf="isLoading()">
-      <p>Chargement des commandes...</p>
+    <div class="ct-bar__actions">
+      <div class="ct-seg" role="group" aria-label="Liste affichée">
+        <button type="button" [class.is-on]="section() === 'terminees'" (click)="choisirSection('terminees')">Terminées</button>
+        <button type="button" [class.is-on]="section() === 'annulees'" (click)="choisirSection('annulees')">Annulées <b>{{ commandesAnnulees().length }}</b></button>
+      </div>
+      <div class="ct-seg" role="group" aria-label="Regroupement">
+        <button type="button" [class.is-on]="groupMode() === 'month'" (click)="setGroupMode('month')">Mois</button>
+        <button type="button" [class.is-on]="groupMode() === 'year'" (click)="setGroupMode('year')">Année</button>
+      </div>
+      <button type="button" class="gv-btn" (click)="navigateToEnCours()">En cours</button>
     </div>
+  </header>
 
-    <div class="loading-area" *ngIf="!isLoading() && loadError()">
+  @if (loadError()) {
+    <div class="gv-panel ct-etat">
       <p>{{ loadError() }}</p>
-      <button type="button" class="btn-navigation" (click)="loadCommandes()">Réessayer</button>
+      <button type="button" class="gv-btn" (click)="loadCommandes()">Réessayer</button>
     </div>
-
-    <div class="commandes-list" *ngIf="!isLoading() && !loadError()">
-      <div class="group-mode group-mode--mobile-top">
-        <button
-          type="button"
-          class="group-mode__btn"
-          [class.active]="groupMode() === 'month'"
-          (click)="setGroupMode('month')">
-          Par mois
-        </button>
-        <button
-          type="button"
-          class="group-mode__btn"
-          [class.active]="groupMode() === 'year'"
-          (click)="setGroupMode('year')">
-          Par année
-        </button>
-      </div>
-      <!-- Bloc Commandes terminées -->
-      <div class="commandes-section">
-        <h2 class="section-title">Commandes et ventes terminées</h2>
-        <div 
-          *ngIf="commandesTerminees().length === 0" 
-          class="empty-state">
-          <p class="empty-message">Aucune commande terminée</p>
-        </div>
-
-        <div
-          class="commandes-group"
-          [class.commandes-group--expanded]="isPeriodExpanded('terminees', group.sortKey)"
-          *ngFor="let group of groupedCommandesTerminees()">
+  } @else if (isLoading() && commandes().length === 0) {
+    <div class="gv-panel ct-etat"><p>Chargement des commandes…</p></div>
+  } @else if (groupesVue().length === 0) {
+    <div class="gv-panel ct-etat">
+      <p>
+        @if (filtreActif()) { Aucune ne correspond au filtre. }
+        @else { {{ section() === 'terminees' ? 'Aucune commande terminée.' : 'Aucune commande annulée.' }} }
+      </p>
+    </div>
+  } @else {
+    <div class="ct-groupes">
+      @for (group of groupesVue(); track group.sortKey) {
+        <section class="gv-panel ct-groupe" [class.is-ouvert]="group.ouvert">
           <button
             type="button"
-            class="group-header group-header--toggle"
-            [class.group-header--expanded]="isPeriodExpanded('terminees', group.sortKey)"
-            [attr.aria-expanded]="isPeriodExpanded('terminees', group.sortKey)"
-            (click)="togglePeriod('terminees', group.sortKey)">
-            <div class="group-header__title-row">
-              <div class="group-header__title-block">
-                <div class="group-header__title-line">
-                  <h3 class="group-title">{{ group.label }}</h3>
-                  <span
-                    class="payment-indicator payment-indicator--unpaid payment-indicator--inline"
-                    *ngIf="group.unpaidCount > 0"
-                    [attr.title]="group.unpaidCount + ' commande(s) ou vente(s) terminée(s) non payée(s)'">
-                    {{ getUnpaidGroupLabel(group.unpaidCount) }}
+            class="ct-groupe__tete"
+            [attr.aria-expanded]="group.ouvert"
+            (click)="togglePeriod(section(), group.sortKey)">
+            <svg class="ct-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+            <h2>{{ group.label }}</h2>
+            <span class="ct-groupe__nb">
+              @if (group.lignes.length !== group.commandes.length) { {{ group.lignes.length }} / }{{ group.commandes.length }}
+            </span>
+            @if (section() === 'terminees' && group.unpaidCount > 0) {
+              <span class="ct-impaye" [title]="group.unpaidCount + ' terminée(s) non payée(s)'">{{ getUnpaidGroupLabel(group.unpaidCount) }}</span>
+            }
+            <span class="ct-totaux">
+              @if (section() === 'terminees') {
+                <span class="ct-total ct-total--fort" title="Commandes terminées"><em>Terminées</em>{{ group.total | number: '1.0-2' }} €</span>
+                <span class="ct-total ct-total--sec" title="Commandes encore en cours sur la période"><em>En cours</em>{{ group.totalEnCours | number: '1.0-2' }} €</span>
+                <span class="ct-total ct-total--sec" title="Terminées + en cours"><em>Total</em>{{ group.totalCombined | number: '1.0-2' }} €</span>
+              } @else {
+                <span class="ct-total" title="Commandes annulées"><em>Annulées</em>{{ group.total | number: '1.0-2' }} €</span>
+              }
+            </span>
+          </button>
+
+          @if (group.ouvert) {
+            <div class="ct-lignes">
+              @for (c of group.lignes; track c.id_commande) {
+                <article
+                  class="ct-ligne"
+                  [class.ct-ligne--annulee]="section() === 'annulees'"
+                  [class.ct-ligne--impayee]="isCommandeNonPayee(c)"
+                  tabindex="0"
+                  (click)="onCommandeClick(c)"
+                  (keydown.enter)="onCommandeClick(c)">
+                  <span class="ct-ligne__date" [title]="(isVente(c) ? 'Date de la vente : ' : 'Date de commande : ') + formatDate(c.date_commande) + (c.deadline ? ' · Deadline : ' + formatDate(c.deadline) : '')">
+                    {{ formatDateCourte(c.date_commande) }}
                   </span>
-                </div>
-                <span class="group-header__count">{{ group.commandes.length }} commande{{ group.commandes.length > 1 ? 's' : '' }}</span>
-              </div>
-              <span
-                class="group-header__chevron-btn"
-                [class.group-header__chevron-btn--expanded]="isPeriodExpanded('terminees', group.sortKey)"
-                aria-hidden="true">
-                <svg class="group-header__chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </span>
+                  <div class="ct-ligne__corps">
+                    <h3>{{ c.produit || 'Commande #' + c.id_commande.substring(0, 8) }}</h3>
+                    <p>
+                      {{ getClientName(c.client) }}@if (getSociete(c)) {<em> · {{ getSociete(c) }}</em>}
+                    </p>
+                    @if (isVente(c) && c.prix_final) {
+                      <p class="ct-ligne__vente">
+                        @if (c.frais_pourcentage) { Frais {{ getFraisCommissionLabel(c) }} ({{ getMontantFraisAffiche(c) | number: '1.2-2' }} €) · }
+                        Net {{ getMontantNetPourTotaux(c) | number: '1.2-2' }} € · HTVA {{ getMontantHtvaPourTotaux(c) | number: '1.2-2' }} €
+                      </p>
+                    }
+                  </div>
+                  <span class="ct-ligne__prix">
+                    @if (c.prix_final) { {{ c.prix_final | number: '1.0-2' }} € }
+                  </span>
+                  <span class="ct-ligne__paye" (click)="$event.stopPropagation()">
+                    @if (section() === 'terminees' && c.prix_final && c.prix_final > 0) {
+                      <button
+                        type="button"
+                        class="ct-paye"
+                        [class.is-paye]="c['payé']"
+                        [attr.aria-pressed]="!!c['payé']"
+                        [title]="c['payé'] ? 'Marquer comme non payé' : 'Marquer comme payé'"
+                        (click)="basculerPaye(c)">
+                        {{ c['payé'] ? '✓ Payé' : 'Non payé' }}
+                      </button>
+                    } @else if (isCommandeNonPayee(c)) {
+                      <span class="ct-impaye">Non payé</span>
+                    }
+                  </span>
+                </article>
+              } @empty {
+                <p class="ct-vide">Aucune ne correspond au filtre</p>
+              }
             </div>
-            <div class="group-title__totals">
-              <div class="group-total-box group-total-box--terminees" title="Commandes terminées">
-                <span class="group-total-box__label">Terminées</span>
-                <span class="group-total-box__amount">{{ group.total | number:'1.0-2' }} €</span>
-              </div>
-              <div class="group-total-box group-total-box--en-cours" title="Commandes en cours">
-                <span class="group-total-box__label">En cours</span>
-                <span class="group-total-box__amount">{{ group.totalEnCours | number:'1.0-2' }} €</span>
-              </div>
-              <div class="group-total-box group-total-box--combined" title="Total terminées + en cours">
-                <span class="group-total-box__label">Total</span>
-                <span class="group-total-box__amount">{{ group.totalCombined | number:'1.0-2' }} €</span>
-              </div>
-            </div>
-          </button>
-          <div class="commandes-group__content" *ngIf="isPeriodExpanded('terminees', group.sortKey)">
-          <div class="commandes-grid">
-            <div 
-              *ngFor="let commande of group.commandes; trackBy: trackByCommandeId" 
-              class="commande-card"
-              [class.commande-card--with-paye-toggle]="commande.prix_final && commande.prix_final > 0"
-              [title]="commande.produit || 'Commande #' + commande.id_commande"
-              (click)="onCommandeClick(commande)">
-              <div class="commande-header">
-                <h3 class="commande-title">
-                  {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
-                </h3>
-                <span class="commande-status-badge">
-                  Terminée
-                </span>
-              </div>
-              <div class="commande-info">
-                <p class="commande-client">
-                  <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
-                </p>
-                <p class="commande-societe" *ngIf="commande.client['société']">
-                  <strong>Société :</strong>&nbsp;{{ commande.client['société'] }}
-                </p>
-                <p class="commande-date">
-                  <strong>{{ isVente(commande) ? 'Date de la vente' : 'Date de commande' }} :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
-                </p>
-                <p class="commande-deadline" *ngIf="commande.deadline">
-                  <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
-                </p>
-                <p class="commande-prix" *ngIf="commande.prix_final">
-                  <strong>Prix final :</strong>&nbsp;{{ commande.prix_final }} €
-                </p>
-                <p class="commande-prix" *ngIf="isVente(commande) && commande.frais_pourcentage">
-                  <strong>Frais :</strong>
-                  &nbsp;{{ getFraisCommissionLabel(commande) }} ({{ getMontantFraisAffiche(commande) | number:'1.2-2' }} €)
-                </p>
-                <p class="commande-prix" *ngIf="isVente(commande) && commande.prix_final">
-                  <strong>Montant net :</strong>
-                  &nbsp;{{ getMontantNetPourTotaux(commande) | number:'1.2-2' }} €
-                </p>
-                <p class="commande-prix" *ngIf="isVente(commande) && commande.prix_final">
-                  <strong>Montant HTVA :</strong>
-                  &nbsp;{{ getMontantHtvaPourTotaux(commande) | number:'1.2-2' }} €
-                </p>
-              </div>
-              <div
-                class="paye-toggle-bottom-right"
-                *ngIf="commande.prix_final && commande.prix_final > 0"
-                (click)="$event.stopPropagation()">
-                <label
-                  class="toggle-switch-small"
-                  [class.toggle-vert]="commande['payé']"
-                  [class.toggle-rouge]="!commande['payé']"
-                  [attr.title]="commande['payé'] ? 'Marquer comme non payé' : 'Marquer comme payé'">
-                  <input
-                    type="checkbox"
-                    [checked]="!!commande['payé']"
-                    (change)="onPayeChange(commande, $event)"
-                    class="toggle-input">
-                  <span class="toggle-slider"></span>
-                  <span class="toggle-label-small">{{ commande['payé'] ? 'Payé' : 'Non payé' }}</span>
-                </label>
-              </div>
-            </div>
-          </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bloc Commandes annulées -->
-      <div class="commandes-section">
-        <h2 class="section-title">Commandes et ventes annulées</h2>
-        <div 
-          *ngIf="commandesAnnulees().length === 0" 
-          class="empty-state">
-          <p class="empty-message">Aucune commande annulée</p>
-        </div>
-
-        <div
-          class="commandes-group"
-          [class.commandes-group--expanded]="isPeriodExpanded('annulees', group.sortKey)"
-          *ngFor="let group of groupedCommandesAnnulees()">
-          <button
-            type="button"
-            class="group-header group-header--toggle"
-            [class.group-header--expanded]="isPeriodExpanded('annulees', group.sortKey)"
-            [attr.aria-expanded]="isPeriodExpanded('annulees', group.sortKey)"
-            (click)="togglePeriod('annulees', group.sortKey)">
-            <div class="group-header__title-row">
-              <div class="group-header__title-block">
-                <h3 class="group-title">{{ group.label }}</h3>
-                <span class="group-header__count">{{ group.commandes.length }} commande{{ group.commandes.length > 1 ? 's' : '' }}</span>
-              </div>
-              <span
-                class="group-header__chevron-btn"
-                [class.group-header__chevron-btn--expanded]="isPeriodExpanded('annulees', group.sortKey)"
-                aria-hidden="true">
-                <svg class="group-header__chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </span>
-            </div>
-            <div class="group-title__totals">
-              <div class="group-total-box group-total-box--annulees" title="Commandes annulées">
-                <span class="group-total-box__label">Annulées</span>
-                <span class="group-total-box__amount">{{ group.total | number:'1.0-2' }} €</span>
-              </div>
-            </div>
-          </button>
-          <div class="commandes-group__content" *ngIf="isPeriodExpanded('annulees', group.sortKey)">
-          <div class="commandes-grid">
-            <div 
-              *ngFor="let commande of group.commandes; trackBy: trackByCommandeId" 
-              class="commande-card commande-annulee"
-              [title]="commande.produit || 'Commande #' + commande.id_commande"
-              (click)="onCommandeClick(commande)">
-              <span
-                class="payment-indicator payment-indicator--unpaid"
-                *ngIf="!commande['payé'] && commande.prix_final && commande.prix_final > 0">
-                Non payé
-              </span>
-              <div class="commande-header">
-                <h3 class="commande-title">
-                  {{ commande.produit || 'Commande #' + commande.id_commande.substring(0, 8) }}
-                </h3>
-                <span class="commande-status-badge badge-annulee">
-                  Annulée
-                </span>
-              </div>
-              <div class="commande-info">
-                <p class="commande-client">
-                  <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
-                </p>
-                <p class="commande-societe" *ngIf="commande.client['société']">
-                  <strong>Société :</strong>&nbsp;{{ commande.client['société'] }}
-                </p>
-                <p class="commande-date">
-                  <strong>{{ isVente(commande) ? 'Date de la vente' : 'Date de commande' }} :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
-                </p>
-                <p class="commande-deadline" *ngIf="commande.deadline">
-                  <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
-                </p>
-                <p class="commande-prix" *ngIf="commande.prix_final">
-                  <strong>Prix final :</strong>&nbsp;{{ commande.prix_final }} €
-                </p>
-                <p class="commande-prix" *ngIf="isVente(commande) && commande.frais_pourcentage">
-                  <strong>Frais :</strong>
-                  &nbsp;{{ getFraisCommissionLabel(commande) }} ({{ getMontantFraisAffiche(commande) | number:'1.2-2' }} €)
-                </p>
-                <p class="commande-prix" *ngIf="isVente(commande) && commande.prix_final">
-                  <strong>Montant net :</strong>
-                  &nbsp;{{ getMontantNetPourTotaux(commande) | number:'1.2-2' }} €
-                </p>
-                <p class="commande-prix" *ngIf="isVente(commande) && commande.prix_final">
-                  <strong>Montant HTVA :</strong>
-                  &nbsp;{{ getMontantHtvaPourTotaux(commande) | number:'1.2-2' }} €
-                </p>
-              </div>
-            </div>
-          </div>
-          </div>
-        </div>
-      </div>
+          }
+        </section>
+      }
     </div>
-  </div>
+  }
 </div>

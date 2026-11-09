@@ -1,6 +1,6 @@
 <app-header></app-header>
 
-<div class="gv-page">
+<div class="gv-page evd">
   <a class="back" routerLink="/dashboard/evenements">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>Événements
   </a>
@@ -68,7 +68,7 @@
     <div class="layout">
       <!-- ===== Colonne gauche ===== -->
       <div class="col">
-        <section class="gv-panel card">
+        <section class="gv-panel card card--infos">
           <div class="card__head">
             <h2 class="gv-section-title"><span class="gv-num">01</span>Infos pratiques</h2>
             @if (!edition()) {
@@ -165,7 +165,7 @@
           }
         </section>
 
-        <section class="gv-panel card">
+        <section class="gv-panel card card--formule">
           <div class="card__head">
             <h2 class="gv-section-title"><span class="gv-num">02</span>Formule et prix</h2>
             @if (!edition()) {
@@ -222,7 +222,7 @@
           }
         </section>
 
-        <section class="gv-panel card">
+        <section class="gv-panel card card--notes">
           <div class="card__head">
             <h2 class="gv-section-title"><span class="gv-num">03</span>Notes</h2>
             <span class="notes-state">
@@ -239,7 +239,7 @@
 
       <!-- ===== Colonne droite ===== -->
       <div class="col">
-        <section class="gv-panel card">
+        <section class="gv-panel card card--materiel">
           <div class="card__head">
             <h2 class="gv-section-title">
               <span class="gv-num">04</span>Matériel
@@ -271,7 +271,7 @@
           <button type="button" class="copy copy--left" (click)="ajouterListeType()">+ Liste type gravure en direct</button>
         </section>
 
-        <section class="gv-panel card">
+        <section class="gv-panel card card--commandes">
           <div class="card__head">
             <h2 class="gv-section-title"><span class="gv-num">05</span>Commandes liées · {{ e.commandes.length }}</h2>
             @if (!rattachement()) {

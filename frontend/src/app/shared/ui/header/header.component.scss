@@ -70,6 +70,28 @@ svg {
     text-transform: none;
   }
 
+  /* Timecode : chiffres à chasse fixe pour ne pas faire danser la ligne */
+  &__tc {
+    min-width: 12ch;
+    padding: 0.15rem 0.45rem;
+    border: 1px solid var(--gv-line);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    color: var(--gv-ink);
+
+    &::before {
+      content: 'TC';
+      margin-right: 0.4rem;
+      color: var(--gv-accent);
+      font-size: 0.58rem;
+      letter-spacing: 0.14em;
+    }
+  }
+
   &__actions {
     margin-left: auto;
     display: flex;
@@ -626,5 +648,17 @@ svg {
 @media (max-width: 899px) {
   .header__search-modal {
     top: 70px;
+  }
+}
+
+/* Petit téléphone : le timecode remplace la date pour que la barre tienne */
+@media (max-width: 480px) {
+  .gv-top__date {
+    display: none;
+  }
+
+  .gv-top__tc {
+    min-width: 0;
+    font-size: 0.66rem;
   }
 }

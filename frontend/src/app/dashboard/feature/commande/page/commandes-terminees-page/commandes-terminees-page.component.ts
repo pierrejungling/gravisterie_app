@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, computed, DestroyRef } from '@angular/core';
+import { Component, OnInit, inject, signal, WritableSignal, computed, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -16,19 +16,23 @@ type PeriodSection = 'terminees' | 'annulees';
   templateUrl: './commandes-terminees-page.component.html',
   styleUrl: './commandes-terminees-page.component.scss'
 })
-export class CommandesTermineesPageComponent implements OnInit, OnDestroy, AfterViewChecked {
+export class CommandesTermineesPageComponent implements OnInit {
   commandes: WritableSignal<Commande[]> = signal([]);
   isLoading: WritableSignal<boolean> = signal(false);
   loadError: WritableSignal<string | null> = signal(null);
-  private scrollRestored: boolean = false;
   groupMode: WritableSignal<'year' | 'month'> = signal('month');
   expandedPeriodKeys: WritableSignal<Set<string>> = signal(new Set<string>());
+  /** Liste affichée : terminées ou annulées (une seule à la fois, moins de défilement). */
+  section: WritableSignal<PeriodSection> = signal('terminees');
+  filtre: WritableSignal<string> = signal('');
+  filtreNonPaye: WritableSignal<boolean> = signal(false);
   
   private readonly apiService: ApiService = inject(ApiService);
   private readonly realtime = inject(RealtimeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly router: Router = inject(Router);
   private readonly scrollKey = 'commandes-terminees-scroll';
+  private readonly etatKey = 'commandes-terminees-etat';
   private readonly ventePrefix = 'Vente | ';
 
   // Commandes terminées triées par date (plus récentes en premier)
@@ -86,6 +90,79 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
     return this.groupByPeriod(this.commandesAnnulees());
   });
 
+  filtreActif = computed(() => this.filtre().trim().length > 0 || this.filtreNonPaye());
+
+  nbNonPayees = computed(() => this.commandesTerminees().filter(c => this.isCommandeNonPayee(c)).length);
+
+  /** Groupes de la section affichée, filtrés par la recherche et « non payé ». */
+  groupesVue = computed(() => {
+    const section = this.section();
+    const mots = this.normaliser(this.filtre()).split(' ').filter(Boolean);
+    const nonPaye = this.filtreNonPaye();
+    const forcer = this.filtreActif();
+    const ouverts = this.expandedPeriodKeys();
+    const source: Array<{ label: string; commandes: Commande[]; sortKey: string; total: number; unpaidCount: number; totalEnCours?: number; totalCombined?: number }> =
+      section === 'terminees' ? this.groupedCommandesTerminees() : this.groupedCommandesAnnulees();
+
+    return source
+      .map(group => {
+        const lignes = group.commandes.filter(c => {
+          if (nonPaye && !this.isCommandeNonPayee(c)) return false;
+          if (!mots.length) return true;
+          const texte = this.normaliser(`${c.produit || ''} ${c.client?.nom || ''} ${c.client?.prénom || ''} ${c.client?.['société'] || ''}`);
+          return mots.every(m => texte.includes(m));
+        });
+        return {
+          ...group,
+          lignes,
+          ouvert: forcer || ouverts.has(this.getPeriodStorageKey(section, group.sortKey)),
+        };
+      })
+      .filter(group => !forcer || group.lignes.length > 0);
+  });
+
+  nbAffichees = computed(() => this.groupesVue().reduce((n, g) => n + g.lignes.length, 0));
+
+  private normaliser(texte: string): string {
+    return (texte || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  }
+
+  choisirSection(section: PeriodSection): void {
+    this.section.set(section);
+  }
+
+  effacerFiltres(): void {
+    this.filtre.set('');
+    this.filtreNonPaye.set(false);
+  }
+
+  basculerPaye(commande: Commande): void {
+    const payeValue = !commande.payé;
+    this.commandes.update(list =>
+      list.map(cmd => (cmd.id_commande === commande.id_commande ? { ...cmd, payé: payeValue } : cmd))
+    );
+    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${commande.id_commande}`, { payé: payeValue }).subscribe({
+      next: () => {},
+      error: (error) => {
+        console.error('Erreur lors de la mise à jour du statut payé:', error);
+        this.commandes.update(list =>
+          list.map(cmd => (cmd.id_commande === commande.id_commande ? { ...cmd, payé: !payeValue } : cmd))
+        );
+      }
+    });
+  }
+
+  getSociete(commande: Commande): string {
+    return (commande.client as Commande['client'] | null | undefined)?.['société'] || '';
+  }
+
+  formatDateCourte(date: string | Date | undefined): string {
+    if (!date) return '';
+    const d = typeof date === 'string' ? new Date(date) : date;
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('fr-FR', this.groupMode() === 'year' ? { day: '2-digit', month: 'short' } : { weekday: 'short', day: '2-digit' });
+  }
+
   isCommandeAnnulee(commande: Commande): boolean {
     return commande.statut_commande === StatutCommande.ANNULEE;
   }
@@ -136,66 +213,66 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
   }
 
   ngOnInit(): void {
-    // Sauvegarder la position de scroll avant le rechargement
-    window.addEventListener('beforeunload', this.saveScrollPosition);
+    this.lireEtat();
     this.loadCommandes();
     this.realtime.on('commande')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.loadCommandes(true));
   }
 
-  ngAfterViewChecked(): void {
-    // Restaurer la position de scroll après le chargement des données
-    if (!this.isLoading() && !this.scrollRestored) {
-      const savedScroll = sessionStorage.getItem(this.scrollKey);
-      if (savedScroll) {
-        this.restoreScrollPosition(parseInt(savedScroll, 10));
-      }
+  /** Vue mémorisée au départ vers une fiche : section, regroupement, périodes ouvertes, filtres, défilement. */
+  private etatARestaurer: { section: PeriodSection; groupMode: 'year' | 'month'; ouverts: string[]; filtre: string; nonPaye: boolean; scroll: number } | null = null;
+
+  private lireEtat(): void {
+    try {
+      const brut = sessionStorage.getItem(this.etatKey);
+      sessionStorage.removeItem(this.etatKey);
+      sessionStorage.removeItem(this.scrollKey);
+      if (!brut) return;
+      const etat = JSON.parse(brut);
+      this.etatARestaurer = etat;
+      this.section.set(etat.section === 'annulees' ? 'annulees' : 'terminees');
+      this.groupMode.set(etat.groupMode === 'year' ? 'year' : 'month');
+      this.filtre.set(etat.filtre || '');
+      this.filtreNonPaye.set(!!etat.nonPaye);
+    } catch {}
+  }
+
+  private sauverEtat(): void {
+    try {
+      sessionStorage.setItem(this.etatKey, JSON.stringify({
+        section: this.section(),
+        groupMode: this.groupMode(),
+        ouverts: Array.from(this.expandedPeriodKeys()),
+        filtre: this.filtre(),
+        nonPaye: this.filtreNonPaye(),
+        scroll: window.scrollY,
+      }));
+    } catch {}
+  }
+
+  private apresPremierChargement(): void {
+    const etat = this.etatARestaurer;
+    this.etatARestaurer = null;
+    if (!etat) {
+      this.resetExpandedToCurrentPeriod();
+      return;
     }
-  }
-
-  private restoreScrollPosition(scrollPosition: number): void {
-    // Méthode robuste compatible Safari avec plusieurs tentatives
-    const attemptScroll = (attempts: number = 0) => {
-      if (attempts > 10) {
-        // Arrêter après 10 tentatives
-        this.scrollRestored = true;
-        return;
-      }
-
-      requestAnimationFrame(() => {
-        // Vérifier que le document est prêt
-        if (document.readyState === 'complete' || document.readyState === 'interactive') {
-          // Essayer différentes méthodes de scroll pour compatibilité Safari
-          window.scrollTo(0, scrollPosition);
-          document.documentElement.scrollTop = scrollPosition;
-          document.body.scrollTop = scrollPosition;
-
-          // Vérifier si le scroll a fonctionné (avec une marge d'erreur de 5px)
-          const currentScroll = window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
-          if (Math.abs(currentScroll - scrollPosition) <= 5) {
-            this.scrollRestored = true;
-          } else {
-            // Réessayer après un court délai
-            setTimeout(() => attemptScroll(attempts + 1), 50);
-          }
-        } else {
-          // Attendre que le document soit prêt
-          setTimeout(() => attemptScroll(attempts + 1), 50);
-        }
-      });
+    this.expandedPeriodKeys.set(new Set(etat.ouverts || []));
+    const cible = etat.scroll || 0;
+    if (cible <= 0) return;
+    // La liste se dessine après le chargement : on réessaie brièvement, sauf si l'utilisateur reprend la main
+    let essais = 0;
+    let stop = false;
+    const arreter = () => { stop = true; };
+    window.addEventListener('wheel', arreter, { once: true, passive: true });
+    window.addEventListener('touchstart', arreter, { once: true, passive: true });
+    const aller = () => {
+      if (stop) return;
+      if (Math.abs(window.scrollY - cible) > 2) window.scrollTo(0, cible);
+      if (++essais < 12) setTimeout(aller, 100);
     };
-
-    // Commencer la restauration après un court délai initial
-    setTimeout(() => attemptScroll(), 100);
-  }
-
-  ngOnDestroy(): void {
-    window.removeEventListener('beforeunload', this.saveScrollPosition);
-  }
-
-  private saveScrollPosition = (): void => {
-    sessionStorage.setItem(this.scrollKey, window.scrollY.toString());
+    requestAnimationFrame(aller);
   }
 
   loadCommandes(silent = false): void {
@@ -208,15 +285,13 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
           this.commandes.set(response.data);
           this.loadError.set(null);
           if (!silent) {
-            this.resetExpandedToCurrentPeriod();
+            this.apresPremierChargement();
           }
         } else if (!silent || this.commandes().length === 0) {
           this.loadError.set('Impossible de charger les commandes.');
         }
         if (!silent) {
           this.isLoading.set(false);
-          // Réinitialiser le flag pour permettre la restauration après le chargement
-          this.scrollRestored = false;
         }
       },
       error: (error) => {
@@ -226,7 +301,6 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
         }
         if (!silent) {
           this.isLoading.set(false);
-          this.scrollRestored = false;
         }
       }
     });
@@ -236,6 +310,7 @@ export class CommandesTermineesPageComponent implements OnInit, OnDestroy, After
   private readonly detailReturnPageKey = 'detail-return-page';
 
   onCommandeClick(commande: Commande): void {
+    this.sauverEtat();
     try {
       sessionStorage.setItem(this.detailReturnPageKey, 'terminees');
     } catch {}

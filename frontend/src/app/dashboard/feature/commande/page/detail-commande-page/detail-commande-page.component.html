@@ -1,67 +1,5 @@
 <app-header></app-header>
 
-<!-- Barre d'actions fixe (desktop) -->
-<div class="detail-actions-bar" *ngIf="!isLoading() && commande() && formGroup">
-  <div class="detail-actions-bar__container">
-    <div class="detail-actions-bar__left">
-      <button 
-        *ngIf="!isVente()"
-        type="button" 
-        class="btn-action-bar btn-toggle-prix"
-        (click)="togglePrixFields()"
-        [title]="showPrixFields() ? 'Masquer les frais' : 'Afficher les frais'">
-        {{ showPrixFields() ? '💰 Masquer frais' : '💰 Afficher frais' }}
-      </button>
-      <button 
-        type="button" 
-        class="btn-action-bar btn-edit"
-        (click)="toggleEditMode()"
-        [title]="isEditMode() ? 'Annuler' : 'Modifier'">
-        {{ isEditMode() ? '✕ Annuler' : '✏️ Modifier' }}
-      </button>
-      <button
-        *ngIf="majDistanteDisponible()"
-        type="button"
-        class="btn-action-bar btn-remote-update"
-        (click)="appliquerMajDistante()"
-        title="Recharger les dernières modifications">
-        ↻ Mise à jour disponible
-      </button>
-      <button 
-        type="button" 
-        class="btn-action-bar btn-delete"
-        (click)="openDeleteConfirm()"
-        title="Supprimer la commande">
-        🗑️ Supprimer
-      </button>
-      <button
-        *ngIf="afficherNotifCommandeSite()"
-        type="button"
-        class="btn-action-bar btn-site-traitee"
-        (click)="onMarquerSiteTraitee()"
-        title="Marquer la commande comme traitée">
-        ✓ Traitée
-      </button>
-    </div>
-    <div class="detail-actions-bar__right">
-      <div class="attente-reponse-toggle-bar" *ngIf="!isVente()">
-        <label class="toggle-switch-small" [class.toggle-vert]="get('attente_reponse').value" [class.toggle-rouge]="!get('attente_reponse').value">
-          <input 
-            type="checkbox" 
-            [formControl]="get('attente_reponse')"
-            (change)="onAttenteReponseChange()"
-            class="toggle-input">
-          <span class="toggle-slider"></span>
-          <span class="toggle-label-small">{{ get('attente_reponse').value ? 'Rien à faire' : 'Client attend' }}</span>
-        </label>
-      </div>
-      <ng-container *ngIf="isEditMode()">
-        <button type="submit" form="detailCommandeForm" class="btn-action-bar btn-save" [disabled]="!formGroup.valid">💾 Enregistrer</button>
-      </ng-container>
-    </div>
-  </div>
-</div>
-
 <div class="detail-commande-wrapper">
   <div
     class="fichiers-window-drop-overlay"
@@ -78,56 +16,96 @@
     [class.deadline-warning]="getDeadlineStatus() === 'warning' && !isCommandeTerminee() && !isCommandeAnnulee()"
     [class.deadline-danger]="getDeadlineStatus() === 'danger' && !isCommandeTerminee() && !isCommandeAnnulee()"
     *ngIf="!isLoading() && commande()">
-    <div class="detail-header">
-      <div class="header-title-section">
-        <h1 class="page-title">Détail de la {{ isVente() ? 'vente' : 'commande' }}</h1>
-        <div class="commande-title-row" *ngIf="!isEditMode()">
-          <h2 class="commande-title-main">
+    <!-- En-tête : titre, résumé et actions (reste visible en haut) -->
+    <header class="cmd-head">
+      <div class="cmd-head__row">
+        <div class="cmd-head__titre">
+          <div class="cmd-head__eyebrow">
+            <span>{{ isVente() ? 'Vente' : 'Commande' }}</span>
+            <ng-container *ngIf="resumeClient() as nomCli"><span class="sep">·</span><span class="cmd-head__client">{{ nomCli }}</span></ng-container>
+          </div>
+          <h1 class="cmd-head__h1" *ngIf="!isEditMode()">
             {{ commande()?.produit || 'Commande #' + (commande()?.id_commande?.substring(0, 8) || '') }}
-          </h2>
-          <div class="detail-status-badge detail-status-badge--terminee" *ngIf="isCommandeTerminee()">Terminée</div>
-          <div class="detail-status-badge detail-status-badge--annulee" *ngIf="isCommandeAnnulee()">Annulée</div>
+          </h1>
+          <div class="cmd-head__edit" *ngIf="isEditMode()">
+            <app-floating-label-input
+              [label]="isVente() ? 'Nom / Intitulé de la vente' : 'Nom / Intitulé de la commande'"
+              [control]="get('nom_commande')"
+              [formGroup]="formGroup"
+              [readonly]="false">
+            </app-floating-label-input>
+          </div>
         </div>
+
+        <!-- Actions (écran large) -->
+        <div class="cmd-head__actions">
+          <label class="cmd-attente" *ngIf="!isVente()" [class.is-attend]="!get('attente_reponse').value" [title]="get('attente_reponse').value ? 'Rien à faire côté client' : 'Le client attend une réponse'">
+            <input type="checkbox" [formControl]="get('attente_reponse')" (change)="onAttenteReponseChange()">
+            <span class="cmd-attente__dot" aria-hidden="true"></span>
+            {{ get('attente_reponse').value ? 'Rien à faire' : 'Client attend' }}
+          </label>
+          <button *ngIf="majDistanteDisponible()" type="button" class="gv-btn gv-btn--sm cmd-maj" (click)="appliquerMajDistante()">↻ Mise à jour</button>
+          <button *ngIf="afficherNotifCommandeSite()" type="button" class="gv-btn gv-btn--sm" (click)="onMarquerSiteTraitee()">✓ Traitée</button>
+          <ng-container *ngIf="!isEditMode()">
+            <button type="button" class="cmd-ico" (click)="copyCommandeFiche()" [title]="isFicheCopied() ? 'Fiche copiée' : 'Copier toute la fiche en texte'" [class.is-ok]="isFicheCopied()">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>
+            </button>
+            <button *ngIf="canDuplicateCommande()" type="button" class="cmd-ico" (click)="duplicateCommande()" [disabled]="isDuplicating()" [title]="'Dupliquer la ' + (isVente() ? 'vente' : 'commande')">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="11" height="11" rx="2"/><path d="M9 20h9a2 2 0 0 0 2-2V9M14.5 9.5v6M11.5 12.5h6"/></svg>
+            </button>
+            <button *ngIf="!isVente()" type="button" class="cmd-ico" (click)="togglePrixFields()" [class.is-on]="showPrixFields()" [title]="showPrixFields() ? 'Masquer les frais' : 'Afficher les frais'">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 6.5A6.5 6.5 0 1 0 17 17.5M4 10h9M4 14h9"/></svg>
+            </button>
+            <button type="button" class="cmd-ico cmd-ico--danger" (click)="openDeleteConfirm()" title="Supprimer">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+            </button>
+            <button type="button" class="gv-btn gv-btn--primary gv-btn--sm" (click)="toggleEditMode()">Modifier</button>
+          </ng-container>
+          <ng-container *ngIf="isEditMode()">
+            <button type="button" class="gv-btn gv-btn--ghost gv-btn--sm" (click)="onCancel()">Annuler</button>
+            <button type="submit" form="detailCommandeForm" class="gv-btn gv-btn--primary gv-btn--sm" [disabled]="!formGroup.valid">Enregistrer</button>
+          </ng-container>
+        </div>
+      </div>
+
+      <!-- Résumé : l'essentiel d'un coup d'oeil -->
+      <div class="cmd-head__chips">
+        <span *ngIf="isCommandeTerminee()" class="gv-chip gv-chip--ok">Terminée</span>
+        <span *ngIf="isCommandeAnnulee()" class="gv-chip gv-chip--warn">Annulée</span>
+        <button type="button" *ngIf="!isVente() && !isCommandeTerminee() && !isCommandeAnnulee()" class="gv-chip gv-chip--accent cmd-chip-btn" (click)="choisirOnglet('atelier')">{{ resumeStatut() }}</button>
+        <span *ngIf="resumeDeadline() as dl" class="gv-chip"
+          [class.gv-chip--warn]="getDeadlineStatus() === 'warning' && !isCommandeTerminee() && !isCommandeAnnulee()"
+          [class.cmd-chip--danger]="getDeadlineStatus() === 'danger' && !isCommandeTerminee() && !isCommandeAnnulee()">⏱ {{ dl }}</span>
+        <button type="button" *ngIf="resumeCompteurs() as rc" class="gv-chip cmd-chip-btn" [class.gv-chip--ok]="rc.fait >= rc.total" (click)="choisirOnglet('atelier')">
+          <span class="cmd-chip-progress" [style.--p]="(rc.fait / rc.total) * 100"></span>{{ rc.fait }} / {{ rc.total }}
+        </button>
+        <button type="button" *ngIf="resumePrix() !== null" class="gv-chip cmd-chip-btn mono" (click)="choisirOnglet('prix')">{{ resumePrixLabel() }}</button>
+        <span class="gv-chip" [class.gv-chip--ok]="get('payé').value" [class.gv-chip--warn]="!get('payé').value && resumePrix()">{{ get('payé').value ? 'Payé' : 'Non payé' }}</span>
         <gv-evenement-lien
           class="evenement-lien"
           *ngIf="!isEditMode()"
           [idCommande]="commande()?.id_commande ?? null"
           [idEvenement]="commande()?.id_evenement ?? null">
         </gv-evenement-lien>
-        <div class="commande-title-edit" *ngIf="isEditMode()">
-          <app-floating-label-input
-            [label]="isVente() ? 'Nom / Intitulé de la vente' : 'Nom / Intitulé de la commande'"
-            [control]="get('nom_commande')"
-            [formGroup]="formGroup"
-            [readonly]="false">
-          </app-floating-label-input>
-        </div>
       </div>
-      <!-- Les boutons sont maintenant dans la barre fixe en haut -->
-    </div>
 
-    <section class="detail-duplicate-section" *ngIf="formGroup">
-      <button
-        *ngIf="canDuplicateCommande()"
-        type="button"
-        class="btn-duplicate"
-        (click)="duplicateCommande()"
-        [disabled]="isDuplicating()">
-        {{ isDuplicating() ? 'Duplication en cours...' : 'Dupliquer la ' + (isVente() ? 'vente' : 'commande') }}
+    </header>
+    <!-- Onglets (écran étroit) -->
+    <nav class="cmd-onglets" aria-label="Sections de la commande">
+      <button type="button" *ngIf="!isVente()" [class.is-active]="ongletActif() === 'atelier'" (click)="choisirOnglet('atelier')">Atelier</button>
+      <button type="button" [class.is-active]="ongletActif() === 'infos'" (click)="choisirOnglet('infos')">Infos</button>
+      <button type="button" [class.is-active]="ongletActif() === 'prix'" (click)="choisirOnglet('prix')">Prix</button>
+      <button type="button" [class.is-active]="ongletActif() === 'client'" (click)="choisirOnglet('client')">Client</button>
+      <button type="button" [class.is-active]="ongletActif() === 'fichiers'" (click)="choisirOnglet('fichiers')">
+        Fichiers<span class="cmd-onglets__n" *ngIf="commandeFichiers().length">{{ commandeFichiers().length }}</span>
       </button>
-      <button
-        type="button"
-        class="copy-field-copy-btn"
-        (click)="copyCommandeFiche()"
-        [title]="isFicheCopied() ? 'Fiche copiée' : 'Copier toute la fiche en texte'">
-        {{ isFicheCopied() ? 'Copié !' : '' }}
-      </button>
-    </section>
+    </nav>
 
-    <form id="detailCommandeForm" [formGroup]="formGroup" *ngIf="formGroup" (ngSubmit)="onSave()">
+    <form id="detailCommandeForm" class="cmd-grid" [formGroup]="formGroup" *ngIf="formGroup" (ngSubmit)="isEditMode() && onSave()">
+      <div class="cmd-col cmd-col--a">
       
       <!-- Informations de la commande -->
-      <section class="form-section">
+      <section [class.cmd-zone--off]="ongletActif() !== 'infos'" class="cmd-zone cmd-zone--infos form-section">
         <h2 class="section-title">Informations de la {{ isVente() ? 'vente' : 'commande' }}</h2>
         <div class="input-wrapper" *ngIf="!isEditMode()">
           <div class="copy-field-readonly">
@@ -184,7 +162,7 @@
           </ng-template>
         </div>
 
-        <div class="input-wrapper">
+        <div class="input-wrapper input-wrapper--large">
           <div class="textarea-container" *ngIf="isEditMode(); else descriptionCopyField">
             <textarea
               class="description-textarea"
@@ -256,7 +234,83 @@
         </div>
 
         <!-- Fichiers joints -->
-        <section class="form-section fichiers-section">
+      </section>
+    <!-- Personnalisation -->
+    <section [class.cmd-zone--off]="ongletActif() !== 'infos'" class="cmd-zone cmd-zone--perso form-section form-section--spaced" *ngIf="!isVente()">
+      <h2 class="section-title">Personnalisation</h2>
+
+      <!-- Couleur (sélection multiple) -->
+      <div class="input-wrapper">
+        <label class="label">Couleur (sélection multiple)</label>
+        <div class="couleurs-grid" [class.disabled]="!isEditMode()">
+          <label 
+            *ngFor="let couleur of couleursDisponibles" 
+            class="couleur-checkbox-label"
+            [class.selected]="isCouleurSelected(couleur)"
+            [class.disabled]="!isEditMode()">
+            <input 
+              type="checkbox" 
+              [checked]="isCouleurSelected(couleur)"
+              [disabled]="!isEditMode()"
+              (change)="toggleCouleur(couleur)"
+              class="couleur-checkbox">
+            <span class="couleur-label">{{ couleur }}</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Police d'écriture -->
+      <div class="input-wrapper">
+        <ng-container *ngIf="isEditMode(); else policeCopyField">
+          <app-floating-label-input
+            [label]="'Police d\'écriture'"
+            [control]="get('police_ecriture')!"
+            [formGroup]="formGroup"
+            [readonly]="false">
+          </app-floating-label-input>
+        </ng-container>
+        <ng-template #policeCopyField>
+          <div class="copy-field-readonly">
+            <div class="copy-field-content">
+              <span class="copy-field-label">Police d'écriture</span>
+              <span class="copy-field-value">{{ getFieldDisplayValue('police_ecriture') }}</span>
+            </div>
+            <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('police_ecriture')" [disabled]="getFieldDisplayValue('police_ecriture') === '-'">
+              {{ copyFeedbackField() === 'police_ecriture' ? 'Copié !' : '' }}
+            </button>
+          </div>
+        </ng-template>
+      </div>
+
+      <!-- Texte de la personnalisation -->
+      <div class="input-wrapper">
+        <ng-container *ngIf="isEditMode(); else textePersoCopyField">
+          <div class="textarea-container" [formGroup]="formGroup">
+            <textarea
+              class="description-textarea"
+              formControlName="texte_personnalisation"
+              (input)="autoGrowTextarea($event)"
+              rows="4"
+              placeholder=" "></textarea>
+            <label class="textarea-label" [class.fixed-label]="get('texte_personnalisation').value && get('texte_personnalisation').value.length > 0">
+              Texte de la personnalisation
+            </label>
+          </div>
+        </ng-container>
+        <ng-template #textePersoCopyField>
+          <div class="copy-field-readonly">
+            <div class="copy-field-content">
+              <span class="copy-field-label">Texte de la personnalisation</span>
+              <span class="copy-field-value">{{ getFieldDisplayValue('texte_personnalisation') }}</span>
+            </div>
+            <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('texte_personnalisation')" [disabled]="getFieldDisplayValue('texte_personnalisation') === '-'">
+              {{ copyFeedbackField() === 'texte_personnalisation' ? 'Copié !' : '' }}
+            </button>
+          </div>
+        </ng-template>
+      </div>
+    </section>
+        <section [class.cmd-zone--off]="ongletActif() !== 'fichiers'" class="cmd-zone cmd-zone--fichiers form-section fichiers-section">
           <h2 class="section-title">Fichiers joints</h2>
           <p class="fichiers-hint" *ngIf="commandeFichiersSorted().length === 0">Aucun fichier pour cette {{ isVente() ? 'vente' : 'commande' }}.</p>
           <ul class="fichiers-list" *ngIf="commandeFichiersSorted().length > 0">
@@ -422,89 +476,10 @@
             </div>
           </div>
         </section>
-      </section>
-
-      <!-- Modal prévisualisation image, PDF ou DOCX -->
-      <div
-        class="preview-overlay"
-        *ngIf="previewImageUrl() || previewPdfUrl() || previewDocxBlob() || previewAiUrl() || previewAiMessage() || preview3dVisible()"
-        (click)="onPreviewOverlayClick()"
-        (touchstart)="onPreviewSwipeStart($event)"
-        (touchend)="onPreviewSwipeEnd($event)"
-        (touchcancel)="onPreviewSwipeEnd($event)"
-        role="button"
-        tabindex="0"
-        aria-label="Fermer l'aperçu">
-        <button type="button" class="preview-close" (click)="closePreview(); $event.stopPropagation()" title="Fermer">✕</button>
-        <button
-          *ngIf="previewImageUrl() && previewFichier() && canShareImageFichier(previewFichier()!)"
-          type="button"
-          class="preview-save"
-          (click)="downloadFichier(previewFichier()!); $event.stopPropagation()"
-          [title]="getFichierDownloadTitle(previewFichier()!)">
-          Enregistrer
-        </button>
-        <button
-          *ngIf="showPreviewNav()"
-          type="button"
-          class="preview-nav preview-nav--prev"
-          [disabled]="!canPreviewNavigate(-1)"
-          (click)="previewNavigate(-1); $event.stopPropagation()"
-          title="Pièce jointe précédente"
-          aria-label="Pièce jointe précédente">‹</button>
-        <button
-          *ngIf="showPreviewNav()"
-          type="button"
-          class="preview-nav preview-nav--next"
-          [disabled]="!canPreviewNavigate(1)"
-          (click)="previewNavigate(1); $event.stopPropagation()"
-          title="Pièce jointe suivante"
-          aria-label="Pièce jointe suivante">›</button>
-        <div
-          *ngIf="showPreviewNav()"
-          class="preview-swipe-zone preview-swipe-zone--prev"
-          (click)="$event.stopPropagation()"></div>
-        <div
-          *ngIf="showPreviewNav()"
-          class="preview-swipe-zone preview-swipe-zone--next"
-          (click)="$event.stopPropagation()"></div>
-        <div
-          class="preview-content"
-          [class.preview-content--image]="!!previewImageUrl()"
-          [class.preview-content--pdf]="previewPdfUrl()"
-          [class.preview-content--docx]="previewDocxBlob()"
-          [class.preview-content--ai]="previewAiUrl()"
-          [class.preview-content--3d]="preview3dVisible()"
-          (click)="$event.stopPropagation()">
-          <div
-            #previewImageStage
-            *ngIf="previewImageUrl()"
-            class="preview-image-stage"
-            (touchstart)="onPreviewImageTouchStart($event)"
-            (touchend)="onPreviewImageTouchEnd($event)"
-            (touchcancel)="onPreviewImageTouchEnd($event)">
-            <img
-              [src]="previewImageUrl() | safeUrl"
-              alt="Aperçu"
-              class="preview-image"
-              [style.transform]="previewImageTransform()"
-              draggable="false">
-          </div>
-          <iframe *ngIf="previewPdfUrl()" [src]="previewPdfUrl() | safeResourceUrl" class="preview-pdf" title="Aperçu PDF"></iframe>
-          <div *ngIf="previewDocxBlob()" id="docx-preview-container" class="preview-docx"></div>
-          <div class="preview-ai-wrap" *ngIf="previewAiUrl()">
-            <iframe [src]="previewAiUrl() | safeResourceUrl" class="preview-ai" title="Aperçu AI"></iframe>
-          </div>
-          <div class="preview-ai-message" *ngIf="previewAiMessage()">
-            <div class="preview-ai-message__title">Aperçu indisponible</div>
-            <div class="preview-ai-message__text">{{ previewAiMessage() }}</div>
-          </div>
-          <div *ngIf="preview3dVisible()" id="model-3d-preview-container" class="preview-3d"></div>
-        </div>
       </div>
-
+      <div class="cmd-col cmd-col--b">
       <!-- Prix et Frais -->
-      <section class="form-section">
+      <section [class.cmd-zone--off]="ongletActif() !== 'prix'" class="cmd-zone cmd-zone--prix form-section">
         <h2 class="section-title">Prix et Frais</h2>
 
         <!-- Prix : une ligne par tarif -->
@@ -1237,9 +1212,160 @@
           </div>
         </div>
       </section>
+      </div>
+      <div class="cmd-col cmd-col--c">
+    <!-- Statuts de la commande -->
+    <section [class.cmd-zone--off]="ongletActif() !== 'atelier'" class="cmd-zone cmd-zone--statuts statuts-section" *ngIf="!isVente()">
+      <div class="statuts-section__title-row">
+        <h2 class="section-title">Statuts de la commande</h2>
+        <div class="detail-status-badge detail-status-badge--terminee" *ngIf="isCommandeTerminee()">Terminée</div>
+        <div class="detail-status-badge detail-status-badge--annulee" *ngIf="isCommandeAnnulee()">Annulée</div>
+      </div>
+      
+      <div class="statuts-list">
+        <label 
+          *ngFor="let statut of allStatuts" 
+          class="statut-checkbox-label"
+          [class.active]="(isStatutActuel(statut) || isStatutActif(statut)) && !isStatutChecked(statut)"
+          [class.completed]="isStatutChecked(statut)"
+          [class.cancelled]="statut === StatutCommande.ANNULEE && isStatutChecked(statut)"
+          [class.disabled]="isStatutDisabled(statut) && !isStatutChecked(statut)">
+          <input 
+            type="checkbox" 
+            [checked]="isStatutChecked(statut)"
+            [disabled]="isStatutDisabled(statut) && !isStatutChecked(statut)"
+            (change)="onStatutChange(statut, $event)"
+            class="statut-checkbox">
+          <span class="statut-label">{{ statutLabels[statut] }}</span>
+        </label>
+      </div>
+    </section>
+    <!-- PCs réalisés -->
+    <section [class.cmd-zone--off]="ongletActif() !== 'atelier'" class="cmd-zone cmd-zone--compteurs form-section pcs-realises-section" *ngIf="!isVente() && formGroup">
+      <h2 class="section-title">Quantité produite</h2>
+      <div
+        class="pcs-realises-wrapper"
+        [formGroup]="formGroup"
+        [class.pcs-realises-disabled]="!isQuantiteRealiseeEditable()">
+        <div formArrayName="quantite_produit_compteurs">
+          <div
+            class="pcs-realises-block pcs-realises-block--row"
+            *ngFor="let _ of quantiteProduitCompteursFormArray.controls; let i = index"
+            [formGroupName]="i"
+            [class.pcs-realises-block--complet]="compteurQuantiteComplete(i)">
+            <div class="pcs-realises-libelle-row">
+              <input
+                *ngIf="isEditMode()"
+                type="text"
+                class="pcs-realises-libelle-input"
+                formControlName="libelle"
+                placeholder="Libellé (ex. Socle, Pieds)"
+                (blur)="onCompteurLibelleBlur()" />
+              <span *ngIf="!isEditMode()" class="pcs-realises-libelle-readonly">{{ compteurLibelleLectureText(i) }}</span>
+              <span *ngIf="compteurQuantiteComplete(i)" class="pcs-compteur-badge-complet">
+                <span class="pcs-compteur-badge-complet__ico" aria-hidden="true">✓</span>
+                Terminé
+              </span>
+            </div>
+            <div class="pcs-realises-input-row">
+              <div class="pcs-realises-counter-controls">
+                <input
+                  *ngIf="isEditMode()"
+                  type="number"
+                  class="pcs-realises-input"
+                  formControlName="quantite_realisee"
+                  (change)="onCompteurRealiseOuCibleInputChange()"
+                  [min]="0"
+                  placeholder="0">
+                <span *ngIf="!isEditMode()" class="pcs-realises-realise-readonly">{{ compteurRealiseAffiche(i) }}</span>
+                <span class="pcs-realises-separator">/</span>
+                <input
+                  *ngIf="isEditMode()"
+                  type="number"
+                  class="pcs-realises-input pcs-realises-cible-input"
+                  formControlName="quantite_cible"
+                  [min]="1"
+                  (change)="onCompteurRealiseOuCibleInputChange()" />
+                <span *ngIf="!isEditMode()" class="pcs-realises-total pcs-realises-cible-readonly">{{ compteurCibleAffiche(i) }}</span>
+                <div class="pcs-realises-buttons" *ngIf="isQuantiteRealiseeEditable()">
+                  <button
+                    type="button"
+                    class="pcs-btn pcs-btn-minus"
+                    (click)="decrementCompteur(i)"
+                    title="Diminuer">−</button>
+                  <button
+                    type="button"
+                    class="pcs-btn pcs-btn-plus"
+                    (click)="incrementCompteur(i)"
+                    title="Augmenter">+</button>
+                </div>
+              </div>
+            </div>
+            <!-- Barre de progression (réalisé / objectif) -->
+            <div class="pcs-compteur-progress-wrap">
+              <div
+                class="pcs-compteur-progress"
+                role="progressbar"
+                [attr.aria-valuenow]="compteurRealiseAffiche(i)"
+                aria-valuemin="0"
+                [attr.aria-valuemax]="compteurProgressAriaMax(i)"
+                [attr.aria-label]="
+                  'Avancement : ' +
+                  compteurRealiseAffiche(i) +
+                  ' sur ' +
+                  compteurCibleAffiche(i)
+                ">
+                <div class="pcs-compteur-progress__track">
+                  <div
+                    class="pcs-compteur-progress__fill"
+                    [style.width.%]="compteurProgressPercent(i)"></div>
+                </div>
+              </div>
+              <span
+                *ngIf="!compteurQuantiteComplete(i)"
+                class="pcs-compteur-restant"
+                [attr.aria-label]="'Restant : ' + compteurQuantiteRestante(i)">
+                restant : {{ compteurQuantiteRestante(i) }}
+              </span>
+            </div>
+            <div class="pcs-realises-add-row pcs-realises-add-row--compteur" *ngIf="isQuantiteRealiseeEditable()">
+              <input
+                #quantiteAjoutBloc
+                type="number"
+                class="pcs-realises-add-input"
+                min="1"
+              >
+              <button
+                type="button"
+                class="btn-add-support btn-add-support--compteur-ligne"
+                (click)="addCompteurFromInput(i, quantiteAjoutBloc.valueAsNumber); quantiteAjoutBloc.value = ''"
+                title="Ajouter au nombre réalisé pour ce libellé">
+                + Ajouter
+              </button>
+            </div>
+            <button
+              type="button"
+              class="btn-remove-support pcs-compteur-btn-supprimer"
+              (click)="supprimerCompteurQuantiteProduit(i)"
+              [disabled]="!isEditMode() || quantiteProduitCompteursFormArray.length <= 1"
+              *ngIf="isEditMode() && quantiteProduitCompteursFormArray.length > 1">
+              Supprimer
+            </button>
+          </div>
+        </div>
+        <button
+          type="button"
+          class="btn-add-support pcs-compteur-btn-ajouter-global"
+          (click)="ajouterCompteurQuantiteProduit()"
+          [disabled]="!isEditMode()"
+          *ngIf="isQuantiteRealiseeEditable() && isEditMode()">
+          + Ajouter un compteur
+        </button>
+      </div>
+    </section>
 
       <!-- Coordonnées de contact -->
-      <section class="form-section">
+      <section [class.cmd-zone--off]="ongletActif() !== 'client'" class="cmd-zone cmd-zone--client form-section">
         <div class="section-title-row">
           <h2 class="section-title">Coordonnées de contact</h2>
           <div class="fiche-client-actions">
@@ -1591,286 +1717,122 @@
           </div>
         </div>
       </section>
+      </div>
     </form>
-
-    <!-- Personnalisation -->
-    <section class="form-section form-section--spaced" *ngIf="!isVente()">
-      <h2 class="section-title">Personnalisation</h2>
-
-      <!-- Couleur (sélection multiple) -->
-      <div class="input-wrapper">
-        <label class="label">Couleur (sélection multiple)</label>
-        <div class="couleurs-grid" [class.disabled]="!isEditMode()">
-          <label 
-            *ngFor="let couleur of couleursDisponibles" 
-            class="couleur-checkbox-label"
-            [class.selected]="isCouleurSelected(couleur)"
-            [class.disabled]="!isEditMode()">
-            <input 
-              type="checkbox" 
-              [checked]="isCouleurSelected(couleur)"
-              [disabled]="!isEditMode()"
-              (change)="toggleCouleur(couleur)"
-              class="couleur-checkbox">
-            <span class="couleur-label">{{ couleur }}</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Police d'écriture -->
-      <div class="input-wrapper">
-        <ng-container *ngIf="isEditMode(); else policeCopyField">
-          <app-floating-label-input
-            [label]="'Police d\'écriture'"
-            [control]="get('police_ecriture')!"
-            [formGroup]="formGroup"
-            [readonly]="false">
-          </app-floating-label-input>
-        </ng-container>
-        <ng-template #policeCopyField>
-          <div class="copy-field-readonly">
-            <div class="copy-field-content">
-              <span class="copy-field-label">Police d'écriture</span>
-              <span class="copy-field-value">{{ getFieldDisplayValue('police_ecriture') }}</span>
-            </div>
-            <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('police_ecriture')" [disabled]="getFieldDisplayValue('police_ecriture') === '-'">
-              {{ copyFeedbackField() === 'police_ecriture' ? 'Copié !' : '' }}
-            </button>
-          </div>
-        </ng-template>
-      </div>
-
-      <!-- Texte de la personnalisation -->
-      <div class="input-wrapper">
-        <ng-container *ngIf="isEditMode(); else textePersoCopyField">
-          <div class="textarea-container" [formGroup]="formGroup">
-            <textarea
-              class="description-textarea"
-              formControlName="texte_personnalisation"
-              (input)="autoGrowTextarea($event)"
-              rows="4"
-              placeholder=" "></textarea>
-            <label class="textarea-label" [class.fixed-label]="get('texte_personnalisation').value && get('texte_personnalisation').value.length > 0">
-              Texte de la personnalisation
-            </label>
-          </div>
-        </ng-container>
-        <ng-template #textePersoCopyField>
-          <div class="copy-field-readonly">
-            <div class="copy-field-content">
-              <span class="copy-field-label">Texte de la personnalisation</span>
-              <span class="copy-field-value">{{ getFieldDisplayValue('texte_personnalisation') }}</span>
-            </div>
-            <button type="button" class="copy-field-copy-btn" (click)="copyFieldValue('texte_personnalisation')" [disabled]="getFieldDisplayValue('texte_personnalisation') === '-'">
-              {{ copyFeedbackField() === 'texte_personnalisation' ? 'Copié !' : '' }}
-            </button>
-          </div>
-        </ng-template>
-      </div>
-    </section>
-
-    <!-- PCs réalisés -->
-    <section class="form-section pcs-realises-section" *ngIf="!isVente() && formGroup">
-      <h2 class="section-title">Quantité produite</h2>
-      <div
-        class="pcs-realises-wrapper"
-        [formGroup]="formGroup"
-        [class.pcs-realises-disabled]="!isQuantiteRealiseeEditable()">
-        <div formArrayName="quantite_produit_compteurs">
-          <div
-            class="pcs-realises-block pcs-realises-block--row"
-            *ngFor="let _ of quantiteProduitCompteursFormArray.controls; let i = index"
-            [formGroupName]="i"
-            [class.pcs-realises-block--complet]="compteurQuantiteComplete(i)">
-            <div class="pcs-realises-libelle-row">
-              <input
-                *ngIf="isEditMode()"
-                type="text"
-                class="pcs-realises-libelle-input"
-                formControlName="libelle"
-                placeholder="Libellé (ex. Socle, Pieds)"
-                (blur)="onCompteurLibelleBlur()" />
-              <span *ngIf="!isEditMode()" class="pcs-realises-libelle-readonly">{{ compteurLibelleLectureText(i) }}</span>
-              <span *ngIf="compteurQuantiteComplete(i)" class="pcs-compteur-badge-complet">
-                <span class="pcs-compteur-badge-complet__ico" aria-hidden="true">✓</span>
-                Terminé
-              </span>
-            </div>
-            <div class="pcs-realises-input-row">
-              <div class="pcs-realises-counter-controls">
-                <input
-                  *ngIf="isEditMode()"
-                  type="number"
-                  class="pcs-realises-input"
-                  formControlName="quantite_realisee"
-                  (change)="onCompteurRealiseOuCibleInputChange()"
-                  [min]="0"
-                  placeholder="0">
-                <span *ngIf="!isEditMode()" class="pcs-realises-realise-readonly">{{ compteurRealiseAffiche(i) }}</span>
-                <span class="pcs-realises-separator">/</span>
-                <input
-                  *ngIf="isEditMode()"
-                  type="number"
-                  class="pcs-realises-input pcs-realises-cible-input"
-                  formControlName="quantite_cible"
-                  [min]="1"
-                  (change)="onCompteurRealiseOuCibleInputChange()" />
-                <span *ngIf="!isEditMode()" class="pcs-realises-total pcs-realises-cible-readonly">{{ compteurCibleAffiche(i) }}</span>
-                <div class="pcs-realises-buttons" *ngIf="isQuantiteRealiseeEditable()">
-                  <button
-                    type="button"
-                    class="pcs-btn pcs-btn-minus"
-                    (click)="decrementCompteur(i)"
-                    title="Diminuer">−</button>
-                  <button
-                    type="button"
-                    class="pcs-btn pcs-btn-plus"
-                    (click)="incrementCompteur(i)"
-                    title="Augmenter">+</button>
-                </div>
-              </div>
-            </div>
-            <!-- Barre de progression (réalisé / objectif) -->
-            <div class="pcs-compteur-progress-wrap">
-              <div
-                class="pcs-compteur-progress"
-                role="progressbar"
-                [attr.aria-valuenow]="compteurRealiseAffiche(i)"
-                aria-valuemin="0"
-                [attr.aria-valuemax]="compteurProgressAriaMax(i)"
-                [attr.aria-label]="
-                  'Avancement : ' +
-                  compteurRealiseAffiche(i) +
-                  ' sur ' +
-                  compteurCibleAffiche(i)
-                ">
-                <div class="pcs-compteur-progress__track">
-                  <div
-                    class="pcs-compteur-progress__fill"
-                    [style.width.%]="compteurProgressPercent(i)"></div>
-                </div>
-              </div>
-              <span
-                *ngIf="!compteurQuantiteComplete(i)"
-                class="pcs-compteur-restant"
-                [attr.aria-label]="'Restant : ' + compteurQuantiteRestante(i)">
-                restant : {{ compteurQuantiteRestante(i) }}
-              </span>
-            </div>
-            <div class="pcs-realises-add-row pcs-realises-add-row--compteur" *ngIf="isQuantiteRealiseeEditable()">
-              <input
-                #quantiteAjoutBloc
-                type="number"
-                class="pcs-realises-add-input"
-                min="1"
-              >
-              <button
-                type="button"
-                class="btn-add-support btn-add-support--compteur-ligne"
-                (click)="addCompteurFromInput(i, quantiteAjoutBloc.valueAsNumber); quantiteAjoutBloc.value = ''"
-                title="Ajouter au nombre réalisé pour ce libellé">
-                + Ajouter
-              </button>
-            </div>
-            <button
-              type="button"
-              class="btn-remove-support pcs-compteur-btn-supprimer"
-              (click)="supprimerCompteurQuantiteProduit(i)"
-              [disabled]="!isEditMode() || quantiteProduitCompteursFormArray.length <= 1"
-              *ngIf="isEditMode() && quantiteProduitCompteursFormArray.length > 1">
-              Supprimer
-            </button>
-          </div>
-        </div>
-        <button
-          type="button"
-          class="btn-add-support pcs-compteur-btn-ajouter-global"
-          (click)="ajouterCompteurQuantiteProduit()"
-          [disabled]="!isEditMode()"
-          *ngIf="isQuantiteRealiseeEditable() && isEditMode()">
-          + Ajouter un compteur
-        </button>
-      </div>
-    </section>
-
-    <!-- Statuts de la commande -->
-    <section class="statuts-section" *ngIf="!isVente()">
-      <div class="statuts-section__title-row">
-        <h2 class="section-title">Statuts de la commande</h2>
-        <div class="detail-status-badge detail-status-badge--terminee" *ngIf="isCommandeTerminee()">Terminée</div>
-        <div class="detail-status-badge detail-status-badge--annulee" *ngIf="isCommandeAnnulee()">Annulée</div>
-      </div>
-      
-      <div class="statuts-list">
-        <label 
-          *ngFor="let statut of allStatuts" 
-          class="statut-checkbox-label"
-          [class.active]="(isStatutActuel(statut) || isStatutActif(statut)) && !isStatutChecked(statut)"
-          [class.completed]="isStatutChecked(statut)"
-          [class.cancelled]="statut === StatutCommande.ANNULEE && isStatutChecked(statut)"
-          [class.disabled]="isStatutDisabled(statut) && !isStatutChecked(statut)">
-          <input 
-            type="checkbox" 
-            [checked]="isStatutChecked(statut)"
-            [disabled]="isStatutDisabled(statut) && !isStatutChecked(statut)"
-            (change)="onStatutChange(statut, $event)"
-            class="statut-checkbox">
-          <span class="statut-label">{{ statutLabels[statut] }}</span>
-        </label>
-      </div>
-    </section>
 
   </div>
 
-  <!-- Footer fixe mobile/tablette : Afficher prix, Supprimer, Modifier / Annuler+Enregistrer, + Toggle attente réponse -->
-  <footer class="detail-actions-footer" *ngIf="!isLoading() && commande() && formGroup">
-    <div class="detail-actions-footer__buttons">
-      <div class="detail-actions-footer__row">
-        <button 
-          *ngIf="!isVente()"
-          type="button"
-          class="btn-footer btn-footer-prix"
-          (click)="togglePrixFields()">
-          {{ showPrixFields() ? '💰 Masquer frais' : '💰 Afficher frais' }}
-        </button>
-        <button type="button" class="btn-footer btn-footer-delete" (click)="openDeleteConfirm()">🗑️ Supprimer</button>
+      <!-- Modal prévisualisation image, PDF ou DOCX -->
+      <div
+        class="preview-overlay"
+        *ngIf="previewImageUrl() || previewPdfUrl() || previewDocxBlob() || previewAiUrl() || previewAiMessage() || preview3dVisible()"
+        (click)="onPreviewOverlayClick()"
+        (touchstart)="onPreviewSwipeStart($event)"
+        (touchend)="onPreviewSwipeEnd($event)"
+        (touchcancel)="onPreviewSwipeEnd($event)"
+        role="button"
+        tabindex="0"
+        aria-label="Fermer l'aperçu">
+        <button type="button" class="preview-close" (click)="closePreview(); $event.stopPropagation()" title="Fermer">✕</button>
         <button
-          *ngIf="afficherNotifCommandeSite()"
+          *ngIf="previewImageUrl() && previewFichier() && canShareImageFichier(previewFichier()!)"
           type="button"
-          class="btn-footer btn-footer-site-traitee"
-          (click)="onMarquerSiteTraitee()">
-          ✓ Traitée
+          class="preview-save"
+          (click)="downloadFichier(previewFichier()!); $event.stopPropagation()"
+          [title]="getFichierDownloadTitle(previewFichier()!)">
+          Enregistrer
         </button>
-      </div>
-      <div class="detail-actions-footer__row">
-        <ng-container *ngIf="!isEditMode()">
-          <button type="button" class="btn-footer btn-footer-edit" (click)="toggleEditMode()">✏️ Modifier</button>
-        </ng-container>
         <button
-          *ngIf="majDistanteDisponible()"
+          *ngIf="showPreviewNav()"
           type="button"
-          class="btn-footer btn-remote-update"
-          (click)="appliquerMajDistante()">
-          ↻ Mise à jour
-        </button>
-        <ng-container *ngIf="isEditMode()">
-          <button type="button" class="btn-footer btn-footer-cancel" (click)="onCancel()">Annuler</button>
-          <button type="submit" form="detailCommandeForm" class="btn-footer btn-footer-save" [disabled]="!formGroup.valid">Enregistrer</button>
-        </ng-container>
+          class="preview-nav preview-nav--prev"
+          [disabled]="!canPreviewNavigate(-1)"
+          (click)="previewNavigate(-1); $event.stopPropagation()"
+          title="Pièce jointe précédente"
+          aria-label="Pièce jointe précédente">‹</button>
+        <button
+          *ngIf="showPreviewNav()"
+          type="button"
+          class="preview-nav preview-nav--next"
+          [disabled]="!canPreviewNavigate(1)"
+          (click)="previewNavigate(1); $event.stopPropagation()"
+          title="Pièce jointe suivante"
+          aria-label="Pièce jointe suivante">›</button>
+        <div
+          *ngIf="showPreviewNav()"
+          class="preview-swipe-zone preview-swipe-zone--prev"
+          (click)="$event.stopPropagation()"></div>
+        <div
+          *ngIf="showPreviewNav()"
+          class="preview-swipe-zone preview-swipe-zone--next"
+          (click)="$event.stopPropagation()"></div>
+        <div
+          class="preview-content"
+          [class.preview-content--image]="!!previewImageUrl()"
+          [class.preview-content--pdf]="previewPdfUrl()"
+          [class.preview-content--docx]="previewDocxBlob()"
+          [class.preview-content--ai]="previewAiUrl()"
+          [class.preview-content--3d]="preview3dVisible()"
+          (click)="$event.stopPropagation()">
+          <div
+            #previewImageStage
+            *ngIf="previewImageUrl()"
+            class="preview-image-stage"
+            (touchstart)="onPreviewImageTouchStart($event)"
+            (touchend)="onPreviewImageTouchEnd($event)"
+            (touchcancel)="onPreviewImageTouchEnd($event)">
+            <img
+              [src]="previewImageUrl() | safeUrl"
+              alt="Aperçu"
+              class="preview-image"
+              [style.transform]="previewImageTransform()"
+              draggable="false">
+          </div>
+          <iframe *ngIf="previewPdfUrl()" [src]="previewPdfUrl() | safeResourceUrl" class="preview-pdf" title="Aperçu PDF"></iframe>
+          <div *ngIf="previewDocxBlob()" id="docx-preview-container" class="preview-docx"></div>
+          <div class="preview-ai-wrap" *ngIf="previewAiUrl()">
+            <iframe [src]="previewAiUrl() | safeResourceUrl" class="preview-ai" title="Aperçu AI"></iframe>
+          </div>
+          <div class="preview-ai-message" *ngIf="previewAiMessage()">
+            <div class="preview-ai-message__title">Aperçu indisponible</div>
+            <div class="preview-ai-message__text">{{ previewAiMessage() }}</div>
+          </div>
+          <div *ngIf="preview3dVisible()" id="model-3d-preview-container" class="preview-3d"></div>
+        </div>
       </div>
-    </div>
-    <div class="detail-actions-footer__toggle" *ngIf="!isVente()">
-      <label class="toggle-switch-small toggle-switch-small--footer" [class.toggle-vert]="get('attente_reponse').value" [class.toggle-rouge]="!get('attente_reponse').value">
-        <input
-          type="checkbox"
-          [formControl]="get('attente_reponse')"
-          (change)="onAttenteReponseChange()"
-          class="toggle-input">
-        <span class="toggle-slider"></span>
-        <span class="toggle-label-small">{{ get('attente_reponse').value ? 'Rien à faire' : 'Client attend' }}</span>
+
+  <!-- Barre d'actions (écran étroit) : une seule ligne -->
+  <footer class="cmd-foot" *ngIf="!isLoading() && commande() && formGroup">
+    <ng-container *ngIf="!isEditMode()">
+      <label class="cmd-attente cmd-attente--foot" *ngIf="!isVente()" [class.is-attend]="!get('attente_reponse').value">
+        <input type="checkbox" [formControl]="get('attente_reponse')" (change)="onAttenteReponseChange()">
+        <span class="cmd-attente__dot" aria-hidden="true"></span>
+        {{ get('attente_reponse').value ? 'Rien à faire' : 'Client attend' }}
       </label>
-    </div>
+      <button *ngIf="majDistanteDisponible()" type="button" class="gv-btn gv-btn--sm cmd-maj" (click)="appliquerMajDistante()">↻</button>
+      <button type="button" class="cmd-ico" (click)="toggleMenuActions()" [class.is-on]="menuActionsOuvert()" aria-label="Plus d'actions">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>
+      </button>
+      <button type="button" class="gv-btn gv-btn--primary cmd-foot__main" (click)="toggleEditMode()">Modifier</button>
+    </ng-container>
+    <ng-container *ngIf="isEditMode()">
+      <button type="button" class="gv-btn gv-btn--ghost cmd-foot__main" (click)="onCancel()">Annuler</button>
+      <button type="submit" form="detailCommandeForm" class="gv-btn gv-btn--primary cmd-foot__main" [disabled]="!formGroup.valid">Enregistrer</button>
+    </ng-container>
   </footer>
+
+  <!-- Menu « Plus d'actions » (écran étroit) -->
+  <div class="cmd-sheet" *ngIf="menuActionsOuvert() && !isEditMode()">
+    <div class="cmd-sheet__backdrop" (click)="toggleMenuActions()"></div>
+    <div class="cmd-sheet__panel" role="menu">
+      <button type="button" role="menuitem" (click)="copyCommandeFiche(); toggleMenuActions()">Copier la fiche en texte</button>
+      <button type="button" role="menuitem" *ngIf="canDuplicateCommande()" (click)="duplicateCommande(); toggleMenuActions()">Dupliquer la {{ isVente() ? 'vente' : 'commande' }}</button>
+      <button type="button" role="menuitem" *ngIf="!isVente()" (click)="togglePrixFields(); toggleMenuActions()">{{ showPrixFields() ? 'Masquer les frais' : 'Afficher les frais' }}</button>
+      <button type="button" role="menuitem" *ngIf="afficherNotifCommandeSite()" (click)="onMarquerSiteTraitee(); toggleMenuActions()">Marquer comme traitée</button>
+      <button type="button" role="menuitem" class="is-danger" (click)="openDeleteConfirm(); toggleMenuActions()">Supprimer</button>
+    </div>
+  </div>
+
 
   <div class="loading-area" *ngIf="isLoading()">
     <p>Chargement de la commande...</p>

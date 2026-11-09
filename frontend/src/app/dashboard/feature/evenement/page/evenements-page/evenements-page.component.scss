@@ -258,3 +258,214 @@
     }
   }
 }
+
+/* ---------- Étape 6 : densité et usage de la largeur ---------- */
+.evp {
+  max-width: 1760px;
+  padding-top: 1.1rem;
+
+  .gv-page-head {
+    margin-bottom: 0.8rem;
+  }
+
+  .kpis {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.3fr);
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+
+    .gv-kpi {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.6rem;
+      min-width: 0;
+      padding: 0.5rem 0.8rem;
+    }
+
+    .gv-kpi__label {
+      margin: 0;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .gv-kpi__value {
+      flex: none;
+      margin: 0;
+      font-size: 1.05rem;
+      white-space: nowrap;
+
+      small {
+        font-size: 0.68rem;
+      }
+    }
+
+    .kpi-next {
+      flex: 0 1 auto;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 0.6rem;
+      min-width: 0;
+
+      &__nom {
+        font-size: 0.92rem;
+        min-width: 0;
+      }
+
+      small {
+        flex: none;
+      }
+    }
+  }
+
+  .liste {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 480px), 1fr));
+    gap: 0.5rem;
+  }
+
+  .ev {
+    grid-template-columns: 50px minmax(0, 1fr) auto;
+    gap: 0.8rem;
+    padding: 0.55rem 0.8rem;
+
+    &__date {
+      height: 50px;
+    }
+
+    &__jour {
+      font-size: 1.2rem;
+    }
+
+    &__mois {
+      font-size: 0.54rem;
+    }
+
+    &__main {
+      gap: 0.15rem;
+    }
+
+    &__titre {
+      font-size: 0.94rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    &__meta {
+      font-size: 0.76rem;
+    }
+
+    &__prix {
+      font-size: 0.95rem;
+    }
+  }
+}
+
+@media (max-width: 900px) {
+  .evp .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    .kpi-btn {
+      grid-column: 1 / -1;
+      order: -1;
+    }
+  }
+}
+
+@media (max-width: 760px) {
+  .evp {
+    padding-top: 0.7rem;
+
+    .gv-page-head {
+      margin-bottom: 0.6rem;
+    }
+
+    .kpis {
+      gap: 0.4rem;
+
+      .gv-kpi {
+        padding: 0.4rem 0.6rem;
+      }
+
+      .gv-kpi__label {
+        font-size: 0.52rem;
+        letter-spacing: 0.1em;
+      }
+
+      .gv-kpi__value {
+        font-size: 0.88rem;
+
+        small {
+          display: none;
+        }
+      }
+
+      .kpi-next small {
+        display: inline;
+        font-size: 0.62rem;
+      }
+    }
+
+    .ev {
+      grid-template-columns: 44px minmax(0, 1fr) auto;
+      gap: 0.6rem;
+      padding: 0.5rem 0.65rem;
+      align-items: start;
+
+      &__date {
+        height: 44px;
+      }
+
+      &__jour {
+        font-size: 1.05rem;
+      }
+
+      &__meta {
+        white-space: nowrap;
+      }
+
+      &__prix {
+        grid-column: auto;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0;
+        font-size: 0.86rem;
+      }
+    }
+  }
+}
+
+@media (max-width: 760px) {
+  .evp .gv-kpis > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .evp .kpi-next {
+    min-width: 0;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+
+    .kpi-next__nom {
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+
+    small {
+      flex: none;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .evp .kpis .kpi-next {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0;
+
+    .kpi-next__nom {
+      max-width: 100%;
+    }
+  }
+}

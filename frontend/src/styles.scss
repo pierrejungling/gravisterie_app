@@ -206,10 +206,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-background);
-  background-image: var(--gv-topo);
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
   color: var(--color-text);
   line-height: 1.6;
   overflow-x: hidden;
@@ -672,5 +668,52 @@ body.gv-shell .commandes-en-cours-wrapper {
 @media (max-width: 899px) {
   .gv-page {
     padding: 1rem 1rem 2rem;
+  }
+}
+
+
+/* =====================================================================
+ * Fond topographique animé (étape 6) : deux calques du motif qui dérivent
+ * très lentement en sens opposés, les courbes semblent onduler.
+ * Désactivé si l'appareil demande moins d'animations.
+ * ===================================================================== */
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: -6%;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--gv-topo);
+  background-size: cover;
+  background-position: center;
+  will-change: transform;
+}
+
+body::before {
+  animation: gv-topo-derive-a 70s ease-in-out infinite alternate;
+}
+
+body::after {
+  opacity: 0.35;
+  transform: scale(1.08) rotate(180deg);
+  animation: gv-topo-derive-b 95s ease-in-out infinite alternate;
+}
+
+@keyframes gv-topo-derive-a {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-1.6%, 1.1%, 0) scale(1.03); }
+  100% { transform: translate3d(1.2%, -1.4%, 0) scale(1.015); }
+}
+
+@keyframes gv-topo-derive-b {
+  0% { transform: translate3d(0, 0, 0) scale(1.08) rotate(180deg); }
+  100% { transform: translate3d(2%, 1.5%, 0) scale(1.12) rotate(181.5deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  body::after {
+    animation: none;
   }
 }

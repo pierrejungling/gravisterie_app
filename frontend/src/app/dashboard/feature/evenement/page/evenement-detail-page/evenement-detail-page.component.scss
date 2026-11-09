@@ -679,3 +679,271 @@
     }
   }
 }
+
+/* ---------- Étape 6 : densité et usage de la largeur ---------- */
+.evd {
+  max-width: 1760px;
+  padding-top: 1rem;
+
+  .back {
+    margin-bottom: 0.5rem;
+  }
+
+  .hero {
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+
+    h1 {
+      margin: 0.1rem 0 0;
+      font-size: clamp(1.3rem, 2.2vw, 1.8rem);
+    }
+
+    &__date {
+      width: 56px;
+      height: 56px;
+    }
+
+    &__jour {
+      font-size: 1.4rem;
+    }
+
+    &__mois {
+      margin-top: 0.15rem;
+      font-size: 0.56rem;
+    }
+
+    &__sub {
+      margin-top: 0.1rem;
+      font-size: 0.9rem;
+    }
+  }
+
+  .kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+
+    .gv-kpi {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      min-width: 0;
+      padding: 0.5rem 0.8rem;
+    }
+
+    .gv-kpi__label {
+      margin: 0;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .gv-kpi__value {
+      flex: none;
+      margin: 0;
+      font-size: 1.05rem;
+      white-space: nowrap;
+      text-align: right;
+
+      small {
+        display: block;
+        font-size: 0.66rem;
+      }
+    }
+
+    .paiement {
+      display: block;
+      font-size: 0.95rem;
+
+      .dot {
+        display: inline-block;
+        margin-right: 0.4rem;
+        width: 10px;
+        height: 10px;
+        vertical-align: baseline;
+      }
+
+      small {
+        width: auto;
+        font-size: 0.6rem;
+      }
+    }
+  }
+
+  .layout,
+  .col {
+    gap: 0.8rem;
+  }
+
+  .card {
+    padding: 0.8rem 0.95rem;
+
+    &__head {
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  /* Infos : libellé à gauche, valeur à droite */
+  .infos {
+    gap: 0;
+
+    > div {
+      display: grid;
+      grid-template-columns: 6.5rem minmax(0, 1fr);
+      align-items: baseline;
+      gap: 0.6rem;
+      padding: 0.38rem 0;
+      border-top: 1px solid var(--gv-line);
+
+      &:first-child {
+        border-top: 0;
+        padding-top: 0;
+      }
+    }
+
+    dd {
+      margin: 0;
+      font-size: 0.9rem;
+    }
+  }
+
+  .map {
+    margin-top: 0.7rem;
+    aspect-ratio: 16 / 7;
+    min-height: 150px;
+  }
+
+  .compteur {
+    margin-top: 0.7rem;
+    padding: 0.5rem 0.7rem;
+  }
+
+  .calcul {
+    margin-top: 0.7rem;
+    padding: 0.5rem 0.7rem;
+  }
+
+  .materiel {
+    label {
+      padding: 0.36rem 0;
+    }
+  }
+
+  .cmd {
+    padding: 0.5rem 0.3rem;
+
+    &__main {
+      gap: 0.2rem;
+    }
+  }
+
+  .gv-empty.small {
+    padding: 0.9rem 0.5rem;
+  }
+}
+
+/* Très large : trois colonnes, la checklist sur deux */
+@media (min-width: 1500px) {
+  .evd {
+    .layout {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    }
+
+    .col:first-child {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .card--infos {
+      grid-row: span 2;
+    }
+  }
+}
+
+@media (min-width: 981px) {
+  .evd .materiel {
+    column-count: 2;
+    column-gap: 1.4rem;
+
+    li {
+      break-inside: avoid;
+      border-top: 0;
+      border-bottom: 1px solid var(--gv-line);
+    }
+  }
+}
+
+/* Bande étroite et téléphone : le terrain d'abord (compteur, matériel, ventes) */
+@media (max-width: 980px) {
+  .evd {
+    .col {
+      display: contents;
+    }
+
+    .card--formule { order: 1; }
+    .card--materiel { order: 2; }
+    .card--commandes { order: 3; }
+    .card--infos { order: 4; }
+    .card--notes { order: 5; }
+    .danger { order: 6; }
+
+    .kpis {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}
+
+@media (max-width: 600px) {
+  .evd {
+    .hero {
+      &__actions {
+        flex-wrap: nowrap;
+        gap: 0.4rem;
+
+        .statut {
+          flex: 1 1 0;
+          width: auto;
+        }
+
+        .statut .gv-select {
+          width: 100%;
+          min-width: 0;
+          min-height: 38px;
+        }
+
+        .gv-btn {
+          flex: 1 1 0;
+          width: auto;
+          min-height: 38px;
+        }
+      }
+    }
+
+    .kpis .gv-kpi {
+      padding: 0.45rem 0.6rem;
+    }
+
+    .kpis .gv-kpi__value {
+      font-size: 0.95rem;
+    }
+
+    .infos > div {
+      grid-template-columns: 6.3rem minmax(0, 1fr);
+      gap: 0.5rem;
+    }
+
+    .infos dt {
+      letter-spacing: 0.1em;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .evd .kpis .gv-kpi__label {
+    font-size: 0.52rem;
+    letter-spacing: 0.08em;
+  }
+}

@@ -4761,3 +4761,595 @@
 .evenement-lien {
   margin-top: 0.6rem;
 }
+
+/* =====================================================================
+ * Refonte (étape 6) : disposition « poste de travail »
+ * - large (>= 1600px) : 3 colonnes (infos / prix / atelier + client)
+ * - moyen (1100-1599px) : 2 colonnes (infos + prix / atelier + client)
+ * - étroit (< 1100px : bande d'écran, tablette, téléphone) : onglets,
+ *   une zone à la fois, barre d'actions d'une ligne en bas
+ * ===================================================================== */
+.detail-commande-wrapper {
+  min-height: auto;
+  padding: 1.1rem clamp(0.75rem, 1.6vw, 1.75rem) 2.5rem;
+  background: transparent;
+}
+
+.detail-commande-container {
+  max-width: 1900px;
+  margin: 0 auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+
+  &.deadline-warning,
+  &.deadline-danger {
+    background: transparent;
+    border-color: transparent;
+  }
+}
+
+/* ---------- En-tête ---------- */
+.cmd-head {
+  position: sticky;
+  top: calc(var(--gv-shell-top) + var(--gv-tabs-h, 0px));
+  z-index: 30;
+  margin-bottom: 14px;
+  padding: 0.85rem 1.1rem 0.8rem;
+  background: var(--gv-panel-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--gv-line);
+  border-left: 3px solid var(--gv-line-strong);
+  border-radius: var(--border-radius);
+
+  .deadline-warning & {
+    border-left-color: var(--gv-warn);
+  }
+
+  .deadline-danger & {
+    border-left-color: #c0392b;
+  }
+
+  &__row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  &__titre {
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    font-family: var(--font-title);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gv-muted);
+
+    .sep {
+      color: var(--gv-line-strong);
+    }
+  }
+
+  &__client {
+    color: var(--gv-accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__h1 {
+    margin: 0.15rem 0 0;
+    font-family: var(--font-title);
+    font-size: clamp(1.25rem, 2vw, 1.75rem);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  &__edit {
+    margin-top: 0.4rem;
+    max-width: 640px;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.6rem;
+
+    .evenement-lien {
+      display: contents;
+    }
+  }
+}
+
+.cmd-chip-btn {
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+
+  &:hover {
+    border-color: var(--gv-accent);
+  }
+}
+
+.cmd-chip--danger {
+  color: #c0392b;
+  border-color: #c0392b;
+  background: rgba(192, 57, 43, 0.08);
+}
+
+.cmd-chip-progress {
+  display: inline-block;
+  width: 34px;
+  height: 5px;
+  margin-right: 0.4rem;
+  vertical-align: middle;
+  border-radius: 99px;
+  background: linear-gradient(90deg, currentColor calc(var(--p, 0) * 1%), var(--gv-line) 0);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+/* Interrupteur « Client attend » */
+.cmd-attente {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 32px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--gv-line);
+  border-radius: 99px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--gv-ok);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+
+  input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &.is-attend {
+    color: #c0392b;
+    border-color: rgba(192, 57, 43, 0.45);
+    background: rgba(192, 57, 43, 0.06);
+
+    .cmd-attente__dot {
+      animation: cmd-pulse 1.6s ease-in-out infinite;
+    }
+  }
+}
+
+@keyframes cmd-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* Boutons icône */
+.cmd-ico {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--gv-line);
+  border-radius: var(--border-radius);
+  background: var(--gv-panel);
+  color: var(--gv-ink);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+
+  svg {
+    width: 17px;
+    height: 17px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  &:hover:not(:disabled),
+  &.is-on {
+    border-color: var(--gv-accent);
+    color: var(--gv-accent);
+  }
+
+  &.is-ok {
+    color: var(--gv-ok);
+    border-color: var(--gv-ok);
+  }
+
+  &--danger:hover:not(:disabled) {
+    color: #c0392b;
+    border-color: #c0392b;
+  }
+}
+
+.cmd-maj {
+  border-color: var(--gv-accent);
+  color: var(--gv-accent);
+}
+
+/* ---------- Onglets (écran étroit) ---------- */
+.cmd-onglets {
+  display: none;
+}
+
+/* ---------- Grille ---------- */
+.cmd-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.cmd-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+
+  &:empty {
+    display: none;
+  }
+}
+
+/* Sections : panneaux compacts */
+.cmd-grid .form-section,
+.cmd-grid .statuts-section,
+.cmd-grid .pcs-realises-section {
+  margin: 0;
+  padding: 0.95rem 1.1rem 1.1rem;
+  border: 1px solid var(--gv-line);
+  border-radius: var(--border-radius);
+  background: var(--gv-panel);
+  min-width: 0;
+
+  &:first-of-type {
+    padding-top: 0.95rem;
+  }
+}
+
+.cmd-grid .fichiers-section {
+  margin: 0;
+}
+
+.cmd-grid .section-title,
+.cmd-grid .statuts-section__title-row .section-title {
+  margin: 0 0 0.8rem;
+  padding: 0;
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gv-ink);
+}
+
+.cmd-grid .section-title-row {
+  margin-bottom: 0.4rem;
+}
+
+.cmd-grid .input-wrapper {
+  margin-bottom: 0.6rem;
+}
+
+/* Champs en lecture : plus serrés */
+.cmd-grid .input-wrapper .copy-field-readonly {
+  padding: 0.4rem 0.6rem 0.45rem;
+  border-color: var(--gv-line);
+  gap: 0.5rem;
+}
+
+.cmd-grid .input-wrapper .copy-field-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+
+.cmd-grid .input-wrapper .copy-field-value {
+  font-size: 0.92rem;
+}
+
+.cmd-grid .input-wrapper .copy-field-copy-btn {
+  padding: 0.3rem 0.45rem;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+.cmd-grid .input-wrapper .copy-field-readonly:hover .copy-field-copy-btn,
+.cmd-grid .input-wrapper .copy-field-copy-btn:focus-visible {
+  opacity: 1;
+}
+
+/* Informations : champs côte à côte quand il y a la place */
+.cmd-zone--infos,
+.cmd-zone--perso {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr));
+  column-gap: 0.6rem;
+  align-content: start;
+
+  > .section-title,
+  > .input-wrapper--large,
+  > .input-wrapper:has(textarea),
+  > .input-wrapper:has(.couleurs-grid),
+  > .input-wrapper:has(.copy-field-readonly--multiline) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Statuts : liste compacte */
+.cmd-grid .statuts-list {
+  gap: 0.3rem;
+  margin-top: 0;
+}
+
+.cmd-grid .statut-checkbox-label {
+  padding: 0.42rem 0.6rem;
+  gap: 0.55rem;
+  font-size: 0.86rem;
+}
+
+.cmd-grid .statut-checkbox-label .statut-label {
+  font-size: 0.86rem;
+}
+
+/* ---------- Écran moyen : 2 colonnes ---------- */
+@media (min-width: 1100px) {
+  .cmd-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
+  }
+
+  .cmd-col--a {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .cmd-col--b {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .cmd-col--c {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .cmd-foot,
+  .cmd-sheet {
+    display: none !important;
+  }
+}
+
+/* ---------- Très large : 3 colonnes ---------- */
+@media (min-width: 1600px) {
+  .cmd-grid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(360px, 420px);
+  }
+
+  .cmd-col--b {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .cmd-col--c {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+
+/* ---------- Étroit : onglets ---------- */
+@media (max-width: 1099px) {
+  .detail-commande-wrapper {
+    padding: 0.6rem 0.6rem calc(64px + 1rem);
+  }
+
+  .cmd-head {
+    position: static;
+    margin-bottom: 0;
+    padding: 0.7rem 0.85rem 0.7rem;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+
+    &__actions {
+      display: none;
+    }
+
+    &__chips {
+      margin-top: 0.45rem;
+    }
+  }
+
+  .cmd-onglets {
+    position: sticky;
+    top: calc(var(--gv-shell-top) + var(--gv-tabs-h, 0px));
+    z-index: 30;
+    display: flex;
+    gap: 0;
+    margin-bottom: 10px;
+    background: var(--gv-panel-glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--gv-line);
+    border-top: 0;
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    overflow-x: auto;
+    scrollbar-width: none;
+
+    button {
+      flex: 1 0 auto;
+      min-height: 42px;
+      padding: 0 0.75rem;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      background: none;
+      color: var(--gv-muted);
+      font-family: var(--font-title);
+      font-size: 0.66rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      cursor: pointer;
+
+      &.is-active {
+        color: var(--gv-ink);
+        border-bottom-color: var(--gv-accent);
+      }
+    }
+
+    &__n {
+      margin-left: 0.3rem;
+      font-family: var(--font-mono);
+      color: var(--gv-accent);
+      letter-spacing: 0;
+    }
+  }
+
+  .cmd-zone--off {
+    display: none !important;
+  }
+
+  /* Atelier : le compteur d'abord, puis les statuts en grille compacte */
+  .cmd-zone--compteurs {
+    order: -1;
+  }
+
+  .cmd-grid .statuts-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  /* Barre d'actions : une ligne, au-dessus de la barre de navigation */
+  .cmd-foot {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
+    background: var(--gv-panel-glass);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid var(--gv-line);
+
+    .cmd-ico {
+      width: 40px;
+      height: 40px;
+    }
+
+    .cmd-attente {
+      height: 40px;
+    }
+
+    &__main {
+      flex: 1;
+      height: 40px;
+      justify-content: center;
+    }
+  }
+
+  .cmd-sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+
+    &__backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(13, 12, 11, 0.4);
+    }
+
+    &__panel {
+      position: absolute;
+      left: 0.6rem;
+      right: 0.6rem;
+      bottom: calc(64px + 0.6rem + env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      padding: 0.35rem;
+      background: var(--gv-panel);
+      border: 1px solid var(--gv-line);
+      border-radius: var(--border-radius);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+
+      button {
+        padding: 0.8rem 0.9rem;
+        border: 0;
+        border-radius: 6px;
+        background: none;
+        color: var(--gv-ink);
+        text-align: left;
+        font-size: 0.92rem;
+        font-weight: 600;
+        cursor: pointer;
+
+        &:hover {
+          background: var(--gv-accent-soft);
+        }
+
+        &.is-danger {
+          color: #c0392b;
+        }
+      }
+    }
+  }
+}
+
+/* Téléphone : la barre d'actions passe au-dessus de la navigation du bas */
+@media (max-width: 899px) {
+  .detail-commande-wrapper {
+    padding-bottom: calc(64px + 1rem);
+  }
+
+  .cmd-onglets {
+    top: calc(56px + var(--gv-tabs-h, 0px));
+  }
+
+  .cmd-foot {
+    bottom: calc(var(--gv-shell-bottom) + env(safe-area-inset-bottom));
+    padding-bottom: 0.5rem;
+  }
+
+  .cmd-sheet__panel {
+    bottom: calc(var(--gv-shell-bottom) + 64px + 0.6rem + env(safe-area-inset-bottom));
+  }
+}

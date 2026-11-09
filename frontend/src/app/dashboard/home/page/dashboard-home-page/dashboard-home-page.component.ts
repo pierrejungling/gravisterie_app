@@ -1,321 +1,309 @@
-import { Component, OnInit, inject, computed, signal, effect, DestroyRef } from '@angular/core';
+import { Component, OnInit, inject, computed, signal, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HeaderComponent, ThemeService } from '@shared';
+import { HeaderComponent } from '@shared';
 import { ApiService, ApiURI, ApiResponse, RealtimeService } from '@api';
 import { Commande, StatutCommande } from '../../../feature/commande/model/commande.interface';
 import { Bon } from '../../../feature/bon/model/bon.interface';
 import { BonService } from '../../../feature/bon/service/bon.service';
+import { Evenement, aVenir, joursAvant, typeEvenement } from '../../../feature/evenement/model/evenement.interface';
 
-export interface DashboardCard {
-  title: string;
-  description: string;
-  route: string;
-  icon: string;
-  count?: number;
-  countTerminees?: number;
-  countAnnulees?: number;
-  countUnit?: 'commande' | 'bon actif' | 'fiche client' | 'événement à venir';
+/** Étapes de l'atelier, dans l'ordre du Kanban. */
+const ETAPES: Array<{ cle: string; label: string; couleur: string; statuts: StatutCommande[] }> = [
+  { cle: 'infos', label: 'Infos à recevoir', couleur: 'var(--gv-muted)', statuts: [StatutCommande.EN_ATTENTE_INFORMATION] },
+  { cle: 'modele', label: 'À modéliser', couleur: 'var(--gv-warn)', statuts: [StatutCommande.A_MODELLISER_PREPARER] },
+  { cle: 'graver', label: 'À graver', couleur: 'var(--gv-accent)', statuts: [StatutCommande.A_GRAVER] },
+  { cle: 'finir', label: 'Finition', couleur: '#7a5c99', statuts: [StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE] },
+  { cle: 'photo', label: 'À prendre en photo', couleur: 'var(--gv-ok)', statuts: [StatutCommande.A_PRENDRE_EN_PHOTO] },
+  {
+    cle: 'apres',
+    label: 'Livrer, facturer, avis',
+    couleur: '#3b6e8f',
+    statuts: [StatutCommande.A_LIVRER, StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS],
+  },
+];
+
+interface Tache {
+  id: string;
+  titre: string;
+  detail: string;
+  tag: string;
+  ton: 'danger' | 'warn' | 'accent';
+  lien: any[];
+  tri: number;
 }
 
-import { Evenement, aVenir } from '../../../feature/evenement/model/evenement.interface';
 @Component({
   selector: 'app-dashboard-home-page',
   standalone: true,
   imports: [CommonModule, RouterModule, HeaderComponent],
   templateUrl: './dashboard-home-page.component.html',
-  styleUrl: './dashboard-home-page.component.scss'
+  styleUrl: './dashboard-home-page.component.scss',
 })
 export class DashboardHomePageComponent implements OnInit {
-  logoError = false;
-  currentUser: string = 'Utilisateur';
-  private readonly apiService: ApiService = inject(ApiService);
+  private readonly api = inject(ApiService);
   private readonly realtime = inject(RealtimeService);
+  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly themeService: ThemeService = inject(ThemeService);
 
-  // Liste des fichiers logo possibles à essayer (ordre de priorité)
-  private readonly possibleLogosLight = [
-    // Logo principal spécifié par l'utilisateur (mode clair)
-    'assets/images/Logo/La Gravisterie_N.svg',
-    // Fallback vers autres formats
-    'assets/images/Logo/La Gravisterie avec noir txt_N.svg',
-    'assets/images/Logo/La Gravisterie carré_N.svg',
-    'assets/images/Logo/logo_carre.png'
-  ];
+  readonly prenom = signal<string>(localStorage.getItem('currentUser') || '');
+  readonly commandes = signal<Commande[]>([]);
+  readonly evenements = signal<Evenement[]>([]);
+  readonly nbClients = signal<number | null>(null);
+  readonly nbBonsActifs = signal<number | null>(null);
+  readonly charge = signal(false);
 
-  private readonly possibleLogosDark = [
-    // Logo blanc pour mode nuit
-    'assets/images/Logo/La Gravisterie Blanc.svg',
-    // Fallback vers autres formats blancs
-    'assets/images/Logo/La Gravisterie blanc sans fond copie.svg',
-    'assets/images/Logo/La Gravisterie blanc carré.svg',
-    'assets/images/Logo/La Gravisterie avec txt blanc sans fond copie.svg'
-  ];
+  readonly maintenant = new Date();
+  readonly dateLabel = this.maintenant.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
+  readonly semaine = numeroSemaine(this.maintenant);
+  readonly salutation = this.maintenant.getHours() >= 18 ? 'Bonsoir' : 'Bonjour';
 
-  // Signal pour le logo de fallback (en cas d'erreur)
-  private fallbackLogoPath = signal<string>('');
-  // Réinitialiser le fallback quand le thème change (effect doit être créé dans le contexte d'injection)
-  private readonly resetFallbackLogo = effect(() => {
-    this.themeService.theme();
-    this.fallbackLogoPath.set('');
-  }, { allowSignalWrites: true });
+  private readonly actives = computed(() => this.commandes().filter((c) => c.statut_commande !== StatutCommande.ANNULEE));
+  private readonly enCours = computed(() =>
+    this.commandes().filter((c) => c.statut_commande !== StatutCommande.TERMINE && c.statut_commande !== StatutCommande.ANNULEE),
+  );
 
-  // Computed signal pour le logo selon le thème
-  logoPath = computed(() => {
-    // Si un fallback a été défini, l'utiliser
-    const fallback = this.fallbackLogoPath();
-    if (fallback) {
-      return fallback;
-    }
-    
-    // Sinon, utiliser le logo selon le thème
-    const isDark = this.themeService.isDarkMode();
-    const possibleLogos = isDark ? this.possibleLogosDark : this.possibleLogosLight;
-    return possibleLogos[0];
-  });
-  
-  dashboardCards: DashboardCard[] = [
-    {
-      title: 'Nouvelle commande / vente',
-      description: 'Créer une nouvelle commande / vente',
-      route: '/dashboard/commandes/nouvelle',
-      icon: '➕',
-    },
-    {
-      title: 'Commandes en cours',
-      description: 'Suivez l\'état de vos commandes en cours de traitement',
-      route: '/dashboard/commandes/en-cours',
-      icon: '📋',
-      count: 0
-    },
-    {
-      title: 'Commandes / ventes terminées ou annulées',
-      description: 'Consultez vos commandes / ventes finalisées',
-      route: '/dashboard/commandes/terminees',
-      icon: '✅',
-      countTerminees: 0,
-      countAnnulees: 0
-    },
-    {
-      title: 'Clients',
-      description: 'Fiches clients, historique, chiffres et doublons',
-      route: '/dashboard/clients',
-      icon: '👥',
-      count: 0,
-      countUnit: 'fiche client',
-    },
-    {
-      title: 'Événements',
-      description: 'Gravure en direct, nocturnes, salons et leurs commandes',
-      route: '/dashboard/evenements',
-      icon: '📍',
-      count: 0,
-      countUnit: 'événement à venir',
-    },
-    {
-      title: 'Bons cadeaux',
-      description: 'Créer et suivre vos bons cadeaux',
-      route: '/dashboard/bons',
-      icon: '🎁',
-      count: 0,
-      countUnit: 'bon actif',
-    },
-  ];
+  readonly caAnnee = computed(() =>
+    this.actives()
+      .filter((c) => c.date_commande && new Date(c.date_commande).getFullYear() === this.maintenant.getFullYear())
+      .reduce((s, c) => s + montant(c.prix_final), 0),
+  );
 
-  ngOnInit(): void {
-    // Récupérer le nom d'utilisateur depuis localStorage (fallback)
-    const storedUser = localStorage.getItem('currentUser');
-    if (storedUser) {
-      this.currentUser = storedUser;
-    }
-    
-    // Récupérer les informations de l'utilisateur depuis l'API
-    this.apiService.get(ApiURI.ME).subscribe({
-      next: (response: ApiResponse) => {
-        if (response.result && response.data && response.data.username) {
-          this.currentUser = response.data.username;
-          // Mettre à jour localStorage avec le username de l'API
-          localStorage.setItem('currentUser', response.data.username);
-        }
-      },
-      error: (error: any) => {
-        console.error('Erreur lors de la récupération des informations utilisateur:', error);
-        // En cas d'erreur, utiliser le nom stocké dans localStorage ou "Utilisateur"
-        this.currentUser = storedUser || 'Utilisateur';
-      }
+  /** Le travail du jour : ce qui est à graver, à finir, et les clients qui attendent une réponse. */
+  readonly aujourdhui = computed(() => {
+    const enCours = this.enCours();
+    const parDeadline = (a: Commande, b: Commande) => t(a.deadline) - t(b.deadline) || t(a.date_commande) - t(b.date_commande);
+    const bloc = (liste: Commande[]) => ({
+      nb: liste.length,
+      items: [...liste].sort(parDeadline).slice(0, 4).map((c) => ({
+        id: c.id_commande,
+        titre: c.produit || 'Commande',
+        deadline: c.deadline ? joursAvant(c.deadline) : null,
+      })),
     });
+    return {
+      graver: bloc(enCours.filter((c) => c.statut_commande === StatutCommande.A_GRAVER || c.statut_commande === StatutCommande.A_MODELLISER_PREPARER)),
+      finir: bloc(enCours.filter((c) => c.statut_commande === StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE)),
+      attend: bloc(enCours.filter((c) => c.attente_reponse === false)),
+    };
+  });
 
-    // Charger les commandes pour mettre à jour les compteurs
-    this.loadCommandesCount();
-
-    // Charger les bons pour afficher le nombre de bons actifs
-    this.loadBonsCount();
-    this.loadClientsCount();
-    this.loadEvenementsCount();
-    this.realtime.on('evenement')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.loadEvenementsCount());
-    this.realtime.on('client', 'commande')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.loadClientsCount());
-
-    this.realtime.on('commande')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.loadCommandesCount());
-    this.realtime.on('bon')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.loadBonsCount());
-
+  tagDeadline(j: number | null): string {
+    if (j === null) return '';
+    if (j < 0) return `${j} j`;
+    if (j === 0) return "auj.";
+    return `J-${j}`;
   }
 
-  /** Événements à venir (non terminés, annulés ou refusés). */
-  loadEvenementsCount(): void {
-    this.apiService.get(ApiURI.LISTE_EVENEMENTS).subscribe({
-      next: (response: ApiResponse) => {
-        if (response.result && Array.isArray(response.data)) {
-          const card = this.dashboardCards.find((c) => c.route === '/dashboard/evenements');
-          if (card) card.count = (response.data as Evenement[]).filter((e) => aVenir(e)).length;
+  readonly kpis = computed(() => {
+    const enCours = this.enCours();
+    const impayes = this.actives().filter((c) => !c['payé'] && montant(c.prix_final) > 0);
+    const retard = enCours.filter((c) => (joursAvant(c.deadline) ?? 0) < 0);
+    return {
+      enCours: enCours.length,
+      clientAttend: enCours.filter((c) => c.attente_reponse === false).length,
+      aEncaisser: impayes.reduce((s, c) => s + montant(c.prix_final), 0),
+      nbImpayes: impayes.length,
+      retard: retard.length,
+      terminees: this.commandes().filter((c) => c.statut_commande === StatutCommande.TERMINE).length,
+      annulees: this.commandes().filter((c) => c.statut_commande === StatutCommande.ANNULEE).length,
+    };
+  });
+
+  readonly atelier = computed(() => {
+    const enCours = this.enCours();
+    const etapes = ETAPES.map((e) => {
+      const liste = enCours.filter((c) => e.statuts.includes(c.statut_commande));
+      return { ...e, nb: liste.length, retard: liste.filter((c) => (joursAvant(c.deadline) ?? 0) < 0).length };
+    }).filter((e) => e.nb > 0);
+    const total = etapes.reduce((s, e) => s + e.nb, 0);
+    return { etapes, total };
+  });
+
+  readonly prochains = computed(() =>
+    this.evenements()
+      .filter((e) => aVenir(e) && e.statut !== 'prospect')
+      .sort((a, b) => t(a.date_debut) - t(b.date_debut))
+      .slice(0, 3),
+  );
+
+  /** Priorités : deadlines dépassées ou dans les 7 jours, événements de la semaine. */
+  readonly taches = computed<Tache[]>(() => {
+    const out: Tache[] = [];
+    for (const c of this.enCours()) {
+      const j = joursAvant(c.deadline);
+      if (j === null || j > 7) continue;
+      out.push({
+        id: c.id_commande,
+        titre: c.produit || 'Commande',
+        detail: `${libelleEtape(c.statut_commande)} · deadline ${dateCourte(c.deadline)}`,
+        tag: j < 0 ? `${j} j` : j === 0 ? "Aujourd'hui" : j === 1 ? 'Demain' : `J-${j}`,
+        ton: j < 0 ? 'danger' : j <= 2 ? 'warn' : 'accent',
+        lien: ['/dashboard', 'commandes', 'detail', c.id_commande],
+        tri: j,
+      });
+    }
+    for (const e of this.prochains()) {
+      const j = joursAvant(e.date_debut);
+      if (j === null || j > 7) continue;
+      const fait = (e.materiel ?? []).filter((m) => m.fait).length;
+      const total = (e.materiel ?? []).length;
+      out.push({
+        id: e.id_evenement,
+        titre: `Préparer ${e.nom}`,
+        detail: total ? `Matériel prêt ${fait} / ${total}` : typeEvenement(e.type).label,
+        tag: j <= 0 ? "Aujourd'hui" : j === 1 ? 'Demain' : `J-${j}`,
+        ton: 'accent',
+        lien: ['/dashboard', 'evenements', e.id_evenement],
+        tri: j - 0.5,
+      });
+    }
+    return out.sort((a, b) => a.tri - b.tri).slice(0, 6);
+  });
+
+  readonly nbAutresTaches = computed(() => {
+    const n = this.enCours().filter((c) => {
+      const j = joursAvant(c.deadline);
+      return j !== null && j <= 7;
+    }).length;
+    return Math.max(n - this.taches().filter((x) => x.lien[1] === 'commandes').length, 0);
+  });
+
+  ngOnInit(): void {
+    this.api.get(ApiURI.ME).subscribe({
+      next: (r: ApiResponse) => {
+        if (r.result && r.data?.username) {
+          this.prenom.set(r.data.username);
+          localStorage.setItem('currentUser', r.data.username);
+        }
+      },
+      error: () => undefined,
+    });
+
+    this.chargerCommandes();
+    this.chargerEvenements();
+    this.chargerClients();
+    this.chargerBons();
+
+    this.realtime.on('commande').pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.chargerCommandes());
+    this.realtime.on('evenement').pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.chargerEvenements());
+    this.realtime.on('client', 'commande').pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.chargerClients());
+    this.realtime.on('bon').pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.chargerBons());
+  }
+
+  private chargerCommandes(): void {
+    this.api.get(ApiURI.LISTE_COMMANDES).subscribe({
+      next: (r: ApiResponse) => {
+        if (r.result && Array.isArray(r.data)) this.commandes.set(r.data as Commande[]);
+        this.charge.set(true);
+      },
+      error: () => this.charge.set(true),
+    });
+  }
+
+  private chargerEvenements(): void {
+    this.api.get(ApiURI.LISTE_EVENEMENTS).subscribe({
+      next: (r: ApiResponse) => {
+        if (r.result && Array.isArray(r.data)) this.evenements.set(r.data as Evenement[]);
+      },
+      error: () => undefined,
+    });
+  }
+
+  private chargerClients(): void {
+    this.api.get(ApiURI.LISTE_CLIENTS).subscribe({
+      next: (r: ApiResponse) => {
+        if (r.result && Array.isArray(r.data)) this.nbClients.set(r.data.length);
+      },
+      error: () => undefined,
+    });
+  }
+
+  private chargerBons(): void {
+    this.api.get(ApiURI.LISTE_BONS).subscribe({
+      next: (r: ApiResponse) => {
+        if (r.result && Array.isArray(r.data)) {
+          this.nbBonsActifs.set((r.data as Bon[]).filter((b) => !b.utilise && !BonService.isExpired(b)).length);
         }
       },
       error: () => undefined,
     });
   }
 
-  loadCommandesCount(): void {
-    this.apiService.get(ApiURI.LISTE_COMMANDES).subscribe({
-      next: (response: ApiResponse) => {
-        if (response.result && response.data) {
-          const commandes = response.data as Commande[];
-          
-          // Compter les commandes non terminées (excluant aussi les annulées)
-          const commandesEnCours = commandes.filter(cmd =>
-            cmd.statut_commande !== StatutCommande.TERMINE && cmd.statut_commande !== StatutCommande.ANNULEE
-          ).length;
-
-          // Compter séparément les commandes terminées et annulées
-          const commandesTerminees = commandes.filter(cmd => 
-            cmd.statut_commande === StatutCommande.TERMINE
-          ).length;
-
-          const commandesAnnulees = commandes.filter(cmd => 
-            cmd.statut_commande === StatutCommande.ANNULEE
-          ).length;
-
-          // Mettre à jour le compteur de la carte "Commandes en cours"
-          const commandesEnCoursCard = this.dashboardCards.find(card => card.route === '/dashboard/commandes/en-cours');
-          if (commandesEnCoursCard) {
-            commandesEnCoursCard.count = commandesEnCours;
-          }
-
-          // Mettre à jour les compteurs de la carte "Commandes et ventes terminées ou annulées"
-          const commandesTermineesCard = this.dashboardCards.find(card => card.route === '/dashboard/commandes/terminees');
-          if (commandesTermineesCard) {
-            commandesTermineesCard.countTerminees = commandesTerminees;
-            commandesTermineesCard.countAnnulees = commandesAnnulees;
-          }
-        }
-      },
-      error: (error: any) => {
-        console.error('Erreur lors de la récupération des commandes:', error);
-      }
-    });
+  // ---------- Affichage ----------
+  euros(v: number): string {
+    return Math.round(v).toLocaleString('fr-BE') + ' €';
   }
 
-  loadClientsCount(): void {
-    this.apiService.get(ApiURI.LISTE_CLIENTS).subscribe({
-      next: (response: ApiResponse) => {
-        if (response.result && Array.isArray(response.data)) {
-          const clientsCard = this.dashboardCards.find((card) => card.route === '/dashboard/clients');
-          if (clientsCard) {
-            clientsCard.count = response.data.length;
-          }
-        }
-      },
-      error: (err) => console.error('Erreur chargement clients:', err),
-    });
+  jour(e: Evenement): string {
+    return e.date_debut ? String(new Date(e.date_debut).getDate()) : '?';
   }
 
-  loadBonsCount(): void {
-    this.apiService.get(ApiURI.LISTE_BONS).subscribe({
-      next: (response: ApiResponse) => {
-        if (response.result && response.data) {
-          const bons = response.data as Bon[];
-          const bonsActifs = bons.filter(
-            (b) => !b.utilise && !BonService.isExpired(b)
-          ).length;
-          const bonsCard = this.dashboardCards.find(
-            (card) => card.route === '/dashboard/bons'
-          );
-          if (bonsCard) {
-            bonsCard.count = bonsActifs;
-          }
-        }
-      },
-      error: (err) => console.error('Erreur chargement bons:', err),
-    });
+  moisCourt(e: Evenement): string {
+    return e.date_debut ? new Date(e.date_debut).toLocaleDateString('fr-BE', { month: 'short' }).replace('.', '') : '';
   }
 
-  onLogoLoad(): void {
-    this.logoError = false;
-    // Réinitialiser le fallback quand le logo charge avec succès
-    this.fallbackLogoPath.set('');
-    console.log('Logo chargé avec succès:', this.logoPath());
-  }
-
-  onLogoError(event: Event): void {
-    const img = event.target as HTMLImageElement;
-    if (img) {
-      console.error('Erreur de chargement du logo:', img.src);
-      img.style.display = 'none';
+  infoEvenement(e: Evenement): string {
+    const parts: string[] = [];
+    if (e.date_debut) {
+      const d = new Date(e.date_debut);
+      parts.push(d.toLocaleDateString('fr-BE', { weekday: 'short' }).replace('.', '') + ' ' + d.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }).replace(':', ' h '));
     }
-    
-    // Essayer le logo suivant
-    this.tryNextLogo();
+    if (e.lieu) parts.push(e.lieu);
+    return parts.join(' · ');
   }
 
-  /** Indique que l’on arrive sur « Commandes en cours » depuis cette page (sections fermées au chargement). */
-  setEntryFromForCommandesEnCours(value: string): void {
+  compteurEvenement(e: Evenement): string {
+    const j = joursAvant(e.date_debut);
+    if (j === null) return '';
+    if (j <= 0) return "Aujourd'hui";
+    if (j === 1) return 'Demain';
+    return `Dans ${j} j`;
+  }
+
+  materiel(e: Evenement): { fait: number; total: number } {
+    const m = e.materiel ?? [];
+    return { fait: m.filter((x) => x.fait).length, total: m.length };
+  }
+
+  allerEnCours(): void {
     try {
-      sessionStorage.setItem('commandes-en-cours-entry-from', value);
+      sessionStorage.setItem('commandes-en-cours-entry-from', 'dashboard');
     } catch {}
+    this.router.navigate(['/dashboard', 'commandes', 'en-cours']);
   }
 
-  /** Indique que l’on arrive sur « Nouvelle commande » depuis le dashboard (pas de restauration de scroll). */
-  clearScrollForNouvelleCommande(): void {
+  nouvelleCommande(): void {
     try {
       sessionStorage.setItem('nouvelle-commande-clear-scroll', '1');
     } catch {}
+    this.router.navigate(['/dashboard', 'commandes', 'nouvelle']);
   }
+}
 
-  tryNextLogo(): void {
-    const isDark = this.themeService.isDarkMode();
-    const possibleLogos = isDark ? this.possibleLogosDark : this.possibleLogosLight;
-    const currentPath = this.logoPath();
-    
-    // Trouver l'index du logo actuel dans la liste appropriée
-    const currentIndex = possibleLogos.indexOf(currentPath);
-    
-    console.error('Erreur de chargement du logo:', currentPath, 'Index:', currentIndex);
-    
-    // Essayer le logo suivant
-    if (currentIndex < possibleLogos.length - 1 && currentIndex >= 0) {
-      // Essayer sans encodage d'abord
-      const nextLogo = possibleLogos[currentIndex + 1];
-      this.fallbackLogoPath.set(nextLogo);
-      this.logoError = false;
-      console.log('Essai du logo suivant (sans encodage):', nextLogo);
-    } else if (currentIndex === -1 && !currentPath.includes('%20')) {
-      // Le logo actuel n'est pas dans la liste, essayer avec encodage
-      console.log('Tentative avec encodage des espaces...');
-      const encodedLogo = possibleLogos[0].split('/').map(part => encodeURIComponent(part)).join('/');
-      this.fallbackLogoPath.set(encodedLogo);
-      this.logoError = false;
-    } else {
-      // Tous les logos ont échoué
-      this.logoError = true;
-      console.error('Tous les logos ont échoué à charger');
-    }
-  }
+// ---------- Utilitaires ----------
+function montant(v: unknown): number {
+  const n = Number(v);
+  return isNaN(n) ? 0 : n;
+}
+
+function t(v: string | null | undefined): number {
+  return v ? new Date(v).getTime() : Infinity;
+}
+
+function dateCourte(v: string | null | undefined): string {
+  return v ? new Date(v).toLocaleDateString('fr-BE', { day: 'numeric', month: 'short' }) : '';
+}
+
+function libelleEtape(statut: StatutCommande): string {
+  return ETAPES.find((e) => e.statuts.includes(statut))?.label ?? statut;
+}
+
+function numeroSemaine(d: Date): number {
+  const x = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const jour = x.getUTCDay() || 7;
+  x.setUTCDate(x.getUTCDate() + 4 - jour);
+  const debut = new Date(Date.UTC(x.getUTCFullYear(), 0, 1));
+  return Math.ceil(((x.getTime() - debut.getTime()) / 86400000 + 1) / 7);
 }

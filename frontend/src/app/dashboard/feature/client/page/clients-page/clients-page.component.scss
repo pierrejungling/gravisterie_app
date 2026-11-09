@@ -449,3 +449,184 @@
     width: 100%;
   }
 }
+
+/* ---------- Étape 6 : densité et usage de la largeur ---------- */
+.cl {
+  max-width: 1760px;
+  padding-top: 1.1rem;
+
+  .gv-page-head {
+    margin-bottom: 0.8rem;
+  }
+
+  .kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 0.7rem;
+
+    .gv-kpi {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.6rem;
+      padding: 0.5rem 0.8rem;
+    }
+
+    .gv-kpi__label {
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    .gv-kpi__value {
+      margin: 0;
+      font-size: 1.05rem;
+      white-space: nowrap;
+
+      small {
+        font-size: 0.68rem;
+      }
+    }
+  }
+
+  .toolbar {
+    margin-bottom: 0.6rem;
+  }
+
+  .client-row {
+    gap: 0.75rem;
+    padding: 0.4rem 0.9rem;
+
+    .gv-avatar {
+      width: 32px;
+      height: 32px;
+      font-size: 0.62rem;
+    }
+
+    &__name {
+      font-size: 0.9rem;
+      line-height: 1.25;
+    }
+
+    &__meta {
+      font-size: 0.75rem;
+    }
+  }
+
+  .client-row--head2 {
+    display: none;
+  }
+}
+
+@media (min-width: 1500px) {
+  .cl .client-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 0;
+
+    .client-row {
+      border-bottom: 1px solid var(--gv-line);
+    }
+
+    .client-row:nth-child(odd) {
+      border-right: 1px solid var(--gv-line);
+    }
+
+    .client-row--head2 {
+      display: grid;
+    }
+  }
+}
+
+@media (max-width: 760px) {
+  .cl {
+    padding-top: 0.7rem;
+
+    .gv-page-head {
+      margin-bottom: 0.6rem;
+    }
+
+    .kpis {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.4rem;
+
+      .gv-kpi {
+        padding: 0.4rem 0.6rem;
+      }
+
+      .gv-kpi__label {
+        font-size: 0.52rem;
+        letter-spacing: 0.1em;
+      }
+
+      .gv-kpi__value {
+        font-size: 0.9rem;
+
+        small {
+          display: none;
+        }
+      }
+    }
+
+    .toolbar {
+      flex-direction: row;
+
+      &__sort {
+        width: auto;
+        min-width: 0;
+        flex: 0 1 44%;
+      }
+    }
+
+    .client-row {
+      grid-template-columns: 32px minmax(0, 1fr) auto;
+      grid-template-areas: 'avatar main ca' 'avatar main date';
+      row-gap: 0;
+      column-gap: 0.6rem;
+      padding: 0.45rem 0.7rem;
+
+      > .gv-avatar {
+        align-self: center;
+      }
+
+      .num[data-label='CA'] {
+        grid-area: ca;
+        align-self: end;
+        text-align: right;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--color-text);
+      }
+
+      .num[data-label='Dernière'] {
+        grid-area: date;
+        align-self: start;
+        font-size: 0.68rem;
+      }
+
+      &__name .gv-chip {
+        font-size: 0.6rem;
+        padding: 0.05rem 0.35rem;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .cl .kpis {
+    .gv-kpi {
+      gap: 0.35rem;
+      min-width: 0;
+    }
+
+    .gv-kpi__label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .gv-kpi__value {
+      flex: none;
+      font-size: 0.84rem;
+    }
+  }
+}

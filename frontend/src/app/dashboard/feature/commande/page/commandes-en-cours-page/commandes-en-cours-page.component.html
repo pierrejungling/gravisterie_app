@@ -1,270 +1,164 @@
 <app-header></app-header>
 
-<div class="commandes-en-cours-wrapper">
-  <div class="commandes-en-cours-container" #mobileContainer>
-    <div class="page-header">
-      <div class="page-header__main">
-        <h1 class="page-title">Commandes en cours</h1>
-        <p
-          class="site-orders-counter"
-          *ngIf="countCommandesSiteNonTraitees() > 0"
-          [attr.aria-label]="countCommandesSiteNonTraitees() + ' nouvelle(s) commande(s) à traiter'">
-          <span class="site-orders-counter__dot" aria-hidden="true"></span>
-          <span class="site-orders-counter__count">{{ countCommandesSiteNonTraitees() }}</span>
-          <span class="site-orders-counter__label">{{ countCommandesSiteNonTraitees() > 1 ? 'nouvelles commandes à traiter' : 'nouvelle commande à traiter' }}</span>
-        </p>
-      </div>
-      <div class="header-actions">
-        <button class="btn-add-commande" (click)="navigateToNouvelleCommande()" title="Créer une nouvelle commande">
-          +
+<div class="gv-page kb">
+  <!-- Barre du haut : titre, recherche, filtres, actions -->
+  <header class="kb-bar">
+    <div class="kb-bar__titre">
+      <h1>En cours</h1>
+      <span class="kb-bar__nb">
+        @if (filtreActif()) { {{ nbAffichees() }} / }{{ enCours().length }}
+      </span>
+      @if (nbSiteNew() > 0) {
+        <button type="button" class="kb-site" (click)="choisirOnglet('attente')" title="Commandes du site à traiter">
+          {{ nbSiteNew() }} du site
         </button>
-        <button class="btn-navigation" (click)="navigateToTerminees()">
-          Voir les commandes terminées / annulées
-        </button>
-      </div>
+      }
     </div>
 
-    <div class="loading-area" *ngIf="isLoading()">
-      <p>Chargement des commandes...</p>
+    <div class="kb-bar__filtres">
+      <div class="kb-cherche">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></svg>
+        <input
+          type="search"
+          class="gv-input"
+          placeholder="Produit, client, société"
+          aria-label="Filtrer les commandes"
+          [value]="filtre()"
+          (input)="filtre.set($any($event.target).value)" />
+      </div>
+      <button type="button" class="kb-filtre kb-filtre--attend" [class.is-on]="filtreAttend()" [attr.aria-pressed]="filtreAttend()" (click)="filtreAttend.set(!filtreAttend())">
+        Client attend <b>{{ nbAttend() }}</b>
+      </button>
+      <button type="button" class="kb-filtre kb-filtre--urgent" [class.is-on]="filtreUrgent()" [attr.aria-pressed]="filtreUrgent()" (click)="filtreUrgent.set(!filtreUrgent())">
+        Urgent <b>{{ nbUrgent() }}</b>
+      </button>
+      @if (filtreActif() || filtreFinal()) {
+        <button type="button" class="kb-efface" (click)="effacerFiltres()">Effacer</button>
+      }
     </div>
 
-    <div class="loading-area" *ngIf="!isLoading() && loadError()">
+    <div class="kb-bar__actions">
+      <button type="button" class="gv-btn" (click)="navigateToTerminees()">Terminées</button>
+      <button type="button" class="gv-btn gv-btn--primary" (click)="navigateToNouvelleCommande()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg><span>Nouvelle</span>
+      </button>
+    </div>
+  </header>
+
+  @if (loadError()) {
+    <div class="gv-panel kb-etat">
       <p>{{ loadError() }}</p>
-      <button type="button" class="btn-navigation" (click)="loadCommandes()">Réessayer</button>
+      <button type="button" class="gv-btn" (click)="loadCommandes()">Réessayer</button>
     </div>
-
-    <!-- Vue desktop : tableau par statut (colonnes même hauteur) -->
-    <div class="table-container desktop-view" *ngIf="!isLoading() && !loadError()">
-      <div class="table-scroll" #tableScroll>
-        <table
-          class="commandes-table"
-          [class.is-drag-active]="!!dragCommandeId">
-          <thead>
-            <tr>
-              <th
-                *ngFor="let statut of statuts"
-                class="statut-column"
-                [class.statut-column--final]="isFinalStatut(statut)"
-                [class.statut-column--final-first]="statut === firstFinalStatut"
-                [class.statut-column--final-last]="statut === lastFinalStatut"
-                [class.drop-target-valid]="isColumnDropHighlighted(statut)"
-                [attr.data-drop-zone]="isFinalStatut(statut) ? 'finals' : statut"
-                [attr.data-statut-drop]="statut">
-                <div class="statut-header-content">
-                  <span class="statut-emoji">{{ statutEmojis[statut] }}</span>
-                  <span class="statut-label">{{ getStatutLabel(statut) }}</span>
-                </div>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td
-                *ngFor="let statut of statuts"
-                class="statut-column drop-zone"
-                [class.statut-column--final]="isFinalStatut(statut)"
-                [class.statut-column--final-first]="statut === firstFinalStatut"
-                [class.statut-column--final-last]="statut === lastFinalStatut"
-                [class.drop-target-valid]="isColumnDropHighlighted(statut)"
-                [attr.data-drop-zone]="isFinalStatut(statut) ? 'finals' : statut"
-                [attr.data-statut-drop]="statut">
-                <div class="commande-cards">
-                  <div
-                    *ngFor="let commande of getCommandesByStatut(statut); trackBy: trackByCommandeId; let cardIndex = index"
-                    class="commande-card"
-                    [style.--card-stack-index]="cardIndex + 1"
-                    [class.has-prix]="commande.prix_final != null && commande.prix_final > 0"
-                    [class.is-dragging]="isCommandeDragging(commande)"
-                    [class.deadline-warning]="getDeadlineStatus(commande) === 'warning'"
-                    [class.deadline-danger]="getDeadlineStatus(commande) === 'danger'"
-                    [title]="getProduitAffiche(commande)"
-                    (click)="onCommandeClick(commande)">
-                    <span class="payment-indicator" *ngIf="commande['payé']">✓ payé</span>
-                    <span class="site-notif" *ngIf="afficherNotifCommandeSite(commande, statut)">
-                      <span class="site-notif__dot" aria-hidden="true"></span>
-                      <span class="site-notif__label">new</span>
-                    </span>
-                    <div
-                      class="commande-drag-body"
-                      (pointerdown)="onCardPointerDown($event, commande, statut)">
-                      <div class="commande-header">
-                        <h3 class="commande-title">
-                          {{ getProduitAffiche(commande) }}
-                        </h3>
-                      </div>
-                      <div class="commande-info">
-                        <p class="commande-client">
-                          <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
-                          <span class="mode-contact-emoji" *ngIf="commande.mode_contact">{{ getModeContactEmoji(commande.mode_contact) }}</span>
-                        </p>
-                        <p class="commande-societe" *ngIf="commande.client['société']">
-                          <strong>Société :</strong>&nbsp;{{ commande.client['société'] }}
-                        </p>
-                        <p class="commande-date">
-                          <strong>Date :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
-                        </p>
-                        <p
-                          class="commande-deadline"
-                          [class.deadline-highlight-warning]="getDeadlineStatus(commande) === 'warning'"
-                          [class.deadline-highlight-danger]="getDeadlineStatus(commande) === 'danger'"
-                          *ngIf="commande.deadline">
-                          <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
-                        </p>
-                      </div>
-                    </div>
-                    <div class="commande-actions" (click)="$event.stopPropagation()">
-                      <div class="etapes-precedentes" *ngIf="getEtapesPrecedentes(commande, statut).length > 0">
-                        <label
-                          *ngFor="let etapePrecedente of getEtapesPrecedentes(commande, statut)"
-                          class="checkbox-label checkbox-completed">
-                          <input
-                            type="checkbox"
-                            [checked]="true"
-                            (change)="onEtapePrecedenteChange($event, commande, etapePrecedente)"
-                            (click)="$event.stopPropagation()"
-                            class="commande-checkbox checkbox-completed-input">
-                          <span class="checkbox-text">{{ getStatutLabel(etapePrecedente) }}</span>
-                        </label>
-                      </div>
-                      <label class="checkbox-label">
-                        <input
-                          type="checkbox"
-                          [checked]="isCheckboxChecked(commande, statut)"
-                          (change)="onCheckboxChange(commande, statut)"
-                          (click)="$event.stopPropagation()"
-                          class="commande-checkbox">
-                        <span class="checkbox-text">Terminé</span>
-                      </label>
-                    </div>
-                    <div class="attente-reponse-toggle-bottom-left" (click)="$event.stopPropagation()">
-                      <label class="toggle-switch-small" [class.toggle-vert]="commande['attente_reponse']" [class.toggle-rouge]="!commande['attente_reponse']">
-                        <input
-                          type="checkbox"
-                          [checked]="commande['attente_reponse']"
-                          (change)="onAttenteReponseChange(commande, $event)"
-                          class="toggle-input">
-                        <span class="toggle-slider"></span>
-                        <span class="toggle-label-small">{{ commande['attente_reponse'] ? 'Rien à faire' : 'Client attend' }}</span>
-                      </label>
-                    </div>
-                    <span class="prix-indicator" *ngIf="commande.prix_final != null && commande.prix_final > 0">{{ commande.prix_final | number:'1.0-2' }} €</span>
-                  </div>
-                  <div *ngIf="getCommandesByStatut(statut).length === 0" class="empty-column">
-                    <p class="empty-message">Aucune commande</p>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+  } @else if (isLoading() && commandes().length === 0) {
+    <div class="gv-panel kb-etat"><p>Chargement des commandes…</p></div>
+  } @else if (!hasAnyCommandeEnCours()) {
+    <div class="gv-panel kb-etat">
+      <p>Aucune commande en cours. Atelier libre.</p>
+      <button type="button" class="gv-btn gv-btn--primary" (click)="navigateToNouvelleCommande()">Nouvelle commande</button>
     </div>
+  } @else {
+    <!-- Écran étroit : une colonne à la fois -->
+    <nav class="kb-tabs" aria-label="Étapes">
+      @for (col of colonnesVue(); track col.cle) {
+        <button type="button" class="kb-tab" [class.is-actif]="onglet() === col.cle" [style.--kb-c]="col.couleur" (click)="choisirOnglet(col.cle)">
+          <span class="kb-tab__label">{{ col.cle === 'modele' ? 'Modèle' : col.label }}</span>
+          <span class="kb-tab__nb">{{ col.cartes.length }}</span>
+        </button>
+      }
+    </nav>
 
-    <!-- Vue mobile : sections repliables (style Rappels Apple) -->
-    <div class="mobile-view" *ngIf="!isLoading() && !loadError()">
-      <div class="mobile-sections" *ngIf="hasAnyCommandeEnCours()">
+    <div class="kb-board" #board>
+      @for (col of colonnesVue(); track col.cle) {
         <section
-          *ngFor="let statut of statuts"
-          class="mobile-section"
-          [class.mobile-section--expanded]="isSectionExpanded(statut)">
-          <button
-            type="button"
-            class="mobile-section__header"
-            [attr.aria-expanded]="isSectionExpanded(statut)"
-            (click)="toggleSection(statut)">
-            <span class="mobile-section__title">
-              <span class="mobile-section__emoji">{{ getStatutEmoji(statut) }}</span>
-              <span class="mobile-section__label">{{ getStatutLabel(statut) }}</span>
-              <span class="mobile-section__count" *ngIf="getCommandesByStatut(statut).length > 0">
-                ({{ getCommandesByStatut(statut).length }})
+          class="kb-col"
+          [class.kb-col--final]="col.final"
+          [class.is-actif]="onglet() === col.cle"
+          [class.is-cible]="isColumnDropHighlighted(col.statut)"
+          [style.--kb-c]="col.couleur"
+          [attr.data-statut-drop]="col.statut"
+          [attr.data-cle]="col.cle">
+          <header class="kb-col__tete">
+            <div class="kb-col__titre">
+              <i></i>
+              <h2>{{ col.label }}</h2>
+              <span class="kb-col__nb">
+                @if (col.cartes.length !== col.total) { {{ col.cartes.length }} / }{{ col.total }}
               </span>
-            </span>
-            <span class="mobile-section__chevron" aria-hidden="true">▼</span>
-          </button>
-          <div class="mobile-section__content" *ngIf="isSectionExpanded(statut)">
-            <div
-              *ngFor="let commande of getCommandesByStatut(statut); trackBy: trackByCommandeId"
-              class="mobile-card"
-              [class.has-prix]="commande.prix_final != null && commande.prix_final > 0"
-              [class.deadline-warning]="getDeadlineStatus(commande) === 'warning'"
-              [class.deadline-danger]="getDeadlineStatus(commande) === 'danger'"
-              [title]="commande.produit || 'Commande #' + commande.id_commande"
-              (click)="onCommandeClick(commande)">
-              <span class="payment-indicator" *ngIf="commande['payé']">✓ payé</span>
-              <span class="site-notif" *ngIf="afficherNotifCommandeSite(commande, statut)">
-                <span class="site-notif__dot" aria-hidden="true"></span>
-                <span class="site-notif__label">new</span>
-              </span>
-              <div class="mobile-card__header">
-                <h3 class="mobile-card__title">
-                  {{ getProduitAffiche(commande) }}
-                </h3>
-              </div>
-              <div class="mobile-card__info">
-                <p class="commande-client">
-                  <strong>Client :</strong>&nbsp;{{ getClientName(commande.client) }}
-                  <span class="mode-contact-emoji" *ngIf="commande.mode_contact">{{ getModeContactEmoji(commande.mode_contact) }}</span>
-                </p>
-                <p class="commande-societe" *ngIf="commande.client['société']">
-                  <strong>Société :</strong>&nbsp;{{ commande.client['société'] }}
-                </p>
-                <p class="commande-date">
-                  <strong>Date :</strong>&nbsp;{{ formatDate(commande.date_commande) }}
-                </p>
-                <p
-                  class="commande-deadline"
-                  [class.deadline-highlight-warning]="getDeadlineStatus(commande) === 'warning'"
-                  [class.deadline-highlight-danger]="getDeadlineStatus(commande) === 'danger'"
-                  *ngIf="commande.deadline">
-                  <strong>Deadline :</strong>&nbsp;{{ formatDate(commande.deadline) }}
-                </p>
-              </div>
-              <div class="mobile-card__actions" (click)="$event.stopPropagation()">
-                <div class="etapes-precedentes" *ngIf="getEtapesPrecedentes(commande, statut).length > 0">
-                  <label
-                    *ngFor="let etapePrecedente of getEtapesPrecedentes(commande, statut)"
-                    class="checkbox-label checkbox-completed">
-                    <input
-                      type="checkbox"
-                      [checked]="true"
-                      (change)="onEtapePrecedenteChange($event, commande, etapePrecedente)"
-                      (click)="$event.stopPropagation()"
-                      class="commande-checkbox checkbox-completed-input">
-                    <span class="checkbox-text">{{ getStatutLabel(etapePrecedente) }}</span>
-                  </label>
-                </div>
-                <label class="checkbox-label">
-                  <input
-                    type="checkbox"
-                    [checked]="isCheckboxChecked(commande, statut)"
-                    (change)="onCheckboxChange(commande, statut)"
-                    (click)="$event.stopPropagation()"
-                    class="commande-checkbox">
-                  <span class="checkbox-text">Terminé</span>
-                </label>
-              </div>
-              <div class="attente-reponse-toggle-bottom-left" (click)="$event.stopPropagation()">
-                <label class="toggle-switch-small" [class.toggle-vert]="commande['attente_reponse']" [class.toggle-rouge]="!commande['attente_reponse']">
-                  <input
-                    type="checkbox"
-                    [checked]="commande['attente_reponse']"
-                    (change)="onAttenteReponseChange(commande, $event)"
-                    class="toggle-input">
-                  <span class="toggle-slider"></span>
-                  <span class="toggle-label-small">{{ commande['attente_reponse'] ? 'Rien à faire' : 'Client attend' }}</span>
-                </label>
-              </div>
-              <span class="prix-indicator" *ngIf="commande.prix_final != null && commande.prix_final > 0">{{ commande.prix_final | number:'1.0-2' }} €</span>
             </div>
-            <p class="mobile-section__empty" *ngIf="getCommandesByStatut(statut).length === 0">
-              Aucune commande
-            </p>
+            @if (col.final && col.total > 0) {
+              <div class="kb-col__sous">
+                @for (f of compteFinaux(); track f.statut) {
+                  <button type="button" class="kb-sous" [class.is-on]="filtreFinal() === f.statut" [disabled]="f.nb === 0 && filtreFinal() !== f.statut" (click)="basculerFiltreFinal(f.statut)">
+                    {{ f.label }} <b>{{ f.nb }}</b>
+                  </button>
+                }
+              </div>
+            }
+          </header>
+
+          <div class="kb-col__liste">
+            @for (carte of col.cartes; track carte.id) {
+              <article
+                class="kb-card"
+                [class.kb-card--warn]="carte.ton === 'warn'"
+                [class.kb-card--danger]="carte.ton === 'danger'"
+                [class.is-dragging]="isCommandeDragging(carte.c)"
+                tabindex="0"
+                (pointerdown)="onCardPointerDown($event, carte.c, carte.source)"
+                (click)="onCommandeClick(carte.c)"
+                (keydown.enter)="onCommandeClick(carte.c)">
+                <div class="kb-card__haut">
+                  <h3>{{ carte.titre }}</h3>
+                  @if (carte.siteNew) { <span class="kb-new">site</span> }
+                </div>
+                @if (carte.client || carte.societe) {
+                  <p class="kb-card__client">
+                    @if (carte.contact) { <span aria-hidden="true">{{ carte.contact }}</span> }
+                    {{ carte.client }}@if (carte.societe) {<em>{{ carte.client ? ' · ' : '' }}{{ carte.societe }}</em>}
+                  </p>
+                }
+                <div class="kb-card__meta">
+                  @if (carte.echeance) {
+                    <span class="kb-ech" [class.kb-ech--warn]="carte.ton === 'warn'" [class.kb-ech--danger]="carte.ton === 'danger'">{{ carte.echeance }}</span>
+                  }
+                  @if (carte.prix !== null) {
+                    <span class="kb-prix" [class.is-paye]="carte.paye" [title]="carte.paye ? 'Payé' : 'Non payé'">
+                      {{ carte.prix | number: '1.0-2' }} €@if (carte.paye) { ✓}
+                    </span>
+                  }
+                </div>
+
+                @if (col.final) {
+                  <div class="kb-fin">
+                    @for (f of carte.finaux; track f.statut) {
+                      <button type="button" class="kb-pill" [class.is-fait]="f.fait" [attr.aria-pressed]="f.fait" [title]="f.fait ? f.label + ' : fait (cliquer pour annuler)' : f.label + ' : à faire'" (click)="$event.stopPropagation(); basculerFinal(carte.c, f.statut)">
+                        <span aria-hidden="true">{{ f.fait ? '✓' : '○' }}</span>{{ f.label }}
+                      </button>
+                    }
+                  </div>
+                }
+
+                <div class="kb-card__foot" (click)="$event.stopPropagation()">
+                  <button type="button" class="kb-att" [class.is-attend]="carte.attend" [title]="carte.attend ? 'Le client attend une réponse. Cliquer quand c\'est fait.' : 'Rien à faire côté client. Cliquer si le client attend.'" (click)="basculerAttente(carte.c)">
+                    {{ carte.attend ? 'Client attend' : 'Rien à faire' }}
+                  </button>
+                  <span class="kb-card__nav">
+                    @if (col.cle !== 'attente') {
+                      <button type="button" class="kb-nav" title="Étape précédente" aria-label="Étape précédente" (click)="reculer(carte, col)">←</button>
+                    }
+                    @if (!col.final) {
+                      <button type="button" class="kb-nav kb-nav--ok" title="Étape suivante" aria-label="Étape suivante" (click)="avancer(carte)">✓</button>
+                    }
+                  </span>
+                </div>
+              </article>
+            } @empty {
+              <p class="kb-vide">{{ col.total ? 'Aucune ne correspond au filtre' : 'Vide' }}</p>
+            }
           </div>
         </section>
-      </div>
-      <div class="mobile-empty" *ngIf="!hasAnyCommandeEnCours()">
-        <p class="empty-message">Aucune commande en cours</p>
-      </div>
+      }
     </div>
-  </div>
+  }
 </div>

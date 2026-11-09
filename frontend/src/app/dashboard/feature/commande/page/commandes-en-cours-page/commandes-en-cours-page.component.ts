@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, inject, signal, WritableSignal, ViewChild, ElementRef, ChangeDetectorRef, NgZone, DestroyRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, inject, signal, computed, WritableSignal, ViewChild, ElementRef, ChangeDetectorRef, NgZone, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { concatMap, from, last } from 'rxjs';
@@ -14,8 +14,45 @@ import {
   isCommandeSiteNonTraitee,
   formatProduitCommandeSite,
 } from '../../model/commande.interface';
-import { Payload } from '@shared';
 import { AppRoutes } from '@shared';
+
+type Ton = 'warn' | 'danger' | null;
+
+/** Une des quatre actions de clôture d'une carte (livraison, web, facture, avis). */
+interface FinalVue {
+  statut: StatutCommande;
+  label: string;
+  fait: boolean;
+}
+
+/** Carte du Kanban, prête à afficher. */
+interface CarteVue {
+  c: Commande;
+  id: string;
+  titre: string;
+  client: string;
+  societe: string;
+  contact: string;
+  echeance: string;
+  ton: Ton;
+  prix: number | null;
+  paye: boolean;
+  siteNew: boolean;
+  attend: boolean;
+  /** Statut d'où part la carte lors d'un glisser-déposer. */
+  source: StatutCommande;
+  finaux: FinalVue[];
+}
+
+interface ColonneVue {
+  cle: string;
+  statut: StatutCommande;
+  label: string;
+  couleur: string;
+  final: boolean;
+  total: number;
+  cartes: CarteVue[];
+}
 
 @Component({
   selector: 'app-commandes-en-cours-page',
@@ -24,18 +61,29 @@ import { AppRoutes } from '@shared';
   templateUrl: './commandes-en-cours-page.component.html',
   styleUrl: './commandes-en-cours-page.component.scss'
 })
-export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterViewChecked {
+export class CommandesEnCoursPageComponent implements OnInit, OnDestroy {
   commandes: WritableSignal<Commande[]> = signal([]);
   isLoading: WritableSignal<boolean> = signal(false);
   loadError: WritableSignal<string | null> = signal(null);
-  private scrollRestored: boolean = false;
-  /** Ne décider (fermer tout / restaurer) qu'au premier chargement ; après, garder l'état des sections. */
-  private initialExpandedStateApplied: boolean = false;
+
+  /** Filtres de la barre du haut. */
+  filtre: WritableSignal<string> = signal('');
+  filtreAttend: WritableSignal<boolean> = signal(false);
+  filtreUrgent: WritableSignal<boolean> = signal(false);
+  /** Sous-filtre de la colonne Clôture (une des quatre actions restantes). */
+  filtreFinal: WritableSignal<StatutCommande | null> = signal(null);
+  /** Colonne affichée sur écran étroit (une colonne à la fois). */
+  onglet: WritableSignal<string> = signal('attente');
+
+  private premierChargementFait = false;
   private draggedRecently: boolean = false;
   private readonly cdr = inject(ChangeDetectorRef);
   private readonly ngZone = inject(NgZone);
+  private readonly host: ElementRef<HTMLElement> = inject(ElementRef);
   private static readonly POINTER_DRAG_THRESHOLD_PX = 6;
   private static readonly COLUMN_SWITCH_HYSTERESIS_PX = 10;
+  /** En dessous de cette largeur : une colonne à la fois, pas de glisser-déposer. */
+  private static readonly LARGEUR_COLONNES_PX = 1100;
 
   private columnDropRects: Array<{ statut: StatutCommande; left: number; right: number }> = [];
   private dragMoveRaf: number | null = null;
@@ -66,28 +114,26 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     this.handleDocumentPointerUp(event);
   };
 
-  /** Drag & drop (vue desktop) */
+  /** Glisser-déposer (écran large) */
   dragCommandeId: string | null = null;
   dragSourceStatut: StatutCommande | null = null;
   dragOverStatut: WritableSignal<StatutCommande | null> = signal(null);
   dragOverFinalsGroup: WritableSignal<boolean> = signal(false);
   isStatutMoveInProgress: boolean = false;
-  
-  @ViewChild('tableScroll', { static: false }) tableScrollElement?: ElementRef<HTMLDivElement>;
-  @ViewChild('mobileContainer', { static: false }) mobileContainerElement?: ElementRef<HTMLDivElement>;
-  
+
+  @ViewChild('board', { static: false }) boardElement?: ElementRef<HTMLDivElement>;
+
   private readonly apiService: ApiService = inject(ApiService);
   private readonly realtime = inject(RealtimeService);
   private readonly destroyRef = inject(DestroyRef);
   private refreshEnAttente = false;
   private readonly router: Router = inject(Router);
   private readonly scrollKey = 'commandes-en-cours-scroll';
-  private readonly expandedSectionsKey = 'commandes-en-cours-expanded-sections';
-  private readonly restoreExpandedKey = 'commandes-en-cours-restore-expanded';
+  private readonly ongletKey = 'kanban-onglet';
   private readonly entryFromKey = 'commandes-en-cours-entry-from';
   private readonly detailReturnPageKey = 'detail-return-page';
 
-  // Ordre des colonnes de statut
+  // Ordre des statuts (les quatre derniers se font en parallèle, dans la colonne Clôture)
   readonly statuts: StatutCommande[] = [
     StatutCommande.EN_ATTENTE_INFORMATION,
     StatutCommande.A_MODELLISER_PREPARER,
@@ -100,17 +146,15 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     StatutCommande.DEMANDE_AVIS,
   ];
 
-  private readonly statutsFinaux: StatutCommande[] = [
+  readonly statutsFinaux: StatutCommande[] = [
     StatutCommande.A_LIVRER,
     StatutCommande.A_METTRE_EN_LIGNE,
     StatutCommande.A_FACTURER,
     StatutCommande.DEMANDE_AVIS,
   ];
 
-  /** Première colonne du bloc parallèle (Livraison → Avis). */
+  /** Statut qui représente la colonne Clôture (cible du glisser-déposer). */
   readonly firstFinalStatut: StatutCommande = StatutCommande.A_LIVRER;
-  /** Dernière colonne du bloc parallèle. */
-  readonly lastFinalStatut: StatutCommande = StatutCommande.DEMANDE_AVIS;
 
   private readonly ordreEtapes: StatutCommande[] = [
     StatutCommande.EN_ATTENTE_INFORMATION,
@@ -120,7 +164,6 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     StatutCommande.A_PRENDRE_EN_PHOTO,
   ];
 
-  // Labels pour chaque statut (version courte pour l'affichage dans la liste)
   readonly statutLabels: Record<StatutCommande, string> = {
     [StatutCommande.EN_ATTENTE_INFORMATION]: 'Attente',
     [StatutCommande.A_MODELLISER_PREPARER]: 'Modélisation',
@@ -128,289 +171,344 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     [StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE]: 'Finition',
     [StatutCommande.A_PRENDRE_EN_PHOTO]: 'Photo',
     [StatutCommande.A_LIVRER]: 'Livraison',
-    [StatutCommande.A_METTRE_EN_LIGNE]: 'WEB',
-    [StatutCommande.A_FACTURER]: 'Facturation',
+    [StatutCommande.A_METTRE_EN_LIGNE]: 'Web',
+    [StatutCommande.A_FACTURER]: 'Facture',
     [StatutCommande.DEMANDE_AVIS]: 'Avis',
     [StatutCommande.TERMINE]: 'Terminé',
     [StatutCommande.ANNULEE]: 'Annulée',
   };
 
-  // Emojis pour chaque statut
-  readonly statutEmojis: Record<StatutCommande, string> = {
-    [StatutCommande.EN_ATTENTE_INFORMATION]: '⏳',
-    [StatutCommande.A_MODELLISER_PREPARER]: '💻',
-    [StatutCommande.A_GRAVER]: '⚒️',
-    [StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE]: '🎨',
-    [StatutCommande.A_PRENDRE_EN_PHOTO]: '📸',
-    [StatutCommande.A_LIVRER]: '🚚',
-    [StatutCommande.A_METTRE_EN_LIGNE]: '🌐',
-    [StatutCommande.A_FACTURER]: '💰',
-    [StatutCommande.DEMANDE_AVIS]: '💬',
-    [StatutCommande.TERMINE]: '✅',
-    [StatutCommande.ANNULEE]: '❌',
-  };
+  /** Les six colonnes du tableau : cinq étapes, puis la clôture qui regroupe les quatre actions finales. */
+  private readonly colonnesDef: Array<{ cle: string; statut: StatutCommande; label: string; couleur: string; final: boolean }> = [
+    { cle: 'attente', statut: StatutCommande.EN_ATTENTE_INFORMATION, label: 'Attente', couleur: 'var(--gv-muted)', final: false },
+    { cle: 'modele', statut: StatutCommande.A_MODELLISER_PREPARER, label: 'Modélisation', couleur: 'var(--gv-warn)', final: false },
+    { cle: 'graver', statut: StatutCommande.A_GRAVER, label: 'Gravure', couleur: 'var(--gv-accent)', final: false },
+    { cle: 'finition', statut: StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE, label: 'Finition', couleur: '#7a5c99', final: false },
+    { cle: 'photo', statut: StatutCommande.A_PRENDRE_EN_PHOTO, label: 'Photo', couleur: 'var(--gv-ok)', final: false },
+    { cle: 'cloture', statut: StatutCommande.A_LIVRER, label: 'Clôture', couleur: '#3b6e8f', final: true },
+  ];
 
-  /** Sections repliables (vue mobile) : ensemble des statuts dont la section est ouverte */
-  expandedSections: WritableSignal<Set<StatutCommande>> = signal(new Set<StatutCommande>([]));
+  /** Commandes encore ouvertes (ni terminées ni annulées). */
+  readonly enCours = computed(() =>
+    this.commandes().filter(
+      (c) => c.statut_commande !== StatutCommande.TERMINE && c.statut_commande !== StatutCommande.ANNULEE,
+    ),
+  );
 
-  isSectionExpanded(statut: StatutCommande): boolean {
-    return this.expandedSections().has(statut);
+  readonly nbAttend = computed(() => this.enCours().filter((c) => c.attente_reponse === false).length);
+  readonly nbUrgent = computed(() => this.enCours().filter((c) => this.getDeadlineStatus(c) !== null).length);
+  readonly nbSiteNew = computed(() => this.enCours().filter((c) => this.estSiteNew(c)).length);
+  readonly filtreActif = computed(() => !!this.filtre().trim() || this.filtreAttend() || this.filtreUrgent());
+
+  /** Nombre de commandes par action de clôture restante. */
+  readonly compteFinaux = computed(() => {
+    const ouvertes = this.enCours();
+    return this.statutsFinaux.map((statut) => ({
+      statut,
+      label: this.statutLabels[statut],
+      nb: ouvertes.filter((c) => c.statuts_actifs?.includes(statut)).length,
+    }));
+  });
+
+  /** Colonnes et cartes prêtes à afficher, filtres appliqués. */
+  readonly colonnesVue = computed<ColonneVue[]>(() => {
+    const ouvertes = this.enCours();
+    const texte = this.normaliser(this.filtre().trim());
+    const attend = this.filtreAttend();
+    const urgent = this.filtreUrgent();
+    const final = this.filtreFinal();
+
+    return this.colonnesDef.map((def) => {
+      const brutes = def.final
+        ? ouvertes.filter((c) => (c.statuts_actifs?.length ?? 0) > 0)
+        : ouvertes.filter(
+            (c) => c.statut_commande === def.statut && (c.statuts_actifs?.length ?? 0) === 0,
+          );
+      const triees = this.sortCommandesByDeadline(brutes, def.statut);
+      const cartes = triees
+        .filter((c) => !attend || c.attente_reponse === false)
+        .filter((c) => !urgent || this.getDeadlineStatus(c) !== null)
+        .filter((c) => !def.final || !final || !!c.statuts_actifs?.includes(final))
+        .filter((c) => !texte || this.texteRecherche(c).includes(texte))
+        .map((c) => this.versCarte(c, def.statut, def.final));
+      return { ...def, total: brutes.length, cartes };
+    });
+  });
+
+  readonly nbAffichees = computed(() => this.colonnesVue().reduce((n, col) => n + col.cartes.length, 0));
+
+  private normaliser(s: string): string {
+    return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   }
 
-  toggleSection(statut: StatutCommande): void {
-    const next = new Set(this.expandedSections());
-    if (next.has(statut)) {
-      next.delete(statut);
-    } else {
-      next.add(statut);
-    }
-    this.expandedSections.set(next);
-    this.saveExpandedSections(next);
+  private texteRecherche(c: Commande): string {
+    return this.normaliser(
+      [this.getProduitAffiche(c), c.client?.nom, c.client?.prénom, c.client?.['société']].filter(Boolean).join(' '),
+    );
   }
 
-  private saveExpandedSections(sections: Set<StatutCommande>): void {
-    try {
-      sessionStorage.setItem(this.expandedSectionsKey, JSON.stringify([...sections]));
-    } catch {
-      // ignorer si sessionStorage indisponible
-    }
+  private estSiteNew(c: Commande): boolean {
+    return c.statut_commande === this.statutCommandesSite && isCommandeSiteNonTraitee(c);
   }
 
-  /** Au chargement : fermer tout si on vient du dashboard/terminées/nouvelle (sessionStorage) ; sinon restaurer les sections. */
-  private setInitialExpandedSections(): void {
-    try {
-      const entryFrom = sessionStorage.getItem(this.entryFromKey);
-      if (entryFrom === 'dashboard' || entryFrom === 'terminees' || entryFrom === 'nouvelle') {
-        sessionStorage.removeItem(this.entryFromKey);
-        this.expandedSections.set(new Set<StatutCommande>());
-        this.saveExpandedSections(new Set<StatutCommande>());
-        return;
-      }
-    } catch {
-      // ignorer
-    }
-
-    try {
-      if (sessionStorage.getItem(this.restoreExpandedKey) === '1') {
-        sessionStorage.removeItem(this.restoreExpandedKey);
-      }
-    } catch {
-      // ignorer
-    }
-
-    this.restoreExpandedSections();
+  private versCarte(c: Commande, statut: StatutCommande, final: boolean): CarteVue {
+    const ech = this.echeance(c);
+    const actifs = c.statuts_actifs ?? [];
+    return {
+      c,
+      id: c.id_commande,
+      titre: this.getProduitAffiche(c),
+      client: this.getClientName(c.client),
+      societe: c.client?.['société'] ?? '',
+      contact: this.getModeContactEmoji(c.mode_contact),
+      echeance: ech.txt,
+      ton: ech.ton,
+      prix: c.prix_final != null && Number(c.prix_final) > 0 ? Number(c.prix_final) : null,
+      paye: !!c['payé'],
+      siteNew: !final && this.estSiteNew(c),
+      attend: c.attente_reponse === false,
+      source: final ? (actifs[0] ?? statut) : statut,
+      finaux: final
+        ? this.statutsFinaux.map((s) => ({ statut: s, label: this.statutLabels[s], fait: !actifs.includes(s) }))
+        : [],
+    };
   }
 
-  private restoreExpandedSections(): void {
-    try {
-      const raw = sessionStorage.getItem(this.expandedSectionsKey);
-      if (!raw) {
-        this.expandedSections.set(new Set<StatutCommande>());
-        return;
-      }
-      const parsed: unknown = JSON.parse(raw);
-      if (!Array.isArray(parsed)) {
-        this.expandedSections.set(new Set<StatutCommande>());
-        return;
-      }
-      // Whitelist : seules les valeurs de statuts (strings) sont acceptées (fiable en prod)
-      const allowed = new Set<string>(this.statuts as unknown as string[]);
-      const valid = new Set<StatutCommande>();
-      for (const s of parsed) {
-        if (typeof s === 'string' && allowed.has(s)) {
-          valid.add(s as StatutCommande);
-        }
-      }
-      this.expandedSections.set(valid);
-    } catch {
-      this.expandedSections.set(new Set<StatutCommande>());
+  /** Texte court de l'échéance : « Retard 2 j », « Auj. », « J-3 · 12/11 », sinon la date de réception. */
+  private echeance(c: Commande): { txt: string; ton: Ton } {
+    const jm = (d: Date) => d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    if (!c.deadline) {
+      return { txt: c.date_commande ? `reçu ${jm(new Date(c.date_commande))}` : '', ton: null };
     }
+    const dl = new Date(c.deadline);
+    const jour = new Date(dl);
+    jour.setHours(0, 0, 0, 0);
+    const auj = new Date();
+    auj.setHours(0, 0, 0, 0);
+    const j = Math.ceil((jour.getTime() - auj.getTime()) / 86400000);
+    const statut = this.getDeadlineStatus(c);
+    const ton: Ton = statut === 'danger' ? 'danger' : statut === 'warning' ? 'warn' : null;
+    if (statut === null) {
+      return { txt: jm(dl), ton };
+    }
+    if (j < 0) {
+      return { txt: `Retard ${-j} j`, ton };
+    }
+    if (j === 0) {
+      return { txt: 'Auj.', ton };
+    }
+    return { txt: `J-${j} · ${jm(dl)}`, ton };
   }
 
   hasAnyCommandeEnCours(): boolean {
-    return this.statuts.some(statut => this.getCommandesByStatut(statut).length > 0);
+    return this.enCours().length > 0;
   }
 
   ngOnInit(): void {
-    window.addEventListener('beforeunload', this.onBeforeUnload);
+    try {
+      const o = sessionStorage.getItem(this.ongletKey);
+      if (o && this.colonnesDef.some((d) => d.cle === o)) {
+        this.onglet.set(o);
+      }
+    } catch {
+      // ignorer
+    }
     this.loadCommandes();
     this.realtime.on('commande')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.loadCommandes(true));
   }
 
-  ngAfterViewChecked(): void {
-    // Restaurer la position de scroll après le chargement initial des données
-    if (!this.isLoading() && !this.scrollRestored) {
-      const savedScroll = sessionStorage.getItem(this.scrollKey);
-      if (savedScroll) {
-        // Attendre un peu pour que les ViewChild soient initialisés
-        setTimeout(() => {
-          // Vérifier à nouveau que scrollRestored n'a pas été modifié entre-temps
-          if (!this.scrollRestored) {
-            this.restoreScrollPosition(parseInt(savedScroll, 10));
-          }
-        }, 200);
-      }
-    }
-  }
-
-  private restoreScrollPosition(scrollPosition: number): void {
-    // Méthode robuste compatible Safari avec plusieurs tentatives
-    const attemptScroll = (attempts: number = 0) => {
-      if (attempts > 30) {
-        // Arrêter après 30 tentatives (augmenté pour Safari)
-        this.scrollRestored = true;
-        return;
-      }
-
-      requestAnimationFrame(() => {
-        const container = this.getScrollContainer();
-        
-        if (container) {
-          // Restaurer le scroll du conteneur interne
-          // Safari nécessite plusieurs méthodes pour fonctionner correctement
-          
-          // Méthode 1 : scrollTop direct
-          container.scrollTop = scrollPosition;
-          
-          // Méthode 2 : scrollTo si disponible
-          if (typeof container.scrollTo === 'function') {
-            try {
-              container.scrollTo({
-                top: scrollPosition,
-                left: 0,
-                behavior: 'auto'
-              });
-            } catch (e) {
-              // Ignorer les erreurs
-            }
-          }
-
-          // Vérifier si le scroll a fonctionné (avec une marge d'erreur de 5px)
-          // Utiliser setTimeout pour laisser Safari appliquer le scroll
-          setTimeout(() => {
-            const currentScroll = container.scrollTop;
-            
-            if (Math.abs(currentScroll - scrollPosition) <= 5) {
-              // Scroll réussi, marquer comme restauré
-              this.scrollRestored = true;
-            } else {
-              // Réessayer après un court délai (délai augmenté pour Safari)
-              setTimeout(() => attemptScroll(attempts + 1), 200);
-            }
-          }, 150);
-        } else if (document.readyState === 'complete' || document.readyState === 'interactive') {
-          // Fallback sur window scroll si le conteneur n'est pas encore disponible
-          // Mais on attend un peu plus pour que les ViewChild soient initialisés
-          if (attempts < 10) {
-            setTimeout(() => attemptScroll(attempts + 1), 100);
-          } else {
-            // Si après 10 tentatives le conteneur n'est toujours pas disponible, utiliser window
-            window.scrollTo({
-              top: scrollPosition,
-              left: 0,
-              behavior: 'auto'
-            });
-            document.documentElement.scrollTop = scrollPosition;
-            document.body.scrollTop = scrollPosition;
-            
-            setTimeout(() => {
-              const currentScroll = this.getCurrentScrollPosition();
-              if (Math.abs(currentScroll - scrollPosition) <= 5) {
-                this.scrollRestored = true;
-              } else {
-                setTimeout(() => attemptScroll(attempts + 1), 150);
-              }
-            }, 100);
-          }
-        } else {
-          // Attendre que le document soit prêt
-          setTimeout(() => attemptScroll(attempts + 1), 100);
-        }
-      });
-    };
-
-    // Commencer la restauration après un délai initial (augmenté pour Safari)
-    // Safari a besoin de plus de temps pour initialiser les ViewChild
-    setTimeout(() => attemptScroll(), 250);
-  }
-
   ngOnDestroy(): void {
-    window.removeEventListener('beforeunload', this.onBeforeUnload);
     this.cancelDragMoveRaf();
     this.cleanupPointerDragListeners();
     this.removeDragGhost();
     this.resetDragState(false);
   }
 
-  private onBeforeUnload = (): void => {
-    // Sauvegarder le scroll du conteneur approprié
-    const scrollPos = this.getCurrentScrollPosition();
-    sessionStorage.setItem(this.scrollKey, scrollPos.toString());
-  };
-
-  private getScrollContainer(): HTMLElement | null {
-    // Détecter quelle vue est active en vérifiant la visibilité des éléments
-    // Sur mobile, .desktop-view est caché, sur desktop .mobile-view est caché
-    const isMobile = window.innerWidth <= 768;
-    
-    // Essayer d'abord avec les ViewChild
-    if (isMobile) {
-      // Vue mobile : utiliser le conteneur mobile
-      if (this.mobileContainerElement?.nativeElement) {
-        return this.mobileContainerElement.nativeElement;
-      }
-    } else {
-      // Vue desktop : utiliser le conteneur du tableau
-      if (this.tableScrollElement?.nativeElement) {
-        return this.tableScrollElement.nativeElement;
-      }
-    }
-    
-    // Fallback : essayer les deux ViewChild si la détection échoue
-    if (this.tableScrollElement?.nativeElement) {
-      return this.tableScrollElement.nativeElement;
-    }
-    if (this.mobileContainerElement?.nativeElement) {
-      return this.mobileContainerElement.nativeElement;
-    }
-    
-    // Fallback final : utiliser querySelector pour trouver les éléments directement
-    // Cela fonctionne même si les ViewChild ne sont pas encore initialisés
-    if (isMobile) {
-      const mobileContainer = document.querySelector('.commandes-en-cours-container') as HTMLElement;
-      if (mobileContainer && mobileContainer.scrollHeight > mobileContainer.clientHeight) {
-        return mobileContainer;
-      }
-    } else {
-      const tableScroll = document.querySelector('.table-scroll') as HTMLElement;
-      if (tableScroll && tableScroll.scrollHeight > tableScroll.clientHeight) {
-        return tableScroll;
-      }
-    }
-    
-    // Dernier fallback : essayer les deux conteneurs
-    const tableScroll = document.querySelector('.table-scroll') as HTMLElement;
-    if (tableScroll) return tableScroll;
-    
-    const mobileContainer = document.querySelector('.commandes-en-cours-container') as HTMLElement;
-    if (mobileContainer) return mobileContainer;
-    
-    return null;
+  @HostListener('window:resize')
+  onResize(): void {
+    this.mesurerHaut();
   }
 
-  private getCurrentScrollPosition(): number {
-    const container = this.getScrollContainer();
-    if (container) {
-      // Scroll interne du conteneur
-      return container.scrollTop;
+  /** Hauteur disponible pour les colonnes : on mesure où commence le tableau dans la page. */
+  private mesurerHaut(): void {
+    const board = this.boardElement?.nativeElement;
+    if (!board) {
+      return;
     }
-    // Fallback sur window scroll (pour le chargement initial)
-    return window.pageYOffset || 
-           document.documentElement.scrollTop || 
-           document.body.scrollTop || 
-           (window.scrollY !== undefined ? window.scrollY : 0);
+    const haut = Math.round(board.getBoundingClientRect().top + window.scrollY);
+    this.host.nativeElement.style.setProperty('--kb-top', `${haut}px`);
+  }
+
+  choisirOnglet(cle: string): void {
+    this.onglet.set(cle);
+    try {
+      sessionStorage.setItem(this.ongletKey, cle);
+    } catch {
+      // ignorer
+    }
+    window.scrollTo({ top: 0 });
+  }
+
+  basculerFiltreFinal(statut: StatutCommande): void {
+    this.filtreFinal.set(this.filtreFinal() === statut ? null : statut);
+  }
+
+  effacerFiltres(): void {
+    this.filtre.set('');
+    this.filtreAttend.set(false);
+    this.filtreUrgent.set(false);
+    this.filtreFinal.set(null);
+  }
+
+  /** Après le premier chargement : onglet par défaut, hauteur des colonnes, retour à la position précédente. */
+  private apresPremierChargement(): void {
+    let depuisAilleurs = false;
+    try {
+      const entryFrom = sessionStorage.getItem(this.entryFromKey);
+      if (entryFrom === 'dashboard' || entryFrom === 'terminees' || entryFrom === 'nouvelle') {
+        sessionStorage.removeItem(this.entryFromKey);
+        sessionStorage.removeItem(this.scrollKey);
+        depuisAilleurs = true;
+      }
+    } catch {
+      // ignorer
+    }
+
+    const colonnes = this.colonnesVue();
+    const courante = colonnes.find((col) => col.cle === this.onglet());
+    if (depuisAilleurs || !courante || courante.total === 0) {
+      const premiere = colonnes.find((col) => col.total > 0);
+      if (premiere && (depuisAilleurs || !courante || courante.total === 0)) {
+        this.onglet.set(premiere.cle);
+      }
+    }
+
+    setTimeout(() => {
+      this.mesurerHaut();
+      if (!depuisAilleurs) {
+        // Deux passes : les cartes peuvent ne pas être encore dessinées à la première
+        requestAnimationFrame(() => this.restaurerScroll(false));
+        setTimeout(() => this.restaurerScroll(true), 350);
+      }
+    });
+  }
+
+  private sauverScroll(): void {
+    const board = this.boardElement?.nativeElement;
+    if (!board) {
+      return;
+    }
+    const cols: Record<string, number> = {};
+    board.querySelectorAll<HTMLElement>('.kb-col').forEach((col) => {
+      const liste = col.querySelector<HTMLElement>('.kb-col__liste');
+      if (liste && col.dataset['cle']) {
+        cols[col.dataset['cle']] = liste.scrollTop;
+      }
+    });
+    try {
+      sessionStorage.setItem(this.scrollKey, JSON.stringify({ cols, win: window.scrollY }));
+    } catch {
+      // ignorer
+    }
+  }
+
+  private restaurerScroll(derniere: boolean): void {
+    const board = this.boardElement?.nativeElement;
+    if (!board) {
+      return;
+    }
+    try {
+      const brut = sessionStorage.getItem(this.scrollKey);
+      if (!brut) {
+        return;
+      }
+      // Position valable une seule fois : au retour de la fiche d'une commande
+      if (derniere) {
+        sessionStorage.removeItem(this.scrollKey);
+      }
+      const etat = JSON.parse(brut) as { cols?: Record<string, number>; win?: number };
+      board.querySelectorAll<HTMLElement>('.kb-col').forEach((col) => {
+        const liste = col.querySelector<HTMLElement>('.kb-col__liste');
+        const y = etat.cols?.[col.dataset['cle'] ?? ''];
+        if (liste && typeof y === 'number') {
+          liste.scrollTop = y;
+        }
+      });
+      if (typeof etat.win === 'number' && etat.win > 0) {
+        window.scrollTo({ top: etat.win });
+      }
+    } catch {
+      // ignorer
+    }
+  }
+
+  /** Bascule « Client attend » / « Rien à faire » sans quitter le tableau. */
+  basculerAttente(commande: Commande): void {
+    const avant = commande.attente_reponse;
+    const apres = avant === false;
+    this.remplacer(commande.id_commande, { attente_reponse: apres });
+    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${commande.id_commande}`, { attente_reponse: apres }).subscribe({
+      error: (error) => {
+        console.error('Erreur lors de la mise à jour de l\'attente réponse:', error);
+        this.remplacer(commande.id_commande, { attente_reponse: avant });
+      },
+    });
+  }
+
+  /** Coche ou décoche une des quatre actions de clôture. */
+  basculerFinal(commande: Commande, statut: StatutCommande): void {
+    if (this.isStatutMoveInProgress) {
+      return;
+    }
+    const actifs = commande.statuts_actifs ?? [];
+    if (actifs.includes(statut)) {
+      this.onCheckboxChange(commande, statut);
+      return;
+    }
+    // Déjà fait : on la remet à faire (le backend bascule sur le même appel)
+    this.remplacer(commande.id_commande, {
+      statuts_actifs: this.statutsFinaux.filter((s) => s === statut || actifs.includes(s)),
+    });
+    this.apiService.put(ApiURI.UPDATE_STATUT_COMMANDE, { id_commande: commande.id_commande, statut }).subscribe({
+      next: (response) => {
+        if (response.result && response.data) {
+          this.remplacer(commande.id_commande, response.data);
+        }
+      },
+      error: (error) => {
+        console.error('Erreur lors de la mise à jour du statut:', error);
+        this.loadCommandes();
+      },
+    });
+  }
+
+  /** Étape suivante (bouton ✓ de la carte). */
+  avancer(carte: CarteVue): void {
+    if (this.isStatutMoveInProgress) {
+      return;
+    }
+    this.onCheckboxChange(carte.c, carte.source);
+  }
+
+  /** Étape précédente (bouton ← de la carte). */
+  reculer(carte: CarteVue, colonne: ColonneVue): void {
+    if (this.isStatutMoveInProgress) {
+      return;
+    }
+    if (colonne.final) {
+      this.onEtapePrecedenteUncheck(carte.c, StatutCommande.A_PRENDRE_EN_PHOTO);
+      return;
+    }
+    const i = this.ordreEtapes.indexOf(colonne.statut);
+    if (i > 0) {
+      this.onEtapePrecedenteUncheck(carte.c, this.ordreEtapes[i - 1]);
+    }
+  }
+
+  private remplacer(id: string, patch: Partial<Commande>): void {
+    this.commandes.set(this.commandes().map((c) => (c.id_commande === id ? { ...c, ...patch } : c)));
   }
 
   loadCommandes(silent = false): void {
@@ -426,17 +524,15 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
         if (response.result && Array.isArray(response.data)) {
           this.commandes.set(response.data);
           this.loadError.set(null);
-          // Ne réappliquer la logique (fermer tout / restaurer) qu'au premier chargement
-          if (!silent && !this.initialExpandedStateApplied) {
-            this.setInitialExpandedSections();
-            this.initialExpandedStateApplied = true;
+          if (!this.premierChargementFait) {
+            this.premierChargementFait = true;
+            this.apresPremierChargement();
           }
         } else if (!silent || this.commandes().length === 0) {
           this.loadError.set('Impossible de charger les commandes.');
         }
         if (!silent) {
           this.isLoading.set(false);
-          this.scrollRestored = false;
         }
       },
       error: (error) => {
@@ -446,39 +542,11 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
         }
         if (!silent) {
           this.isLoading.set(false);
-          this.scrollRestored = false;
         }
       }
     });
   }
 
-  getCommandesByStatut(statut: StatutCommande): Commande[] {
-    // Ne pas afficher les commandes terminées ni annulées
-    const commandesNonTerminees = this.commandes().filter(c => 
-      c.statut_commande !== StatutCommande.TERMINE && c.statut_commande !== StatutCommande.ANNULEE
-    );
-    
-    let commandesFiltrees: Commande[] = [];
-    
-    if (this.statutsFinaux.includes(statut)) {
-      // Afficher les commandes qui ont ce statut dans statuts_actifs
-      commandesFiltrees = commandesNonTerminees.filter(c => 
-        c.statuts_actifs && c.statuts_actifs.includes(statut)
-      );
-    } else if (statut === StatutCommande.A_PRENDRE_EN_PHOTO) {
-      // Pour "À Prendre en photo", exclure les commandes qui ont déjà des statuts_actifs
-      // (car elles sont passées aux 4 dernières colonnes)
-      commandesFiltrees = commandesNonTerminees.filter(c => 
-        c.statut_commande === statut && (!c.statuts_actifs || c.statuts_actifs.length === 0)
-      );
-    } else {
-      // Pour les autres colonnes, utiliser le statut principal
-      commandesFiltrees = commandesNonTerminees.filter(c => c.statut_commande === statut);
-    }
-    
-    // Trier les commandes selon le type de deadline
-    return this.sortCommandesByDeadline(commandesFiltrees, statut);
-  }
 
   /** Colonne où arrivent les commandes du site vitrine (webhook). */
   readonly statutCommandesSite = StatutCommande.EN_ATTENTE_INFORMATION;
@@ -503,9 +571,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
    * 3. Le reste -> trié par date d'ajout (date_commande) - plus récentes en premier
    */
   countCommandesSiteNonTraitees(): number {
-    return this.getCommandesByStatut(this.statutCommandesSite)
-      .filter((c) => isCommandeSiteNonTraitee(c))
-      .length;
+    return this.nbSiteNew();
   }
 
   private sortCommandesByDeadline(commandes: Commande[], statut: StatutCommande): Commande[] {
@@ -621,14 +687,6 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     });
   }
 
-  onEtapePrecedenteChange(event: Event, commande: Commande, etapePrecedente: StatutCommande): void {
-    const target = event.target as HTMLInputElement;
-    // Si la checkbox est décochée, faire revenir la commande à cette étape
-    if (!target.checked) {
-      this.onEtapePrecedenteUncheck(commande, etapePrecedente);
-    }
-  }
-
   onEtapePrecedenteUncheck(commande: Commande, etapePrecedente: StatutCommande): void {
     // Mettre à jour localement immédiatement pour un feedback instantané
     const commandes = [...this.commandes()];
@@ -680,57 +738,6 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     return commande.statut_commande === statut;
   }
 
-  isCheckboxChecked(commande: Commande, statut: StatutCommande): boolean {
-    // Les checkboxes ne sont jamais cochées par défaut
-    // Elles sont cochées uniquement après avoir été cliquées (ce qui déclenche la transition)
-    // Pour les 3 dernières colonnes, une commande apparaît dans la colonne mais n'est pas encore complétée
-    return false;
-  }
-
-  getEtapesPrecedentes(commande: Commande, statutActuel: StatutCommande): StatutCommande[] {
-    // Pour les 4 dernières colonnes, toutes les étapes précédentes sont complétées
-    if (this.statutsFinaux.includes(statutActuel)) {
-      return this.ordreEtapes; // Toutes les étapes sont complétées, incluant "À Prendre en photo"
-    }
-
-    // Trouver l'index de l'étape actuelle
-    const indexActuel = this.ordreEtapes.indexOf(statutActuel);
-    
-    // Si l'étape actuelle n'est pas dans l'ordre, retourner toutes les étapes
-    if (indexActuel === -1) {
-      return this.ordreEtapes;
-    }
-
-    // Retourner toutes les étapes précédentes (non incluses)
-    return this.ordreEtapes.slice(0, indexActuel);
-  }
-
-  isEtapePrecedente(commande: Commande, etapePrecedente: StatutCommande, statutActuel: StatutCommande): boolean {
-    // Si on est dans les colonnes finales et qu'on décoche "À Prendre en photo", c'est spécial
-    if (this.statutsFinaux.includes(statutActuel) && etapePrecedente === StatutCommande.A_PRENDRE_EN_PHOTO) {
-      return true; // On peut décocher "À Prendre en photo" pour revenir en arrière
-    }
-    return true; // Par défaut, toutes les étapes précédentes peuvent être décochées
-  }
-
-  getStatutLabel(statut: StatutCommande): string {
-    return this.statutLabels[statut];
-  }
-
-  getStatutEmoji(statut: StatutCommande): string {
-    return this.statutEmojis[statut] ?? '';
-  }
-
-  formatDate(dateString: string): string {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', { 
-      day: '2-digit', 
-      month: '2-digit', 
-      year: 'numeric' 
-    });
-  }
-
   getClientName(client: Commande['client']): string {
     const nom = client.nom || '';
     const prenom = client.prénom || '';
@@ -750,10 +757,6 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
       default:
         return '';
     }
-  }
-
-  trackByCommandeId(index: number, commande: Commande): string {
-    return commande.id_commande;
   }
 
   private isLivraisonTerminee(commande: Commande): boolean {
@@ -814,11 +817,11 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
       return;
     }
     try {
-      sessionStorage.setItem(this.restoreExpandedKey, '1');
       sessionStorage.setItem(this.detailReturnPageKey, 'en-cours');
     } catch {
       // ignorer
     }
+    this.sauverScroll();
     this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'detail', commande.id_commande]);
   }
 
@@ -828,26 +831,6 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
 
   navigateToNouvelleCommande(): void {
     this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', 'nouvelle']);
-  }
-
-  onAttenteReponseChange(commande: Commande, event: Event): void {
-    const target = event.target as HTMLInputElement;
-    const attenteReponseValue = target.checked;
-
-    // Envoyer la mise à jour à la base de données
-    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${commande.id_commande}`, {
-      attente_reponse: attenteReponseValue
-    }).subscribe({
-      next: () => {
-        // Mettre à jour localement pour un feedback immédiat
-        commande.attente_reponse = attenteReponseValue;
-      },
-      error: (error) => {
-        console.error('Erreur lors de la mise à jour de l\'attente réponse:', error);
-        // Revert la valeur en cas d'erreur
-        target.checked = !attenteReponseValue;
-      }
-    });
   }
 
   isCommandeDragging(commande: Commande): boolean {
@@ -891,6 +874,9 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     if (sourceStatut === targetStatut) {
       return false;
     }
+    if (this.isFinalStatut(sourceStatut) && this.isFinalStatut(targetStatut)) {
+      return false;
+    }
     if (!this.isCommandeInStatut(commande, sourceStatut)) {
       return false;
     }
@@ -901,6 +887,9 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     if (this.isStatutMoveInProgress || event.button !== 0 || this.pointerDrag) {
       return;
     }
+    if (event.pointerType === 'touch' || window.innerWidth < CommandesEnCoursPageComponent.LARGEUR_COLONNES_PX) {
+      return;
+    }
 
     const target = event.target as HTMLElement | null;
     if (this.isInteractiveDragTarget(target)) {
@@ -908,7 +897,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     }
 
     const captureElement = event.currentTarget as HTMLElement;
-    const cardElement = captureElement.closest('.commande-card') as HTMLElement | null;
+    const cardElement = captureElement.closest('.kb-card') as HTMLElement | null;
     if (!cardElement) {
       return;
     }
@@ -1055,11 +1044,6 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     ghost.style.lineHeight = computed.lineHeight;
     ghost.style.boxShadow = '0 20px 44px rgba(0, 0, 0, 0.28)';
 
-    const badge = document.createElement('div');
-    badge.className = 'commande-drag-ghost-badge';
-    badge.textContent = 'Déplacement';
-    ghost.prepend(badge);
-
     document.body.appendChild(ghost);
     this.dragGhost = ghost;
   }
@@ -1080,14 +1064,14 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   private refreshColumnDropRects(): void {
-    const table = this.tableScrollElement?.nativeElement.querySelector('.commandes-table');
-    if (!table) {
+    const board = this.boardElement?.nativeElement;
+    if (!board) {
       this.columnDropRects = [];
       return;
     }
 
     this.columnDropRects = Array.from(
-      table.querySelectorAll<HTMLElement>('tbody td[data-statut-drop]')
+      board.querySelectorAll<HTMLElement>('.kb-col[data-statut-drop]')
     ).map(cell => {
       const rect = cell.getBoundingClientRect();
       return {
@@ -1128,20 +1112,6 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
     }
 
     if (!hit) {
-      const table = this.tableScrollElement?.nativeElement.querySelector('.commandes-table');
-      const headers = table?.querySelectorAll<HTMLElement>('thead th[data-statut-drop]');
-      if (headers) {
-        for (const th of Array.from(headers)) {
-          const rect = th.getBoundingClientRect();
-          if (clientX >= rect.left && clientX < rect.right && clientY >= rect.top && clientY <= rect.bottom) {
-            hit = th.dataset['statutDrop'] as StatutCommande;
-            break;
-          }
-        }
-      }
-    }
-
-    if (!hit) {
       return null;
     }
 
@@ -1163,7 +1133,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
 
   private isInteractiveDragTarget(target: HTMLElement | null): boolean {
     return !!target?.closest(
-      'input, button, .toggle-switch-small, .commande-checkbox, label.checkbox-label, .commande-actions, .attente-reponse-toggle-bottom-left, .prix-indicator'
+      'input, button, a, .kb-card__foot, .kb-fin'
     );
   }
 
@@ -1240,9 +1210,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   private lockTableScroll(locked: boolean): void {
-    const scrollEl = this.tableScrollElement?.nativeElement
-      ?? document.querySelector('.table-scroll') as HTMLElement | null;
-    scrollEl?.classList.toggle('scroll-locked', locked);
+    this.boardElement?.nativeElement.classList.toggle('is-drag', locked);
   }
 
   private buildTargetStateForStatut(targetStatut: StatutCommande): Pick<Commande, 'statut_commande' | 'statuts_actifs'> {

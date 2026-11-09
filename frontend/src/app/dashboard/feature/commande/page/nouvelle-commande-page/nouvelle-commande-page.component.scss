@@ -2962,3 +2962,355 @@
 .evenement-lien {
   margin: 0.4rem 0 0.8rem;
 }
+
+/* =====================================================================
+   Mise en page en colonnes (grand écran, bande étroite, téléphone)
+   ===================================================================== */
+:host {
+  display: block;
+}
+
+.nouvelle-commande-wrapper {
+  min-height: 0;
+  background: none;
+  padding: 0.9rem 1.25rem 2rem;
+
+  @media (min-width: 769px) {
+    padding-top: 0.9rem;
+  }
+}
+
+.nouvelle-commande-container {
+  max-width: 1560px;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+
+.nouvelle-commande-actions-bar {
+  @media (min-width: 769px) {
+    position: sticky;
+    top: var(--gv-shell-top, 60px);
+    z-index: 20;
+    padding: 0.6rem 1.25rem 0;
+  }
+}
+
+.nouvelle-commande-actions-bar__container {
+  max-width: 1560px;
+  padding: 0.4rem 0.8rem;
+  border-color: var(--gv-line);
+  border-radius: var(--border-radius);
+  background: var(--gv-panel);
+  box-shadow: none;
+}
+
+/* En-tête sur une ligne : titre, type, nom, événement */
+.detail-header {
+  margin-bottom: 0.8rem;
+  padding-bottom: 0;
+}
+
+.header-title-section {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+}
+
+.page-title {
+  order: 1;
+  margin: 0;
+  font-family: var(--font-title);
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  white-space: nowrap;
+}
+
+.commande-type-toggle--top-right {
+  order: 2;
+  position: static;
+  margin: 0;
+}
+
+.commande-title-edit {
+  order: 3;
+  flex: 1 1 300px;
+  min-width: 0;
+  margin: 0;
+}
+
+.evenement-lien {
+  order: 4;
+  margin: 0;
+}
+
+/* Grille : 1 colonne, puis 2, puis 3 */
+.nc-grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+}
+
+.nc-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .nc-grille {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .nc-col--prix {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 1500px) {
+  .nc-grille {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.3fr);
+  }
+
+  .nc-col--prix {
+    grid-column: auto;
+  }
+}
+
+.nc-col .form-section,
+.nc-col .statuts-section {
+  margin: 0;
+  padding: 0.85rem 1rem 0.4rem;
+  border: 1px solid var(--gv-line);
+  border-radius: var(--border-radius);
+  background: var(--gv-panel);
+}
+
+.nc-col .statuts-section {
+  padding-bottom: 1rem;
+}
+
+.nc-col .section-title {
+  margin: 0 0 0.8rem;
+  padding: 0;
+  font-family: var(--font-title);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gv-muted);
+}
+
+.nc-col .input-wrapper {
+  margin-bottom: 0.9rem;
+}
+
+/* Champs côte à côte */
+.nc-info,
+.nc-contact {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 0.75rem;
+  align-items: start;
+
+  > * {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+}
+
+.nc-info > .nc-demi,
+.nc-contact > .input-wrapper {
+  grid-column: auto;
+}
+
+.nc-contact > .input-wrapper:last-child {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 480px) {
+  .nc-info > .nc-demi,
+  .nc-contact > .input-wrapper {
+    grid-column: 1 / -1;
+  }
+}
+
+.nc-col .address-section {
+  margin-bottom: 0.2rem;
+}
+
+/* Couleurs et statuts en pastilles */
+.nc-col .couleurs-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.nc-col .couleur-checkbox-label,
+.nc-col .statut-radio-label {
+  position: relative;
+  gap: 0;
+  min-height: 32px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--gv-line);
+  border-radius: 999px;
+  background: none;
+  font-size: 0.82rem;
+
+  &:hover {
+    opacity: 1;
+    border-color: var(--gv-line-strong);
+    background: none;
+  }
+
+  &:focus-within {
+    outline: 2px solid var(--gv-accent);
+    outline-offset: 1px;
+  }
+
+  .couleur-label,
+  .statut-label {
+    font-size: 0.82rem;
+    color: inherit;
+  }
+
+  &.selected {
+    border-color: var(--gv-ink);
+    background: var(--gv-ink);
+    color: var(--color-background);
+
+    .couleur-label,
+    .statut-label {
+      color: inherit;
+      font-weight: 600;
+    }
+  }
+}
+
+.nc-col .couleur-checkbox,
+.nc-col .statut-radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nc-col .statuts-list {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+@media (max-width: 768px) {
+  .nouvelle-commande-wrapper {
+    padding: 0.7rem 0.7rem 200px;
+  }
+
+  .nouvelle-commande-container {
+    padding: 0;
+  }
+
+  .nc-col .form-section,
+  .nc-col .statuts-section {
+    padding: 0.75rem 0.75rem 0.3rem;
+  }
+
+  .nc-col .statuts-section {
+    padding-bottom: 0.8rem;
+  }
+}
+
+/* Mode de contact : une seule ligne compacte */
+.nc-col .mode-contact-radio-group {
+  gap: 0.3rem 0.5rem;
+  margin: 0.3rem 0 0;
+}
+
+.nc-col .mode-contact-radio-label {
+  margin: 0;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.86rem;
+}
+
+/* Barre d'actions du bas (bande étroite et téléphone) : compacte, au-dessus de la navigation */
+@media (max-width: 768px) {
+  .form-actions-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.4rem 0.6rem;
+    align-items: center;
+    bottom: var(--gv-shell-bottom, 0px);
+    padding: 0.5rem 0.7rem;
+    border-top: 1px solid var(--gv-line);
+    background: var(--gv-panel);
+    box-shadow: none;
+  }
+
+  .form-actions-footer__buttons {
+    display: contents;
+  }
+
+  .form-actions-footer__row {
+    flex-wrap: nowrap;
+    gap: 0.4rem;
+    grid-column: 1 / -1;
+  }
+
+  .form-actions-footer__row:first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .form-actions-footer__toggle {
+    grid-column: 2;
+    grid-row: 1;
+    padding: 0;
+    border: 0;
+  }
+
+  .form-actions-footer .btn-footer {
+    min-height: 38px;
+    padding: 0 0.6rem;
+    font-size: 0.82rem;
+  }
+
+  .form-actions-footer .btn-footer.btn-primary {
+    min-height: 42px;
+    font-weight: 700;
+  }
+
+  .nouvelle-commande-wrapper {
+    padding-bottom: 190px;
+  }
+}
+
+@media (min-width: 769px) {
+  .form-actions-footer {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-actions-footer .btn-footer {
+    padding: 0 0.45rem;
+    font-size: 0.78rem;
+  }
+
+  .form-actions-footer__toggle {
+    min-width: 0;
+    max-width: 6.6rem;
+
+    .toggle-label,
+    .toggle-label-text,
+    span:not(.toggle-slider) {
+      font-size: 0.7rem;
+      line-height: 1.1;
+      white-space: normal;
+    }
+  }
+}

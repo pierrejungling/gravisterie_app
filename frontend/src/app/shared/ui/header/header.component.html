@@ -13,6 +13,7 @@
 
   <div class="gv-top__meta" *ngIf="isAuthenticated()">
     <span class="gv-top__date">{{ todayLabel }}</span>
+    <span class="gv-top__tc" #timecode aria-hidden="true">00:00:00.000</span>
     <span class="gv-top__sep" aria-hidden="true">·</span>
     <span class="gv-top__coords">50°29′N 5°51′E</span>
   </div>

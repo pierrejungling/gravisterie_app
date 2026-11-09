@@ -1,6 +1,6 @@
 <app-header></app-header>
 
-<div class="gv-page">
+<div class="gv-page cl">
   <header class="gv-page-head">
     <div>
       <div class="gv-eyebrow">Fichier clients · {{ totaux().fiches }} fiches</div>
@@ -73,6 +73,14 @@
     } @else {
       <div class="client-list gv-panel">
         <div class="client-row client-row--head" aria-hidden="true">
+          <span></span>
+          <span>Client</span>
+          <span class="num">Cmd</span>
+          <span class="num">CA</span>
+          <span class="num">Panier</span>
+          <span class="num">Dernière</span>
+        </div>
+        <div class="client-row client-row--head client-row--head2" aria-hidden="true">
           <span></span>
           <span>Client</span>
           <span class="num">Cmd</span>

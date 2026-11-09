@@ -107,14 +107,16 @@
     </div>
 
     <form id="nouvelleCommandeForm" [formGroup]="formGroup" *ngIf="formGroup" (ngSubmit)="onSubmit()">
+      <div class="nc-grille" [class.nc-grille--vente]="isVente()">
+      <div class="nc-col nc-col--infos">
       
       <!-- Informations de la commande -->
-      <section class="form-section">
+      <section class="form-section nc-info">
         <h2 class="section-title">Informations de la {{ isVente() ? 'vente' : 'commande' }}</h2>
         
         <!-- Le champ nom_commande est maintenant dans le header, on ne l'affiche plus ici -->
 
-        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('date_commande')">
+        <div class="input-wrapper nc-demi" [class.field-wrapper--error]="hasFieldError('date_commande')">
           <app-floating-label-input
             [label]="'Date de commande'"
             [control]="get('date_commande')"
@@ -124,7 +126,7 @@
           <p class="field-error" *ngIf="getFieldErrorMessage('date_commande')">{{ getFieldErrorMessage('date_commande') }}</p>
         </div>
 
-        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('deadline')" *ngIf="!isVente()">
+        <div class="input-wrapper nc-demi" [class.field-wrapper--error]="hasFieldError('deadline')" *ngIf="!isVente()">
           <app-floating-label-input
             [label]="'Deadline'"
             [control]="get('deadline')"
@@ -148,7 +150,7 @@
           </div>
         </div>
 
-        <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('dimensions_souhaitees')" *ngIf="!isVente()">
+        <div class="input-wrapper nc-demi" [class.field-wrapper--error]="hasFieldError('dimensions_souhaitees')" *ngIf="!isVente()">
           <app-floating-label-input
             [label]="'Dimensions souhaitées'"
             [control]="get('dimensions_souhaitees')"
@@ -157,7 +159,7 @@
           <p class="field-error" *ngIf="getFieldErrorMessage('dimensions_souhaitees')">{{ getFieldErrorMessage('dimensions_souhaitees') }}</p>
         </div>
 
-        <div class="input-wrapper" *ngIf="!isVente()">
+        <div class="input-wrapper nc-demi" *ngIf="!isVente()">
           <app-floating-label-input
             #supportInput
             [label]="'Support'"
@@ -198,8 +200,59 @@
 
       </section>
 
+    <!-- Personnalisation -->
+    <section class="form-section nc-perso" *ngIf="!isVente()">
+      <h2 class="section-title">Personnalisation</h2>
+
+      <!-- Couleur (sélection multiple) -->
+      <div class="input-wrapper">
+        <label class="label">Couleur (sélection multiple)</label>
+        <div class="couleurs-grid">
+          <label 
+            *ngFor="let couleur of couleursDisponibles" 
+            class="couleur-checkbox-label"
+            [class.selected]="isCouleurSelected(couleur)">
+            <input 
+              type="checkbox" 
+              [checked]="isCouleurSelected(couleur)"
+              (change)="toggleCouleur(couleur)"
+              class="couleur-checkbox">
+            <span class="couleur-label">{{ couleur }}</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Police d'écriture -->
+      <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('police_ecriture')">
+        <app-floating-label-input
+          [label]="'Police d\'écriture'"
+          [control]="get('police_ecriture')!"
+          [formGroup]="formGroup">
+        </app-floating-label-input>
+        <p class="field-error" *ngIf="getFieldErrorMessage('police_ecriture')">{{ getFieldErrorMessage('police_ecriture') }}</p>
+      </div>
+
+      <!-- Texte de la personnalisation -->
+      <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('texte_personnalisation')">
+        <div class="textarea-container" [formGroup]="formGroup">
+          <textarea
+            class="description-textarea"
+            formControlName="texte_personnalisation"
+            (input)="autoGrowTextarea($event)"
+            rows="4"
+            placeholder=" "></textarea>
+          <label class="textarea-label" [class.fixed-label]="get('texte_personnalisation').value && get('texte_personnalisation').value.length > 0">
+            Texte de la personnalisation
+          </label>
+        </div>
+        <p class="field-error" *ngIf="getFieldErrorMessage('texte_personnalisation')">{{ getFieldErrorMessage('texte_personnalisation') }}</p>
+      </div>
+    </section>
+      </div>
+
+      <div class="nc-col nc-col--contact">
       <!-- Coordonnées de contact -->
-      <section class="form-section">
+      <section class="form-section nc-contact">
         <h2 class="section-title">Coordonnées de contact</h2>
 
         <div class="client-picker-slot">
@@ -347,8 +400,31 @@
         </div>
       </section>
 
+    <!-- Statut initial de la commande -->
+    <section class="statuts-section" *ngIf="!isVente()">
+      <h2 class="section-title">Statut initial de la commande</h2>
+      
+      <div class="statuts-list">
+        <label 
+          *ngFor="let statut of statuts" 
+          class="statut-radio-label"
+          [class.selected]="isStatutSelected(statut)">
+          <input 
+            type="radio" 
+            name="statut_initial"
+            [value]="statut"
+            [checked]="isStatutSelected(statut)"
+            (change)="onStatutChange(statut)"
+            class="statut-radio">
+          <span class="statut-label">{{ statutLabels[statut] }}</span>
+        </label>
+      </div>
+    </section>
+      </div>
+
+      <div class="nc-col nc-col--prix">
       <!-- Prix et Frais -->
-      <section class="form-section">
+      <section class="form-section nc-prix">
         <h2 class="section-title">Prix et Frais</h2>
 
         <!-- Prix : une ligne par tarif -->
@@ -756,77 +832,9 @@
           </div>
         </div>
       </section>
+      </div>
+      </div>
     </form>
-
-    <!-- Personnalisation -->
-    <section class="form-section form-section--spaced" *ngIf="!isVente()">
-      <h2 class="section-title">Personnalisation</h2>
-
-      <!-- Couleur (sélection multiple) -->
-      <div class="input-wrapper">
-        <label class="label">Couleur (sélection multiple)</label>
-        <div class="couleurs-grid">
-          <label 
-            *ngFor="let couleur of couleursDisponibles" 
-            class="couleur-checkbox-label"
-            [class.selected]="isCouleurSelected(couleur)">
-            <input 
-              type="checkbox" 
-              [checked]="isCouleurSelected(couleur)"
-              (change)="toggleCouleur(couleur)"
-              class="couleur-checkbox">
-            <span class="couleur-label">{{ couleur }}</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Police d'écriture -->
-      <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('police_ecriture')">
-        <app-floating-label-input
-          [label]="'Police d\'écriture'"
-          [control]="get('police_ecriture')!"
-          [formGroup]="formGroup">
-        </app-floating-label-input>
-        <p class="field-error" *ngIf="getFieldErrorMessage('police_ecriture')">{{ getFieldErrorMessage('police_ecriture') }}</p>
-      </div>
-
-      <!-- Texte de la personnalisation -->
-      <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('texte_personnalisation')">
-        <div class="textarea-container" [formGroup]="formGroup">
-          <textarea
-            class="description-textarea"
-            formControlName="texte_personnalisation"
-            (input)="autoGrowTextarea($event)"
-            rows="4"
-            placeholder=" "></textarea>
-          <label class="textarea-label" [class.fixed-label]="get('texte_personnalisation').value && get('texte_personnalisation').value.length > 0">
-            Texte de la personnalisation
-          </label>
-        </div>
-        <p class="field-error" *ngIf="getFieldErrorMessage('texte_personnalisation')">{{ getFieldErrorMessage('texte_personnalisation') }}</p>
-      </div>
-    </section>
-
-    <!-- Statut initial de la commande -->
-    <section class="statuts-section" *ngIf="!isVente()">
-      <h2 class="section-title">Statut initial de la commande</h2>
-      
-      <div class="statuts-list">
-        <label 
-          *ngFor="let statut of statuts" 
-          class="statut-radio-label"
-          [class.selected]="isStatutSelected(statut)">
-          <input 
-            type="radio" 
-            name="statut_initial"
-            [value]="statut"
-            [checked]="isStatutSelected(statut)"
-            (change)="onStatutChange(statut)"
-            class="statut-radio">
-          <span class="statut-label">{{ statutLabels[statut] }}</span>
-        </label>
-      </div>
-    </section>
   </div>
 
   <!-- Footer fixe mobile/tablette : Afficher frais, Annuler, Créer la commande, + Toggle attente réponse -->

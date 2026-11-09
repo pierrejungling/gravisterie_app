@@ -44,6 +44,18 @@ import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js';
 import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 
+type OngletDetail = 'atelier' | 'infos' | 'prix' | 'client' | 'fichiers';
+const CLE_ONGLET_DETAIL = 'detail-commande-onglet';
+const ONGLETS_DETAIL: OngletDetail[] = ['atelier', 'infos', 'prix', 'client', 'fichiers'];
+
+function lireOngletDetail(): OngletDetail {
+  try {
+    const v = sessionStorage.getItem(CLE_ONGLET_DETAIL) as OngletDetail | null;
+    if (v && ONGLETS_DETAIL.includes(v)) return v;
+  } catch {}
+  return 'atelier';
+}
+
 @Component({
   selector: 'app-detail-commande-page',
   standalone: true,
@@ -75,6 +87,11 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private suggestionsEditionNettoyage = false;
   majDistanteDisponible: WritableSignal<boolean> = signal(false);
   showPrixFields: WritableSignal<boolean> = signal(true);
+
+  /** Écran étroit (téléphone, fenêtre en bande) : une zone à la fois, sans scroller. */
+  readonly ongletDetail: WritableSignal<OngletDetail> = signal(lireOngletDetail());
+  /** Menu « Plus d'actions » de la barre du bas (écran étroit). */
+  readonly menuActionsOuvert: WritableSignal<boolean> = signal(false);
   showDeleteConfirm: WritableSignal<boolean> = signal(false);
   isDuplicating: WritableSignal<boolean> = signal(false);
   showAdresseMap: WritableSignal<boolean> = signal(false);
@@ -3924,6 +3941,83 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         }
       });
     }
+  }
+
+  // ---------- Disposition (résumé, onglets écran étroit) ----------
+  /** Onglet réellement affiché : une vente n'a pas d'atelier. */
+  ongletActif(): OngletDetail {
+    const o = this.ongletDetail();
+    return this.isVente() && o === 'atelier' ? 'infos' : o;
+  }
+
+  choisirOnglet(onglet: OngletDetail): void {
+    this.ongletDetail.set(onglet);
+    this.menuActionsOuvert.set(false);
+    try {
+      sessionStorage.setItem(CLE_ONGLET_DETAIL, onglet);
+    } catch {}
+    if (typeof window !== 'undefined' && window.scrollY > 0) window.scrollTo({ top: 0 });
+  }
+
+  toggleMenuActions(): void {
+    this.menuActionsOuvert.update((v) => !v);
+  }
+
+  resumeClient(): string {
+    const c = this.commande()?.client;
+    if (!c) return '';
+    return (c.société || [c.prénom, c.nom].filter(Boolean).join(' ') || '').trim();
+  }
+
+  resumeStatut(): string {
+    const st = this.commande()?.statut_commande;
+    return st ? this.statutLabels[st] || st : '';
+  }
+
+  /** Jours avant la deadline (négatif = dépassée), null sans deadline. */
+  joursAvantDeadline(): number | null {
+    const d = this.commande()?.deadline;
+    if (!d) return null;
+    const jour = new Date(d);
+    if (isNaN(jour.getTime())) return null;
+    const auj = new Date();
+    auj.setHours(0, 0, 0, 0);
+    jour.setHours(0, 0, 0, 0);
+    return Math.round((jour.getTime() - auj.getTime()) / 86400000);
+  }
+
+  resumeDeadline(): string {
+    const j = this.joursAvantDeadline();
+    if (j === null) return '';
+    const date = new Date(this.commande()!.deadline as string).toLocaleDateString('fr-BE', { day: 'numeric', month: 'short' });
+    if (j < 0) return `${date} · ${-j} j de retard`;
+    if (j === 0) return `${date} · aujourd'hui`;
+    if (j === 1) return `${date} · demain`;
+    return `${date} · J-${j}`;
+  }
+
+  resumePrix(): number | null {
+    const v = Number(this.commande()?.prix_final);
+    return this.commande()?.prix_final != null && !isNaN(v) ? v : null;
+  }
+
+  resumePrixLabel(): string {
+    const v = this.resumePrix();
+    return v === null ? '' : v.toLocaleString('fr-BE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' €';
+  }
+
+  /** Avancement cumulé des compteurs (réalisé / cible), null sans compteur. */
+  resumeCompteurs(): { fait: number; total: number } | null {
+    if (!this.formGroup || this.isVente()) return null;
+    const n = this.quantiteProduitCompteursFormArray?.length ?? 0;
+    if (!n) return null;
+    let fait = 0;
+    let total = 0;
+    for (let i = 0; i < n; i++) {
+      fait += Math.min(this.compteurRealiseAffiche(i), this.compteurCibleAffiche(i));
+      total += this.compteurCibleAffiche(i);
+    }
+    return total > 0 ? { fait, total } : null;
   }
 
   goBack(): void {

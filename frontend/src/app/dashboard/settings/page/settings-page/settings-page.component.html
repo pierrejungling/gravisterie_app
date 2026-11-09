@@ -1,91 +1,68 @@
 <app-header></app-header>
 
-<div class="settings-page">
-  <div class="settings-page__container">
-    <div class="settings-page__header">
-      <h1 class="settings-page__title">Paramètres</h1>
-    </div>
+<div class="gv-page rg">
+  <header class="rg-bar">
+    <h1>Réglages</h1>
+    <span class="rg-bar__compte" *ngIf="currentUsername">{{ currentUsername }}</span>
+  </header>
 
-    <div class="settings-page__content">
-      <div class="settings-section">
-        <h2 class="settings-section__title">Modifier mes identifiants</h2>
-        <p class="settings-section__description">
-          Changez votre nom d'utilisateur et votre mot de passe
-        </p>
+  <div class="rg-grille">
+    <section class="gv-panel rg-bloc">
+      <h2 class="gv-section-title">Identifiants</h2>
 
-        <div class="success-area" *ngIf="successMessage">
-          <p class="success-message">{{ successMessage }}</p>
+      <p class="rg-ok" *ngIf="successMessage">{{ successMessage }}</p>
+      <p class="rg-erreur" *ngIf="getGeneralError()">{{ getGeneralError() }}</p>
+
+      <form [formGroup]="formGroup" class="rg-form" (ngSubmit)="updateCredentials()">
+        <div class="rg-champ" [class.rg-champ--erreur]="hasFieldError('username')">
+          <app-floating-label-input
+            [label]="'Nom d\'utilisateur'"
+            [control]="get('username')"
+            [formGroup]="formGroup">
+          </app-floating-label-input>
+          <p class="rg-champ__erreur" *ngIf="getFieldErrorMessage('username')">{{ getFieldErrorMessage('username') }}</p>
         </div>
 
-        <div class="error-area error-area--general" *ngIf="getGeneralError()">
-          <p>{{ getGeneralError() }}</p>
+        <div class="rg-champ" [class.rg-champ--erreur]="hasFieldError('currentPassword')">
+          <app-floating-label-input
+            [label]="'Mot de passe actuel'"
+            [control]="get('currentPassword')"
+            [formGroup]="formGroup"
+            type="password">
+          </app-floating-label-input>
+          <p class="rg-champ__erreur" *ngIf="getFieldErrorMessage('currentPassword')">{{ getFieldErrorMessage('currentPassword') }}</p>
         </div>
 
-        <form [formGroup]="formGroup" class="settings-form">
-          <div class="settings-form__fields">
-            <div class="field-wrapper" [class.field-wrapper--error]="hasFieldError('username')">
-              <app-floating-label-input
-                [label]="'Nom d\'utilisateur'"
-                [control]="get('username')"
-                [formGroup]="formGroup">
-              </app-floating-label-input>
-              <p class="field-error" *ngIf="getFieldErrorMessage('username')">{{ getFieldErrorMessage('username') }}</p>
-            </div>
+        <div class="rg-champ" [class.rg-champ--erreur]="hasFieldError('newPassword')">
+          <app-floating-label-input
+            [label]="'Nouveau mot de passe'"
+            [control]="get('newPassword')"
+            [formGroup]="formGroup"
+            type="password">
+          </app-floating-label-input>
+          <p class="rg-champ__erreur" *ngIf="getFieldErrorMessage('newPassword')">{{ getFieldErrorMessage('newPassword') }}</p>
+        </div>
 
-            <div class="field-wrapper" [class.field-wrapper--error]="hasFieldError('currentPassword')">
-              <app-floating-label-input
-                [label]="'Mot de passe actuel'"
-                [control]="get('currentPassword')"
-                [formGroup]="formGroup"
-                type="password">
-              </app-floating-label-input>
-              <p class="field-error" *ngIf="getFieldErrorMessage('currentPassword')">{{ getFieldErrorMessage('currentPassword') }}</p>
-            </div>
+        <div class="rg-champ" [class.rg-champ--erreur]="hasFieldError('confirmPassword')">
+          <app-floating-label-input
+            [label]="'Confirmer le nouveau mot de passe'"
+            [control]="get('confirmPassword')"
+            [formGroup]="formGroup"
+            type="password">
+          </app-floating-label-input>
+          <p class="rg-champ__erreur" *ngIf="getFieldErrorMessage('confirmPassword')">{{ getFieldErrorMessage('confirmPassword') }}</p>
+        </div>
 
-            <div class="field-wrapper" [class.field-wrapper--error]="hasFieldError('newPassword')">
-              <app-floating-label-input
-                [label]="'Nouveau mot de passe'"
-                [control]="get('newPassword')"
-                [formGroup]="formGroup"
-                type="password">
-              </app-floating-label-input>
-              <p class="field-error" *ngIf="getFieldErrorMessage('newPassword')">{{ getFieldErrorMessage('newPassword') }}</p>
-            </div>
+        <div class="rg-form__actions">
+          <button type="submit" class="gv-btn gv-btn--primary">Enregistrer</button>
+        </div>
+      </form>
+    </section>
 
-            <div class="field-wrapper" [class.field-wrapper--error]="hasFieldError('confirmPassword')">
-              <app-floating-label-input
-                [label]="'Confirmer le nouveau mot de passe'"
-                [control]="get('confirmPassword')"
-                [formGroup]="formGroup"
-                type="password">
-              </app-floating-label-input>
-              <p class="field-error" *ngIf="getFieldErrorMessage('confirmPassword')">{{ getFieldErrorMessage('confirmPassword') }}</p>
-            </div>
-          </div>
-
-          <div class="settings-form__actions">
-            <button 
-              type="button" 
-              class="btn-primary"
-              (click)="updateCredentials()">
-              Enregistrer les modifications
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div class="settings-section settings-section--logout">
-        <h2 class="settings-section__title">Déconnexion</h2>
-        <p class="settings-section__description">
-          Fermer votre session et quitter l'application
-        </p>
-        <button
-          type="button"
-          class="btn-logout"
-          (click)="logout()">
-          Se déconnecter
-        </button>
-      </div>
-    </div>
+    <section class="gv-panel rg-bloc rg-bloc--session">
+      <h2 class="gv-section-title">Session</h2>
+      <p class="rg-note">Ferme la session sur cet appareil.</p>
+      <button type="button" class="gv-btn rg-sortie" (click)="logout()">Se déconnecter</button>
+    </section>
   </div>
 </div>

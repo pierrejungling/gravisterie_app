@@ -1,45 +1,191 @@
 <app-header></app-header>
 
-<div class="dashboard-home">
-  <div class="dashboard-home__container">
-    <!-- Logo en grand -->
-    <div class="dashboard-home__logo-section fade-in">
-      <img 
-        [src]="logoPath()" 
-        alt="LA GRAVISTERIE" 
-        class="dashboard-home__logo"
-        (load)="onLogoLoad()"
-        (error)="onLogoError($event)">
-      <h1 class="dashboard-home__title" *ngIf="logoError || !logoPath()">LA GRAVISTERIE</h1>
-      <p class="dashboard-home__subtitle">Bienvenue, {{ currentUser }}</p>
+<div class="gv-page dashboard-home">
+  <!-- En-tête -->
+  <header class="home-head">
+    <div>
+      <div class="gv-eyebrow">{{ dateLabel }} · semaine {{ semaine }}</div>
+      <h1>{{ salutation }}@if (prenom()) {, <span class="home-head__nom">{{ prenom() }}</span>}</h1>
     </div>
+    <div class="home-head__actions">
+      <button type="button" class="gv-btn gv-btn--primary" (click)="nouvelleCommande()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>Nouvelle commande
+      </button>
+      <a class="gv-btn" routerLink="/dashboard/evenements">Événement</a>
+      <a class="gv-btn" routerLink="/dashboard/bons">Bon cadeau</a>
+    </div>
+  </header>
 
-    <!-- Cartes de navigation -->
-    <div class="dashboard-home__cards">
-      <div 
-        *ngFor="let card of dashboardCards; let i = index"
-        class="dashboard-card"
-        [routerLink]="card.route"
-        (click)="card.route.includes('en-cours') && setEntryFromForCommandesEnCours('dashboard'); card.route.includes('nouvelle') && clearScrollForNouvelleCommande()"
-        [style.animation-delay]="(i * 0.1) + 's'">
-        <div class="dashboard-card__icon">{{ card.icon }}</div>
-        <h3 class="dashboard-card__title">{{ card.title }}</h3>
-        <p class="dashboard-card__description">{{ card.description }}</p>
-        <div class="dashboard-card__footer">
-          <div class="dashboard-card__counts" *ngIf="card.countTerminees !== undefined || card.countAnnulees !== undefined">
-            <span class="dashboard-card__count" *ngIf="card.countTerminees !== undefined">
-              {{ card.countTerminees }} terminée{{ card.countTerminees > 1 ? 's' : '' }}
-            </span>
-            <span class="dashboard-card__count" *ngIf="card.countAnnulees !== undefined">
-              {{ card.countAnnulees }} annulée{{ card.countAnnulees > 1 ? 's' : '' }}
-            </span>
+  <!-- Travail du jour + prochains événements -->
+  <section class="home-hero">
+    <div class="gv-panel panel jour">
+      <div class="panel__head">
+        <h2><span class="num">01</span>Aujourd'hui</h2>
+        <button type="button" class="lien" (click)="allerEnCours()">Kanban →</button>
+      </div>
+      <div class="jour__cols">
+        @for (b of [
+          { cle: 'graver', titre: 'À graver', sous: 'modéliser et graver', data: aujourdhui().graver },
+          { cle: 'finir', titre: 'À finir', sous: 'laver, assembler, peindre', data: aujourdhui().finir },
+          { cle: 'attend', titre: 'Client attend', sous: 'une réponse de ta part', data: aujourdhui().attend }
+        ]; track b.cle) {
+          <div class="jour__col" [class.jour__col--attend]="b.cle === 'attend'">
+            <div class="jour__tete">
+              <span class="jour__nb">{{ b.data.nb }}</span>
+              <span><b>{{ b.titre }}</b><small>{{ b.sous }}</small></span>
+            </div>
+            <ul>
+              @for (c of b.data.items; track c.id) {
+                <li>
+                  <a [routerLink]="['/dashboard', 'commandes', 'detail', c.id]">
+                    <span class="jour__titre">{{ c.titre }}</span>
+                    @if (c.deadline !== null) {
+                      <span class="jour__dl" [class.is-retard]="c.deadline < 0" [class.is-proche]="c.deadline >= 0 && c.deadline <= 2">{{ tagDeadline(c.deadline) }}</span>
+                    }
+                  </a>
+                </li>
+              } @empty {
+                <li class="jour__vide">Rien pour l'instant</li>
+              }
+              @if (b.data.nb > b.data.items.length) {
+                <li class="jour__plus"><button type="button" (click)="allerEnCours()">+ {{ b.data.nb - b.data.items.length }} autres</button></li>
+              }
+            </ul>
           </div>
-          <span class="dashboard-card__count" *ngIf="card.count !== undefined && card.countTerminees === undefined && card.countAnnulees === undefined">
-            {{ card.count }} {{ card.countUnit === 'bon actif' ? (card.count > 1 ? 'bons actifs' : 'bon actif') : card.countUnit === 'fiche client' ? (card.count > 1 ? 'fiches clients' : 'fiche client') : card.countUnit === 'événement à venir' ? (card.count > 1 ? 'événements à venir' : 'événement à venir') : (card.count > 1 ? 'commandes' : 'commande') }}
-          </span>
-          <span class="dashboard-card__arrow">→</span>
-        </div>
+        }
       </div>
     </div>
-  </div>
+
+    <div class="gv-panel panel evs">
+      <div class="panel__head">
+        <h2><span class="num">02</span>Événements</h2>
+        <a routerLink="/dashboard/evenements">Tous →</a>
+      </div>
+      @if (prochains().length === 0) {
+        <p class="vide">Aucun événement prévu.</p>
+      }
+      @for (e of prochains(); track e.id_evenement; let premier = $first) {
+        <a class="ev" [class.ev--premier]="premier" [routerLink]="['/dashboard', 'evenements', e.id_evenement]">
+          <div class="ev__date"><b>{{ jour(e) }}</b><span>{{ moisCourt(e) }}</span></div>
+          <div class="ev__main">
+            <div class="ev__nom">{{ e.nom }}</div>
+            <div class="ev__meta">{{ infoEvenement(e) }}</div>
+            @if (premier) {
+              <div class="ev__chips">
+                <span class="gv-chip gv-chip--accent">{{ compteurEvenement(e) }}</span>
+                @if (materiel(e).total) {
+                  <span class="gv-chip" [class.gv-chip--ok]="materiel(e).fait === materiel(e).total">Matériel {{ materiel(e).fait }}/{{ materiel(e).total }}</span>
+                }
+              </div>
+            }
+          </div>
+        </a>
+      }
+    </div>
+  </section>
+
+  <!-- Chiffres clés -->
+  <section class="kpis">
+    <button type="button" class="gv-panel kpi" (click)="allerEnCours()">
+      <span class="kpi__label">En cours</span>
+      <span class="kpi__val">{{ kpis().enCours }}</span>
+      <span class="kpi__sous">{{ kpis().clientAttend }} client{{ kpis().clientAttend > 1 ? 's' : '' }} attend{{ kpis().clientAttend > 1 ? 'ent' : '' }}</span>
+    </button>
+    <button type="button" class="gv-panel kpi" [class.kpi--warn]="kpis().retard > 0" (click)="allerEnCours()">
+      <span class="kpi__label">Deadlines dépassées</span>
+      <span class="kpi__val">{{ kpis().retard }}</span>
+      <span class="kpi__sous">commandes en retard</span>
+    </button>
+    <a class="gv-panel kpi" [class.kpi--warn]="kpis().aEncaisser > 0" routerLink="/dashboard/commandes/terminees">
+      <span class="kpi__label">À encaisser</span>
+      <span class="kpi__val">{{ euros(kpis().aEncaisser) }}</span>
+      <span class="kpi__sous">{{ kpis().nbImpayes }} commandes non payées</span>
+    </a>
+    <a class="gv-panel kpi" routerLink="/dashboard/commandes/terminees">
+      <span class="kpi__label">CA {{ maintenant.getFullYear() }}</span>
+      <span class="kpi__val">{{ euros(caAnnee()) }}</span>
+      <span class="kpi__sous">HTVA, hors annulées</span>
+    </a>
+  </section>
+
+  <!-- Atelier + priorités -->
+  <section class="home-main">
+    <div class="gv-panel panel">
+      <div class="panel__head">
+        <h2><span class="num">03</span>Atelier</h2>
+        <button type="button" class="lien" (click)="allerEnCours()">Kanban →</button>
+      </div>
+      @if (atelier().total) {
+        <div class="flux">
+          @for (e of atelier().etapes; track e.cle) {
+            <button type="button" [style.flex]="e.nb" [style.background]="e.couleur" (click)="allerEnCours()" [title]="e.label">{{ e.nb }}</button>
+          }
+        </div>
+        <ul class="etapes">
+          @for (e of atelier().etapes; track e.cle) {
+            <li>
+              <i [style.background]="e.couleur"></i>
+              <span>{{ e.label }}</span>
+              @if (e.retard) { <em>{{ e.retard }} en retard</em> }
+              <b>{{ e.nb }}</b>
+            </li>
+          }
+        </ul>
+      } @else if (charge()) {
+        <p class="vide">Rien en cours. Atelier libre.</p>
+      }
+    </div>
+
+    <div class="gv-panel panel">
+      <div class="panel__head">
+        <h2><span class="num">04</span>À faire en priorité</h2>
+        @if (nbAutresTaches()) { <button type="button" class="lien" (click)="allerEnCours()">+ {{ nbAutresTaches() }} →</button> }
+      </div>
+      @if (taches().length === 0 && charge()) {
+        <p class="vide">Aucune deadline dans les 7 jours.</p>
+      }
+      <ul class="taches">
+        @for (x of taches(); track x.id) {
+          <li>
+            <a [routerLink]="x.lien">
+              <span class="tag" [class]="'tag tag--' + x.ton">{{ x.tag }}</span>
+              <span class="taches__txt">
+                <span class="taches__titre">{{ x.titre }}</span>
+                <span class="taches__detail">{{ x.detail }}</span>
+              </span>
+              <span class="taches__fleche" aria-hidden="true">→</span>
+            </a>
+          </li>
+        }
+      </ul>
+    </div>
+  </section>
+
+  <!-- Accès aux modules -->
+  <nav class="mods" aria-label="Modules">
+    <button type="button" class="mod" (click)="nouvelleCommande()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+      <b>Nouvelle</b><span>commande / vente</span>
+    </button>
+    <button type="button" class="mod" (click)="allerEnCours()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="7" height="16" rx="1.5" /><rect x="14" y="4" width="7" height="10" rx="1.5" /></svg>
+      <b>En cours</b><span>{{ kpis().enCours }}</span>
+    </button>
+    <a class="mod" routerLink="/dashboard/commandes/terminees">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l4 4 10-10" /></svg>
+      <b>Terminées</b><span>{{ kpis().terminees }} · {{ kpis().annulees }} ann.</span>
+    </a>
+    <a class="mod" routerLink="/dashboard/clients">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.5a3.5 3.5 0 010 7M18 14.8c1.8.8 3 2.6 3.5 5.2" /></svg>
+      <b>Clients</b><span>{{ nbClients() ?? '-' }} fiches</span>
+    </a>
+    <a class="mod" routerLink="/dashboard/evenements">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+      <b>Événements</b><span>{{ prochains().length }} à venir</span>
+    </a>
+    <a class="mod" routerLink="/dashboard/bons">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="2" /><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1.5S10 8 12 8zm0 0c2-4 6-4 6-1.5S14 8 12 8z" /></svg>
+      <b>Bons cadeaux</b><span>{{ nbBonsActifs() ?? '-' }} actifs</span>
+    </a>
+  </nav>
 </div>

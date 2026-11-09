@@ -52,6 +52,17 @@ export class BonsCadeauxPageComponent implements OnInit {
   showExpires: WritableSignal<boolean> = signal(false);
   showTermines: WritableSignal<boolean> = signal(false);
 
+  /** Onglet affiché dans la liste */
+  onglet: WritableSignal<'actifs' | 'expires' | 'termines'> = signal('actifs');
+  bonsVisibles = computed<Bon[]>(() => {
+    const o = this.onglet();
+    return o === 'actifs' ? this.bonsActifs() : o === 'expires' ? this.bonsExpires() : this.bonsTermines();
+  });
+  /** Valeur totale des bons encore utilisables */
+  valeurActifs = computed<number>(() =>
+    this.bonsActifs().reduce((t: number, b: Bon) => t + (Number(b.valeur) || 0), 0)
+  );
+
   toggleSection(section: 'actifs' | 'expires' | 'termines'): void {
     if (section === 'actifs') this.showActifs.update((v) => !v);
     else if (section === 'expires') this.showExpires.update((v) => !v);

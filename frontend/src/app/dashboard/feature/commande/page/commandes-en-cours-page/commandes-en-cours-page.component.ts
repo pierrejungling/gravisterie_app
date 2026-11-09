@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { concatMap, from, last } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HeaderComponent } from '@shared';
+import { HeaderComponent, CodeDecoComponent, EasterComponent } from '@shared';
 import { ApiService, RealtimeService } from '@api';
 import { ApiURI } from '@api';
 import {
@@ -57,7 +57,7 @@ interface ColonneVue {
 @Component({
   selector: 'app-commandes-en-cours-page',
   standalone: true,
-  imports: [CommonModule, HeaderComponent],
+  imports: [CommonModule, HeaderComponent, CodeDecoComponent, EasterComponent],
   templateUrl: './commandes-en-cours-page.component.html',
   styleUrl: './commandes-en-cours-page.component.scss'
 })

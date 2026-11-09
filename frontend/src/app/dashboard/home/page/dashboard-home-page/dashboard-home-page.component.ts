@@ -2,7 +2,7 @@ import { Component, OnInit, inject, computed, signal, DestroyRef } from '@angula
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HeaderComponent } from '@shared';
+import { HeaderComponent, CodeDecoComponent, EasterComponent } from '@shared';
 import { ApiService, ApiURI, ApiResponse, RealtimeService } from '@api';
 import { Commande, StatutCommande, livraisonFaite, isCommandeSiteNonTraitee } from '../../../feature/commande/model/commande.interface';
 import { Bon } from '../../../feature/bon/model/bon.interface';
@@ -40,7 +40,7 @@ interface Tache {
 @Component({
   selector: 'app-dashboard-home-page',
   standalone: true,
-  imports: [CommonModule, RouterModule, HeaderComponent],
+  imports: [CommonModule, RouterModule, HeaderComponent, CodeDecoComponent, EasterComponent],
   templateUrl: './dashboard-home-page.component.html',
   styleUrl: './dashboard-home-page.component.scss',
 })

@@ -624,3 +624,24 @@
     }
   }
 }
+
+/* Easter egg : bout de code gravé, en bas à droite */
+.home-deco {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 1.6rem;
+  margin: 1.6rem 0 0.4rem;
+
+  &__pearl {
+    width: 92px;
+    height: 68px;
+    margin-bottom: 0.3rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .home-deco__pearl {
+    display: none;
+  }
+}

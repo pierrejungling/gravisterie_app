@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal, WritableSignal, computed, DestroyRef
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HeaderComponent } from '@shared';
+import { HeaderComponent, CodeDecoComponent, EasterComponent } from '@shared';
 import { ApiService, ApiURI, RealtimeService } from '@api';
 import { Commande, StatutCommande } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
@@ -12,7 +12,7 @@ type PeriodSection = 'terminees' | 'annulees';
 @Component({
   selector: 'app-commandes-terminees-page',
   standalone: true,
-  imports: [CommonModule, HeaderComponent],
+  imports: [CommonModule, HeaderComponent, CodeDecoComponent, EasterComponent],
   templateUrl: './commandes-terminees-page.component.html',
   styleUrl: './commandes-terminees-page.component.scss'
 })

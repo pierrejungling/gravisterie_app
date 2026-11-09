@@ -3,7 +3,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-import { FloatingLabelInputComponent, HeaderComponent, ThemeService } from '@shared';
+import { FloatingLabelInputComponent, HeaderComponent, CodeDecoComponent, ThemeService } from '@shared';
 import { SignInForm } from '../../data/form';
 import { getFormValidationErrors, FormError } from '@shared';
 import { AppRoutes } from '@shared';
@@ -13,7 +13,7 @@ import { ApiURI } from '@api';
 @Component({
   selector: 'app-sign-in-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FloatingLabelInputComponent, TranslateModule, HeaderComponent],
+  imports: [CommonModule, ReactiveFormsModule, FloatingLabelInputComponent, TranslateModule, HeaderComponent, CodeDecoComponent],
   templateUrl: './sign-in-page.component.html',
   styleUrl: './sign-in-page.component.scss'
 })

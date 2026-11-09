@@ -791,3 +791,15 @@
     justify-content: center;
   }
 }
+
+.kb-deco {
+  margin-top: 1.2rem;
+}
+
+/* Fanfreluche s'installe dans les colonnes vides */
+.kb-chat {
+  display: block;
+  width: 26px;
+  height: 37px;
+  margin: 0.2rem auto 0.6rem;
+}

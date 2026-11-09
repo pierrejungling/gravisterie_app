@@ -493,3 +493,17 @@
     padding: 0 0.55rem;
   }
 }
+
+/* Easter egg : bout de code gravé en bas de liste */
+.ct-deco {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 1.2rem;
+  margin: 1.6rem 0 0.4rem;
+
+  &__chat {
+    width: 34px;
+    height: 48px;
+  }
+}

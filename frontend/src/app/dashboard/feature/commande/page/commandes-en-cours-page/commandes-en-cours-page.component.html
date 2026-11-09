@@ -56,6 +56,7 @@
     <div class="gv-panel kb-etat">
       <p>Aucune commande en cours. Atelier libre.</p>
       <button type="button" class="gv-btn gv-btn--primary" (click)="navigateToNouvelleCommande()">Nouvelle commande</button>
+      <gv-code-deco class="kb-deco" bout="repos"></gv-code-deco>
     </div>
   } @else {
     <!-- Écran étroit : une colonne à la fois -->
@@ -155,6 +156,7 @@
               </article>
             } @empty {
               <p class="kb-vide">{{ col.total ? 'Aucune ne correspond au filtre' : 'Vide' }}</p>
+              @if (!col.total) { <gv-easter class="kb-chat" forme="fanfreluche"></gv-easter> }
             }
           </div>
         </section>

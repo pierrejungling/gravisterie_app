@@ -240,6 +240,8 @@
     flex: none;
     width: 20px;
     height: 20px;
+    min-width: 20px !important;
+    min-height: 20px !important;
     margin-top: 0.1rem;
     display: grid;
     place-items: center;
@@ -422,5 +424,28 @@
       border-bottom-right-radius: 0;
       padding-bottom: calc(1.4rem + env(safe-area-inset-bottom));
     }
+  }
+}
+
+.external {
+  position: relative;
+  margin: 0 1rem 0.5rem;
+  flex-wrap: wrap;
+
+  &__tag {
+    width: 100%;
+    margin-bottom: -0.2rem;
+  }
+}
+
+.group__external {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.75rem 1rem 0;
+
+  gv-client-picker {
+    width: 100%;
   }
 }

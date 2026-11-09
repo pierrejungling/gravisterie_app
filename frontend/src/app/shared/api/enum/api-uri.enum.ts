@@ -17,6 +17,7 @@ export enum ApiURI {
   AJOUTER_FRAIS_COMMISSION = 'frais-commission/ajouter',
   LISTE_CLIENTS = 'client/liste',
   RECHERCHE_CLIENTS = 'client/recherche',
+  CORRESPONDANCES_CLIENTS = 'client/correspondances',
   DOUBLONS_CLIENTS = 'client/doublons',
   AJOUTER_CLIENT = 'client/ajouter',
   FUSIONNER_CLIENTS = 'client/fusionner',

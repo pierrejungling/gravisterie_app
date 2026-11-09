@@ -249,6 +249,26 @@
           <p class="field-error" *ngIf="getFieldErrorMessage('mail')">{{ getFieldErrorMessage('mail') }}</p>
         </div>
 
+        <!-- Fiche existante qui correspond à la saisie (anti-doublon) -->
+        <div class="client-suggest" *ngIf="!clientLie() && suggestionsClient().length > 0">
+          <div class="client-suggest__title">Ce client existe peut-être déjà</div>
+          <div class="client-suggest__item" *ngFor="let s of suggestionsClient()">
+            <span class="gv-avatar">{{ initialesClient(s) }}</span>
+            <span class="client-suggest__body">
+              <span class="client-suggest__name">{{ nomClient(s) }}</span>
+              <span class="client-suggest__meta">{{ contactSuggestion(s) || 'Pas de coordonnées' }}</span>
+              <span class="client-suggest__chips">
+                <span class="gv-chip gv-chip--accent" *ngFor="let r of s.raisons">même {{ r }}</span>
+                <span class="gv-chip">{{ s.stats.nb_commandes }} cmd</span>
+              </span>
+            </span>
+            <span class="client-suggest__actions">
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--primary" (click)="lierSuggestion(s)">Lier</button>
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="ignorerSuggestion(s)" aria-label="Ce n'est pas lui">Non</button>
+            </span>
+          </div>
+        </div>
+
         <!-- Adresse décomposée -->
         <div class="address-section">
           <label class="section-subtitle">Adresse</label>

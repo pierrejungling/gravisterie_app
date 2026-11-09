@@ -137,16 +137,28 @@
               <button type="button" class="link-btn" (click)="ignorerGroupe(gi)">Ignorer</button>
             </header>
 
+            @if (g.externe) {
+              <div class="fiche is-target external">
+                <span class="external__tag gv-eyebrow">Tout rattacher à</span>
+                <div class="fiche__body">
+                  <div class="fiche__name">{{ nomClient(g.externe) }} <span class="gv-chip gv-chip--accent">Fiche gardée</span></div>
+                  <div class="fiche__meta">{{ contact(g.externe) || 'Pas de coordonnées' }}</div>
+                  <div class="fiche__stats"><span class="gv-chip">{{ g.externe.stats.nb_commandes }} cmd</span></div>
+                </div>
+                <button type="button" class="link-btn" (click)="retirerCibleExterne(gi)">Annuler</button>
+              </div>
+            }
+
             <div class="group__fiches">
               @for (f of g.fiches; track f.id_client) {
-                <div class="fiche" [class.is-target]="f.id_client === g.cible" [class.is-out]="!g.inclus.has(f.id_client)">
-                  <button type="button" class="fiche__radio" (click)="choisirCible(gi, f.id_client)" [attr.aria-pressed]="f.id_client === g.cible" title="Garder cette fiche">
+                <div class="fiche" [class.is-target]="!g.externe && f.id_client === g.cible" [class.is-out]="!g.inclus.has(f.id_client)">
+                  <button type="button" class="fiche__radio" (click)="choisirCible(gi, f.id_client)" [attr.aria-pressed]="!g.externe && f.id_client === g.cible" title="Garder cette fiche">
                     <span></span>
                   </button>
                   <div class="fiche__body">
                     <div class="fiche__name">
                       {{ nomClient(f) }}
-                      @if (f.id_client === g.cible) { <span class="gv-chip gv-chip--accent">Gardée</span> }
+                      @if (!g.externe && f.id_client === g.cible) { <span class="gv-chip gv-chip--accent">Gardée</span> }
                     </div>
                     <div class="fiche__meta">{{ contact(f) || 'Pas de coordonnées' }}</div>
                     @if (adresseUtile(f.adresse); as adr) { <div class="fiche__meta">{{ adr }}</div> }
@@ -156,13 +168,28 @@
                       <span class="gv-chip">{{ dateCourte(f.stats.derniere_commande) }}</span>
                     </div>
                   </div>
-                  @if (f.id_client !== g.cible) {
+                  @if (g.externe || f.id_client !== g.cible) {
                     <label class="fiche__check">
                       <input type="checkbox" [checked]="g.inclus.has(f.id_client)" (change)="basculerInclus(gi, f.id_client)" />
                       <span>Fusionner</span>
                     </label>
                   }
                 </div>
+              }
+            </div>
+
+            <div class="group__external">
+              @if (g.choixExterne) {
+                <gv-client-picker
+                  [selected]="null"
+                  [sansNouveau]="true"
+                  [exclure]="idsGroupe(g)"
+                  placeholder="Fiche à garder : nom, mail, téléphone…"
+                  (choisi)="choisirCibleExterne(gi, $event)">
+                </gv-client-picker>
+                <button type="button" class="link-btn" (click)="ouvrirChoixExterne(gi, false)">Fermer</button>
+              } @else if (!g.externe) {
+                <button type="button" class="link-btn" (click)="ouvrirChoixExterne(gi, true)">Tout rattacher à une autre fiche…</button>
               }
             </div>
 

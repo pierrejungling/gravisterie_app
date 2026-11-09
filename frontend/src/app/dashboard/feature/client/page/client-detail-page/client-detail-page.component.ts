@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HeaderComponent } from '@shared';
+import { HeaderComponent, SafeResourceUrlPipe } from '@shared';
 import { RealtimeService } from '@api';
 import { StatutCommande } from '../../../commande/model/commande.interface';
 import { ClientApiService } from '../../service/client-api.service';
@@ -23,7 +23,7 @@ import {
 @Component({
   selector: 'app-client-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, HeaderComponent],
+  imports: [CommonModule, FormsModule, RouterModule, HeaderComponent, SafeResourceUrlPipe],
   templateUrl: './client-detail-page.component.html',
   styleUrl: './client-detail-page.component.scss',
 })
@@ -226,6 +226,11 @@ export class ClientDetailPageComponent implements OnInit {
 
   mapsUrl(adresse: string): string {
     return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(adresse);
+  }
+
+  /** Aperçu Google Maps intégré (même rendu que le détail commande). */
+  mapEmbedUrl(adresse: string): string {
+    return `https://maps.google.com/maps?q=${encodeURIComponent(adresse)}&z=16&output=embed`;
   }
 
   telUrl(tel: string): string {

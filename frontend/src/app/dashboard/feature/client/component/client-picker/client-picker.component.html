@@ -26,7 +26,7 @@
       class="gv-input picker__input"
       type="text"
       autocomplete="off"
-      placeholder="Client existant ? Nom, société, mail, téléphone…"
+      [placeholder]="placeholder"
       [value]="query()"
       (input)="onInput($event)"
       (focus)="open.set(true)"
@@ -57,6 +57,7 @@
         @if (!loading() && results().length === 0) {
           <div class="picker__hint">Aucune fiche trouvée.</div>
         }
+        @if (!sansNouveau) {
         <button
           type="button"
           class="picker__option picker__option--new"
@@ -70,6 +71,7 @@
             <span class="picker__option-meta">Remplir les coordonnées ci-dessous, la fiche sera créée avec la commande</span>
           </span>
         </button>
+        }
       </div>
     }
   </div>

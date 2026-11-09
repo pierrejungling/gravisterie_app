@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Observable, map, of } from 'rxjs';
 import { ApiService, ApiURI, CLIENT_BY_ID } from '@api';
-import { ClientPayload, FicheClient, FicheClientDetail } from '../model/client.interface';
+import { ClientPayload, CorrespondanceClient, CriteresCorrespondance, FicheClient, FicheClientDetail } from '../model/client.interface';
 
 @Injectable({ providedIn: 'root' })
 export class ClientApiService {
@@ -15,6 +15,18 @@ export class ClientApiService {
     return this.api
       .getWithQuery(ApiURI.RECHERCHE_CLIENTS, { q, limit })
       .pipe(map((r) => (r.result && r.data ? (r.data as FicheClient[]) : [])));
+  }
+
+  /** Fiches existantes qui ressemblent aux coordonnées saisies. */
+  correspondances(criteres: CriteresCorrespondance): Observable<CorrespondanceClient[]> {
+    const params: Record<string, string> = {};
+    Object.entries(criteres).forEach(([cle, valeur]) => {
+      if (valeur && String(valeur).trim()) params[cle] = String(valeur).trim();
+    });
+    if (Object.keys(params).length === 0) return of([]);
+    return this.api
+      .getWithQuery(ApiURI.CORRESPONDANCES_CLIENTS, params)
+      .pipe(map((r) => (r.result && r.data ? (r.data as CorrespondanceClient[]) : [])));
   }
 
   doublons(): Observable<FicheClient[][]> {

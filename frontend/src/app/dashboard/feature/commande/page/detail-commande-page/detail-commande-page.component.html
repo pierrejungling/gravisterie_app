@@ -1233,10 +1233,34 @@
       <section class="form-section">
         <div class="section-title-row">
           <h2 class="section-title">Coordonnées de contact</h2>
-          <a class="fiche-client-link" *ngIf="commande()?.client?.id_client as idClient" [routerLink]="['/dashboard', 'clients', idClient]">
-            Fiche client
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
-          </a>
+          <div class="fiche-client-actions">
+            <button type="button" class="fiche-client-link fiche-client-link--ghost" *ngIf="!isEditMode()" (click)="toggleChangerClient()">
+              {{ changerClientOuvert() ? 'Fermer' : 'Changer de fiche' }}
+            </button>
+            <a class="fiche-client-link" *ngIf="commande()?.client?.id_client as idClient" [routerLink]="['/dashboard', 'clients', idClient]">
+              Fiche client
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Rattacher la commande à une autre fiche client -->
+        <div class="changer-client" *ngIf="changerClientOuvert() && !isEditMode()">
+          <ng-container *ngIf="clientCible() as cible; else choixClient">
+            <p class="changer-client__confirm">
+              Rattacher cette commande à <strong>{{ nomClientFiche(cible) }}</strong> ? Les coordonnées affichées seront celles de cette fiche.
+            </p>
+            <div class="changer-client__actions">
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="clientCible.set(null)">Autre fiche</button>
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--primary" [disabled]="changementClientEnCours()" (click)="confirmerChangementClient()">
+                {{ changementClientEnCours() ? 'Enregistrement…' : 'Oui, rattacher' }}
+              </button>
+            </div>
+          </ng-container>
+          <ng-template #choixClient>
+            <gv-client-picker [selected]="null" [sansNouveau]="true" (choisi)="choisirClientCible($event)"></gv-client-picker>
+          </ng-template>
+          <p class="gv-error" *ngIf="changementClientErreur()">{{ changementClientErreur() }}</p>
         </div>
         
         <div class="input-wrapper">
@@ -1326,6 +1350,39 @@
               </button>
             </div>
           </ng-template>
+        </div>
+
+        <!-- Mode Modifier : fiche existante qui correspond à la saisie -->
+        <div class="client-suggest" *ngIf="isEditMode() && clientLieEdition() as lie">
+          <div class="client-suggest__title">Sera rattachée à cette fiche à l'enregistrement</div>
+          <div class="client-suggest__item">
+            <span class="gv-avatar">{{ initialesClientFiche(lie) }}</span>
+            <span class="client-suggest__body">
+              <span class="client-suggest__name">{{ nomClientFiche(lie) }}</span>
+              <span class="client-suggest__meta">{{ contactFiche(lie) || 'Pas de coordonnées' }}</span>
+            </span>
+            <span class="client-suggest__actions">
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="annulerLienEdition()">Annuler</button>
+            </span>
+          </div>
+        </div>
+        <div class="client-suggest" *ngIf="isEditMode() && !clientLieEdition() && suggestionsEdition().length > 0">
+          <div class="client-suggest__title">Ce client existe peut-être déjà</div>
+          <div class="client-suggest__item" *ngFor="let s of suggestionsEdition()">
+            <span class="gv-avatar">{{ initialesClientFiche(s) }}</span>
+            <span class="client-suggest__body">
+              <span class="client-suggest__name">{{ nomClientFiche(s) }}</span>
+              <span class="client-suggest__meta">{{ contactFiche(s) || 'Pas de coordonnées' }}</span>
+              <span class="client-suggest__chips">
+                <span class="gv-chip gv-chip--accent" *ngFor="let r of s.raisons">même {{ r }}</span>
+                <span class="gv-chip">{{ s.stats.nb_commandes }} cmd</span>
+              </span>
+            </span>
+            <span class="client-suggest__actions">
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--primary" (click)="lierSuggestionEdition(s)">Lier</button>
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="ignorerSuggestionEdition(s)">Non</button>
+            </span>
+          </div>
         </div>
 
         <!-- Adresse décomposée -->

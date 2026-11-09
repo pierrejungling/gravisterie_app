@@ -36,6 +36,14 @@ export interface StatsClient {
 
 export type ClientAvecStats = Client & { stats: StatsClient };
 
+export interface CriteresCorrespondance {
+    nom?: string;
+    prenom?: string;
+    mail?: string;
+    telephone?: string;
+    societe?: string;
+}
+
 @Injectable()
 export class ClientService {
     constructor(
@@ -167,6 +175,59 @@ export class ClientService {
         });
 
         return this.getClientById(idCible);
+    }
+
+    /**
+     * Fiches qui correspondent à des coordonnées en cours de saisie (nouvelle commande),
+     * pour proposer la fiche existante au lieu de créer un doublon.
+     */
+    async trouverCorrespondances(criteres: CriteresCorrespondance, limit = 4): Promise<(ClientAvecStats & { raisons: string[] })[]> {
+        const mail = criteres.mail?.trim().toLowerCase() || '';
+        const tel = this.normaliserTelephone(criteres.telephone);
+        const nom = normalizeSearchText(criteres.nom || '');
+        const prenom = normalizeSearchText(criteres.prenom || '');
+        const societe = normalizeSearchText(criteres.societe || '');
+        if (!mail && tel.length < 6 && nom.length < 3 && prenom.length < 3 && societe.length < 3) return [];
+
+        const commence = (valeur: string | null | undefined, debut: string) =>
+            !!debut && normalizeSearchText(valeur || '').split(/\s+/).some((mot) => mot.startsWith(debut));
+
+        const resultats: (ClientAvecStats & { raisons: string[]; score: number })[] = [];
+        for (const client of await this.getAllClients()) {
+            const raisons: string[] = [];
+            let score = 0;
+            const mailClient = client.mail?.trim().toLowerCase() || '';
+            if (mail.length >= 5 && mailClient && (mailClient === mail || (mail.length >= 6 && mailClient.startsWith(mail)))) {
+                raisons.push('mail');
+                score += 4;
+            }
+            const telClient = this.normaliserTelephone(client.téléphone);
+            if (tel.length >= 6 && telClient.length >= 6 && (telClient === tel || telClient.startsWith(tel))) {
+                raisons.push('téléphone');
+                score += 4;
+            }
+            // Nom et prénom, dans un sens ou dans l'autre (souvent inversés dans les anciennes fiches).
+            // Un nom qui correspond suffit ; le prénom qui correspond aussi fait monter la fiche.
+            const nomClientOk = (a: string) => a.length >= 3 && (commence(client.nom, a) || commence(client.prénom, a));
+            const prenomOk = (a: string) => a.length >= 2 && (commence(client.prénom, a) || commence(client.nom, a));
+            if (nomClientOk(nom) || (!nom && nomClientOk(prenom))) {
+                raisons.push('nom');
+                score += nom && prenom && prenomOk(prenom) ? 3 : 2;
+            }
+            if (societe.length >= 3 && normalizeSearchText(client.société || '').includes(societe)) {
+                raisons.push('société');
+                score += 2;
+            }
+            if (raisons.length) resultats.push({ ...client, raisons, score });
+        }
+        return resultats
+            .sort((a, b) => b.score - a.score || b.stats.nb_commandes - a.stats.nb_commandes)
+            .slice(0, limit)
+            .map(({ score, ...reste }) => reste);
+    }
+
+    private normaliserTelephone(valeur: string | null | undefined): string {
+        return (valeur || '').replace(/\D/g, '').replace(/^(0032|32)/, '0');
     }
 
     /**

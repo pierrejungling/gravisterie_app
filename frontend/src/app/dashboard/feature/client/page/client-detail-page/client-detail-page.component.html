@@ -110,6 +110,19 @@
                 </dd>
               </div>
             </dl>
+
+            @if (adresseUtile(c.adresse); as adr) {
+              <div class="map">
+                <iframe
+                  class="map__frame"
+                  [src]="mapEmbedUrl(adr) | safeResourceUrl"
+                  title="Carte de l'adresse du client"
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                  allowfullscreen>
+                </iframe>
+              </div>
+            }
           } @else {
             <form class="edit" (ngSubmit)="enregistrer()">
               <div class="edit__grid">

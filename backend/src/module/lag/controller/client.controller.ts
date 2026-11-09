@@ -26,6 +26,18 @@ export class ClientController {
         return await this.clientService.rechercherClients(query || '', parsedLimit);
     }
 
+    @Get('correspondances')
+    @ApiOperation({ summary: 'Fiches existantes qui correspondent à des coordonnées saisies' })
+    async trouverCorrespondances(
+        @Query('nom') nom?: string,
+        @Query('prenom') prenom?: string,
+        @Query('mail') mail?: string,
+        @Query('telephone') telephone?: string,
+        @Query('societe') societe?: string,
+    ) {
+        return await this.clientService.trouverCorrespondances({ nom, prenom, mail, telephone, societe });
+    }
+
     @Get('doublons')
     @ApiOperation({ summary: 'Fiches clients probablement en double' })
     async getDoublons() {

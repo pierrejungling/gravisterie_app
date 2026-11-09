@@ -2,6 +2,11 @@ import { Component, OnInit, OnDestroy, AfterViewChecked, HostListener, inject, s
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { nettoyerAdresse } from '../../util/adresse.util';
+import { ClientPickerComponent } from '../../../client/component/client-picker/client-picker.component';
+import { CorrespondanceClient, FicheClient, initialesClient, nomClient } from '../../../client/model/client.interface';
+import { ClientApiService } from '../../../client/service/client-api.service';
+import { of as ofObs } from 'rxjs';
+import { catchError as catchErrorOp, debounceTime as debounceTimeOp, distinctUntilChanged as distinctOp, map as mapOp, switchMap as switchMapOp } from 'rxjs/operators';
 import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, Payload } from '@shared';
 import { ApiService, RealtimeService } from '@api';
@@ -39,7 +44,7 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 @Component({
   selector: 'app-detail-commande-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, FraisCommissionPickerComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, FraisCommissionPickerComponent, ClientPickerComponent],
   templateUrl: './detail-commande-page.component.html',
   styleUrl: './detail-commande-page.component.scss'
 })
@@ -47,6 +52,23 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   commande: WritableSignal<Commande | null> = signal(null);
   isLoading: WritableSignal<boolean> = signal(false);
   isEditMode: WritableSignal<boolean> = signal(false);
+
+  // Rattacher la commande à une autre fiche client
+  changerClientOuvert: WritableSignal<boolean> = signal(false);
+  clientCible: WritableSignal<FicheClient | null> = signal(null);
+  changementClientEnCours: WritableSignal<boolean> = signal(false);
+  changementClientErreur: WritableSignal<string | null> = signal(null);
+  readonly nomClientFiche = nomClient;
+  readonly initialesClientFiche = initialesClient;
+
+  // Mode Modifier : suggestions de fiches existantes pendant la saisie des coordonnées
+  private readonly clientApi = inject(ClientApiService);
+  suggestionsEdition: WritableSignal<CorrespondanceClient[]> = signal([]);
+  /** Fiche choisie pendant la modification : la commande y sera rattachée à l'enregistrement. */
+  clientLieEdition: WritableSignal<FicheClient | null> = signal(null);
+  private readonly suggestionsEditionIgnorees = new Set<string>();
+  private suggestionsEditionSub?: Subscription;
+  private suggestionsEditionNettoyage = false;
   majDistanteDisponible: WritableSignal<boolean> = signal(false);
   showPrixFields: WritableSignal<boolean> = signal(true);
   showDeleteConfirm: WritableSignal<boolean> = signal(false);
@@ -408,6 +430,150 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
            document.documentElement.scrollTop || 
            document.body.scrollTop || 
            (window.scrollY !== undefined ? window.scrollY : 0);
+  }
+
+  /** Coordonnées du formulaire utilisées pour chercher une fiche existante. */
+  private criteresContact(v: any) {
+    return {
+      nom: v?.nom || '',
+      prenom: v?.prenom || '',
+      mail: v?.mail || '',
+      telephone: v?.telephone || '',
+      societe: v?.societe || '',
+    };
+  }
+
+  private surveillerCorrespondancesEdition(): void {
+    this.suggestionsEditionSub?.unsubscribe();
+    this.suggestionsEdition.set([]);
+    if (!this.formGroup) return;
+    const client = this.commande()?.client;
+    // Ce qui était affiché avant modification : pas de suggestion tant que rien n'a changé.
+    const avant: Record<string, string> = this.criteresContact({
+      nom: client?.nom,
+      prenom: client?.prénom,
+      mail: client?.mail,
+      telephone: client?.téléphone,
+      societe: client?.société,
+    });
+    // Seuls les champs retapés servent à chercher : les autres sont encore ceux de l'ancienne fiche.
+    const modifies = (criteres: Record<string, string>) => {
+      const r: Record<string, string> = {};
+      Object.entries(criteres).forEach(([cle, val]) => {
+        if (String(val || '').trim() !== String(avant[cle] || '').trim()) r[cle] = val;
+      });
+      return r;
+    };
+    this.suggestionsEditionSub = this.formGroup.valueChanges
+      .pipe(
+        mapOp(() => modifies(this.criteresContact(this.formGroup.getRawValue()))),
+        debounceTimeOp(350),
+        distinctOp((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        switchMapOp((criteres) =>
+          !this.isEditMode() || this.clientLieEdition() || Object.keys(criteres).length === 0
+            ? ofObs([] as CorrespondanceClient[])
+            : this.clientApi.correspondances(criteres).pipe(catchErrorOp(() => ofObs([] as CorrespondanceClient[]))),
+        ),
+      )
+      .subscribe((list) => {
+        const idActuel = this.commande()?.client?.id_client;
+        this.suggestionsEdition.set(
+          list.filter((c) => c.id_client !== idActuel && !this.suggestionsEditionIgnorees.has(c.id_client)),
+        );
+      });
+    if (!this.suggestionsEditionNettoyage) {
+      this.suggestionsEditionNettoyage = true;
+      this.destroyRef.onDestroy(() => this.suggestionsEditionSub?.unsubscribe());
+    }
+  }
+
+  /**
+   * Rattache la commande à la fiche proposée (effectif à l'enregistrement).
+   * Les champs qui ont servi au rapprochement et ceux restés tels quels prennent la valeur de la fiche ;
+   * ce qui a été retapé à la main est gardé.
+   */
+  lierSuggestionEdition(fiche: CorrespondanceClient): void {
+    const v: any = this.formGroup.getRawValue();
+    const ancien = this.commande()?.client;
+    const raisons = new Set(fiche.raisons || []);
+    const inchange = (champ: string, valeurAvant: any) => String(v[champ] || '').trim() === String(valeurAvant || '').trim();
+    const patch: Record<string, string> = {};
+    const prendre = (champ: string, valeurFiche: string | null | undefined, valeurAvant: any, force: boolean) => {
+      if (force || inchange(champ, valeurAvant) || !String(v[champ] || '').trim()) patch[champ] = valeurFiche || '';
+    };
+    prendre('nom', fiche.nom, ancien?.nom, raisons.has('nom'));
+    prendre('prenom', fiche.prénom, ancien?.prénom, raisons.has('nom'));
+    prendre('societe', fiche.société, ancien?.société, raisons.has('société'));
+    prendre('mail', fiche.mail, ancien?.mail, raisons.has('mail'));
+    prendre('telephone', fiche.téléphone, ancien?.téléphone, raisons.has('téléphone'));
+    prendre('tva', fiche.tva, ancien?.tva, false);
+    const adresseAvant = this.buildAdresseComplete(
+      this.extractAdressePart(ancien?.adresse, 0),
+      this.extractAdressePart(ancien?.adresse, 1),
+      this.extractAdressePart(ancien?.adresse, 2),
+      this.extractAdressePart(ancien?.adresse, 3) || (this.hasAdresseDetails(ancien?.adresse) ? 'Belgique' : ''),
+    );
+    const adresseForm = this.buildAdresseComplete(v.rue, v.code_postal, v.ville, v.pays);
+    if (!adresseForm || adresseForm === adresseAvant) {
+      patch['rue'] = this.extractAdressePart(fiche.adresse, 0);
+      patch['code_postal'] = this.extractAdressePart(fiche.adresse, 1);
+      patch['ville'] = this.extractAdressePart(fiche.adresse, 2);
+      patch['pays'] = this.extractAdressePart(fiche.adresse, 3) || (this.hasAdresseDetails(fiche.adresse) ? 'Belgique' : '');
+    }
+    this.clientLieEdition.set(fiche);
+    this.suggestionsEdition.set([]);
+    this.formGroup.patchValue(patch);
+  }
+
+  ignorerSuggestionEdition(fiche: FicheClient): void {
+    this.suggestionsEditionIgnorees.add(fiche.id_client);
+    this.suggestionsEdition.update((list) => list.filter((c) => c.id_client !== fiche.id_client));
+  }
+
+  annulerLienEdition(): void {
+    this.clientLieEdition.set(null);
+  }
+
+  contactFiche(c: FicheClient): string {
+    return [c.société && nomClient(c) !== c.société ? c.société : null, c.mail, c.téléphone].filter(Boolean).join(' · ');
+  }
+
+  toggleChangerClient(): void {
+    this.changerClientOuvert.update((v) => !v);
+    this.clientCible.set(null);
+    this.changementClientErreur.set(null);
+  }
+
+  choisirClientCible(client: FicheClient): void {
+    if (client.id_client === this.commande()?.client?.id_client) {
+      this.changementClientErreur.set('La commande est déjà liée à cette fiche.');
+      return;
+    }
+    this.changementClientErreur.set(null);
+    this.clientCible.set(client);
+  }
+
+  confirmerChangementClient(): void {
+    const id = this.commande()?.id_commande;
+    const cible = this.clientCible();
+    if (!id || !cible) return;
+    this.changementClientEnCours.set(true);
+    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${id}`, { id_client: cible.id_client } as any).subscribe({
+      next: (res: any) => {
+        this.changementClientEnCours.set(false);
+        if (res && res.result === false) {
+          this.changementClientErreur.set('Le changement de fiche a échoué.');
+          return;
+        }
+        this.changerClientOuvert.set(false);
+        this.clientCible.set(null);
+        this.loadCommande(id, true);
+      },
+      error: () => {
+        this.changementClientEnCours.set(false);
+        this.changementClientErreur.set('Le changement de fiche a échoué.');
+      },
+    });
   }
 
   loadCommande(id: string, silent = false): void {
@@ -1582,6 +1748,11 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   initForm(): void {
+    this.initFormBase();
+    this.surveillerCorrespondancesEdition();
+  }
+
+  private initFormBase(): void {
     const cmd = this.commande();
     if (!cmd) return;
 
@@ -2882,6 +3053,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   toggleEditMode(): void {
     const newEditMode = !this.isEditMode();
     this.isEditMode.set(newEditMode);
+    this.clientLieEdition.set(null);
+    this.suggestionsEdition.set([]);
+    this.suggestionsEditionIgnorees.clear();
 
     // Si on quitte le mode édition via le bouton de la barre (✕ Annuler),
     // on réinitialise complètement le formulaire avec les dernières données
@@ -3027,6 +3201,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       frais_pourcentage: formValue.frais_pourcentage !== null && formValue.frais_pourcentage !== undefined && formValue.frais_pourcentage !== '' ? parseFloat(String(formValue.frais_pourcentage)) : null,
       frais_commission_id: formValue.frais_commission_id || null,
       frais_commission_libelle: formValue.frais_commission_libelle?.trim() || null,
+      ...(this.clientLieEdition() ? { id_client: this.clientLieEdition()!.id_client } : {}),
       coordonnees_contact: {
         nom: formValue.nom,
         prenom: formValue.prenom,
@@ -3097,6 +3272,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       frais_commission_libelle: formValue.frais_commission_libelle?.trim() || undefined,
       client: {
         ...currentCommande.client,
+        ...(this.clientLieEdition() ? { id_client: this.clientLieEdition()!.id_client } : {}),
         nom: formValue.nom,
         prénom: formValue.prenom,
         société: formValue.societe,
@@ -3140,6 +3316,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         : {}),
     });
     
+    this.clientLieEdition.set(null);
+    this.suggestionsEditionIgnorees.clear();
     // Réinitialiser le formulaire avec les nouvelles valeurs
     this.initForm();
     this.isEditMode.set(false);
@@ -3159,6 +3337,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   onCancel(): void {
+    this.clientLieEdition.set(null);
+    this.suggestionsEdition.set([]);
     // Recharger complètement la commande depuis l'API pour annuler
     // TOUTES les modifications non enregistrées sur les champs "classiques".
     const current = this.commande();

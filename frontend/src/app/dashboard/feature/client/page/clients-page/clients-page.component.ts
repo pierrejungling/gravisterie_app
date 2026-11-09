@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HeaderComponent } from '@shared';
+import { ClientPickerComponent } from '../../component/client-picker/client-picker.component';
 import { RealtimeService } from '@api';
 import { ClientApiService } from '../../service/client-api.service';
 import { ClientPayload, FicheClient, adresseUtile, dateCourte, euros, initialesClient, nomClient } from '../../model/client.interface';
@@ -16,6 +17,9 @@ interface GroupeDoublons {
   fiches: FicheClient[];
   cible: string;
   inclus: Set<string>;
+  /** Fiche cible choisie hors du groupe : toutes les fiches cochées y sont rattachées. */
+  externe: FicheClient | null;
+  choixExterne: boolean;
 }
 
 const PAGE = 60;
@@ -30,7 +34,7 @@ function normaliser(valeur: string | null | undefined): string {
 @Component({
   selector: 'app-clients-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, HeaderComponent],
+  imports: [CommonModule, FormsModule, HeaderComponent, ClientPickerComponent],
   templateUrl: './clients-page.component.html',
   styleUrl: './clients-page.component.scss',
 })
@@ -143,7 +147,7 @@ export class ClientsPageComponent implements OnInit {
             const cible = [...fiches].sort(
               (a, b) => b.stats.nb_commandes - a.stats.nb_commandes || this.completude(b) - this.completude(a),
             )[0];
-            return { fiches, cible: cible.id_client, inclus: new Set(fiches.map((f) => f.id_client)) };
+            return { fiches, cible: cible.id_client, inclus: new Set(fiches.map((f) => f.id_client)), externe: null, choixExterne: false };
           }),
         );
         this.doublonsLoading.set(false);
@@ -226,7 +230,7 @@ export class ClientsPageComponent implements OnInit {
         if (i !== index) return g;
         const inclus = new Set(g.inclus);
         inclus.add(id);
-        return { ...g, cible: id, inclus };
+        return { ...g, cible: id, inclus, externe: null, choixExterne: false };
       }),
     );
     this.fusionConfirm.set(null);
@@ -235,7 +239,7 @@ export class ClientsPageComponent implements OnInit {
   basculerInclus(index: number, id: string): void {
     this.doublons.update((groupes) =>
       groupes.map((g, i) => {
-        if (i !== index || id === g.cible) return g;
+        if (i !== index || (id === g.cible && !g.externe)) return g;
         const inclus = new Set(g.inclus);
         if (inclus.has(id)) inclus.delete(id);
         else inclus.add(id);
@@ -246,11 +250,40 @@ export class ClientsPageComponent implements OnInit {
   }
 
   sources(groupe: GroupeDoublons): FicheClient[] {
+    if (groupe.externe) return groupe.fiches.filter((f) => groupe.inclus.has(f.id_client));
     return groupe.fiches.filter((f) => f.id_client !== groupe.cible && groupe.inclus.has(f.id_client));
   }
 
   cibleDe(groupe: GroupeDoublons): FicheClient | undefined {
-    return groupe.fiches.find((f) => f.id_client === groupe.cible);
+    return groupe.externe ?? groupe.fiches.find((f) => f.id_client === groupe.cible);
+  }
+
+  idsGroupe(groupe: GroupeDoublons): string[] {
+    return groupe.fiches.map((f) => f.id_client);
+  }
+
+  ouvrirChoixExterne(index: number, ouvert: boolean): void {
+    this.doublons.update((groupes) => groupes.map((g, i) => (i === index ? { ...g, choixExterne: ouvert } : g)));
+    this.fusionConfirm.set(null);
+  }
+
+  choisirCibleExterne(index: number, client: FicheClient): void {
+    this.doublons.update((groupes) =>
+      groupes.map((g, i) => (i === index ? { ...g, externe: client, choixExterne: false } : g)),
+    );
+    this.fusionConfirm.set(null);
+  }
+
+  retirerCibleExterne(index: number): void {
+    this.doublons.update((groupes) =>
+      groupes.map((g, i) => {
+        if (i !== index) return g;
+        const inclus = new Set(g.inclus);
+        inclus.add(g.cible);
+        return { ...g, externe: null, inclus };
+      }),
+    );
+    this.fusionConfirm.set(null);
   }
 
   ignorerGroupe(index: number): void {
@@ -269,7 +302,7 @@ export class ClientsPageComponent implements OnInit {
     }
     this.fusionEnCours.set(index);
     this.fusionErreur.set(null);
-    this.clientApi.fusionner(groupe.cible, sources).subscribe({
+    this.clientApi.fusionner(groupe.externe?.id_client ?? groupe.cible, sources).subscribe({
       next: (res) => {
         this.fusionEnCours.set(null);
         this.fusionConfirm.set(null);

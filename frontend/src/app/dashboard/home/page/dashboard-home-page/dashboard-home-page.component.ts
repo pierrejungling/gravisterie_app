@@ -16,7 +16,7 @@ export interface DashboardCard {
   count?: number;
   countTerminees?: number;
   countAnnulees?: number;
-  countUnit?: 'commande' | 'bon actif';
+  countUnit?: 'commande' | 'bon actif' | 'fiche client';
 }
 
 @Component({
@@ -93,6 +93,14 @@ export class DashboardHomePageComponent implements OnInit {
       countAnnulees: 0
     },
     {
+      title: 'Clients',
+      description: 'Fiches clients, historique, chiffres et doublons',
+      route: '/dashboard/clients',
+      icon: '👥',
+      count: 0,
+      countUnit: 'fiche client',
+    },
+    {
       title: 'Bons cadeaux',
       description: 'Créer et suivre vos bons cadeaux',
       route: '/dashboard/bons',
@@ -130,6 +138,10 @@ export class DashboardHomePageComponent implements OnInit {
 
     // Charger les bons pour afficher le nombre de bons actifs
     this.loadBonsCount();
+    this.loadClientsCount();
+    this.realtime.on('client', 'commande')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadClientsCount());
 
     this.realtime.on('commande')
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -182,6 +194,20 @@ export class DashboardHomePageComponent implements OnInit {
       error: (error: any) => {
         console.error('Erreur lors de la récupération des commandes:', error);
       }
+    });
+  }
+
+  loadClientsCount(): void {
+    this.apiService.get(ApiURI.LISTE_CLIENTS).subscribe({
+      next: (response: ApiResponse) => {
+        if (response.result && Array.isArray(response.data)) {
+          const clientsCard = this.dashboardCards.find((card) => card.route === '/dashboard/clients');
+          if (clientsCard) {
+            clientsCard.count = response.data.length;
+          }
+        }
+      },
+      error: (err) => console.error('Erreur chargement clients:', err),
     });
   }
 

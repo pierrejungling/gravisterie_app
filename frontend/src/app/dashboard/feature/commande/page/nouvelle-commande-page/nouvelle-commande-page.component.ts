@@ -1,18 +1,20 @@
-import { Component, OnInit, OnDestroy, AfterViewChecked, AfterViewInit, HostListener, inject, signal, WritableSignal, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewChecked, AfterViewInit, HostListener, inject, signal, WritableSignal, ViewChild, ElementRef, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HeaderComponent, FloatingLabelInputComponent, getFormValidationErrors, FormError } from '@shared';
 import { ApiService } from '@api';
 import { ApiURI, COMMANDE_FICHIERS_UPLOAD } from '@api';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 import { NouvelleCommandeForm, CoordonneesContactForm } from '../../data/form/nouvelle-commande.form';
 import { Couleur, StatutCommande, ModeContact } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
 import { ClientPickerComponent } from '../../../client/component/client-picker/client-picker.component';
 import { ClientApiService } from '../../../client/service/client-api.service';
-import { FicheClient } from '../../../client/model/client.interface';
+import { CorrespondanceClient, FicheClient, initialesClient, nomClient } from '../../../client/model/client.interface';
 import { adresseUtile } from '../../util/adresse.util';
 import { formatTelephoneBE } from '../../util/format-telephone.util';
 import {
@@ -54,6 +56,12 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
   /** Fiche client existante liée à la commande (null = nouveau client créé avec la commande). */
   clientLie: WritableSignal<FicheClient | null> = signal(null);
+  /** Fiches existantes qui ressemblent à ce qui est tapé (évite les doublons). */
+  suggestionsClient: WritableSignal<CorrespondanceClient[]> = signal([]);
+  private readonly suggestionsIgnorees = new Set<string>();
+  private readonly destroyRef = inject(DestroyRef);
+  readonly nomClient = nomClient;
+  readonly initialesClient = initialesClient;
   private readonly scrollKey = 'nouvelle-commande-scroll';
   private readonly clearScrollKey = 'nouvelle-commande-clear-scroll';
 
@@ -137,6 +145,8 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     } catch {}
     this.formGroup.get('coordonnees_contact.pays')?.setValue('Belgique');
 
+    this.surveillerCorrespondances();
+
     // Arrivée depuis une fiche client (« Nouvelle commande ») : lier directement la fiche.
     const idClient = this.route.snapshot.queryParamMap.get('client');
     if (idClient) {
@@ -152,6 +162,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   /** Lie une fiche existante et recopie ses coordonnées (modifiables : elles mettent la fiche à jour). */
   choisirClient(client: FicheClient): void {
     this.clientLie.set(client);
+    this.suggestionsClient.set([]);
     this.formGroup.patchValue({
       nom: client.nom || '',
       prenom: client.prénom || '',
@@ -165,6 +176,65 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       ville: '',
       pays: '',
     });
+  }
+
+  /** Pendant la saisie des coordonnées, cherche une fiche existante qui correspond. */
+  private surveillerCorrespondances(): void {
+    this.formGroup.valueChanges
+      .pipe(
+        map((v: any) => ({
+          nom: v.nom || '',
+          prenom: v.prenom || '',
+          mail: v.mail || '',
+          telephone: v.telephone || '',
+          societe: v.societe || '',
+        })),
+        debounceTime(350),
+        distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+        switchMap((criteres) =>
+          this.clientLie() ? of([]) : this.clientApi.correspondances(criteres).pipe(catchError(() => of([]))),
+        ),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((list) => {
+        this.suggestionsClient.set(this.clientLie() ? [] : list.filter((c) => !this.suggestionsIgnorees.has(c.id_client)));
+      });
+  }
+
+  /**
+   * Lie la fiche proposée. Les champs qui ont servi au rapprochement (souvent tapés à moitié)
+   * prennent la valeur de la fiche ; les autres champs déjà remplis sont gardés, les vides complétés.
+   */
+  lierSuggestion(client: CorrespondanceClient): void {
+    const v: any = this.formGroup.value;
+    const vide = (x: any) => !x || !String(x).trim();
+    const raisons = new Set(client.raisons || []);
+    const adresseFiche = adresseUtile(client.adresse);
+    const patch: Record<string, string> = {};
+    const prendre = (champ: string, valeur: string | null | undefined, force: boolean) => {
+      if (valeur && (force || vide(v[champ]))) patch[champ] = valeur;
+    };
+    prendre('nom', client.nom, raisons.has('nom'));
+    prendre('prenom', client.prénom, raisons.has('nom'));
+    prendre('societe', client.société, raisons.has('société'));
+    prendre('mail', client.mail, raisons.has('mail'));
+    prendre('telephone', client.téléphone, raisons.has('téléphone'));
+    prendre('tva', client.tva, false);
+    if (vide(v.rue) && vide(v.code_postal) && vide(v.ville) && adresseFiche) {
+      Object.assign(patch, { rue: adresseFiche, code_postal: '', ville: '', pays: '' });
+    }
+    this.clientLie.set(client);
+    this.suggestionsClient.set([]);
+    this.formGroup.patchValue(patch);
+  }
+
+  ignorerSuggestion(client: FicheClient): void {
+    this.suggestionsIgnorees.add(client.id_client);
+    this.suggestionsClient.update((list) => list.filter((c) => c.id_client !== client.id_client));
+  }
+
+  contactSuggestion(c: FicheClient): string {
+    return [c.société && nomClient(c) !== c.société ? c.société : null, c.mail, c.téléphone].filter(Boolean).join(' · ');
   }
 
   /** Nouveau client : on repart d'un formulaire vide, prérempli avec ce qui a été tapé. */
@@ -1358,6 +1428,8 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     this.showSuccessPopup.set(false);
     this.lastCreatedCommandeId.set(null);
     this.clientLie.set(null);
+    this.suggestionsClient.set([]);
+    this.suggestionsIgnorees.clear();
     this.formGroup.reset();
     
     // Réinitialiser les valeurs par défaut

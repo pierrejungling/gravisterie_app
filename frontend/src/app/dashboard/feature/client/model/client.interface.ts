@@ -39,6 +39,19 @@ export interface CommandeClientResume {
   quantité: number | null;
 }
 
+/** Fiche proposée pendant la saisie, avec ce qui correspond (mail, téléphone, nom, société). */
+export interface CorrespondanceClient extends FicheClient {
+  raisons: string[];
+}
+
+export interface CriteresCorrespondance {
+  nom?: string;
+  prenom?: string;
+  mail?: string;
+  telephone?: string;
+  societe?: string;
+}
+
 export interface FicheClientDetail extends FicheClient {
   commandes: CommandeClientResume[];
 }

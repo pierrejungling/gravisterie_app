@@ -26,6 +26,11 @@ export class ClientPickerComponent {
 
   /** Fiche actuellement liée (null = nouveau client). */
   @Input() selected: FicheClient | null = null;
+  /** Masque l'option « Nouveau client » (rattachement à une fiche existante uniquement). */
+  @Input() sansNouveau = false;
+  @Input() placeholder = 'Client existant ? Nom, société, mail, téléphone…';
+  /** Fiches à ne pas proposer (ex. celles du groupe en cours de fusion). */
+  @Input() exclure: string[] = [];
   @Output() choisi = new EventEmitter<FicheClient>();
   @Output() nouveau = new EventEmitter<string>();
   @Output() retire = new EventEmitter<void>();
@@ -50,7 +55,7 @@ export class ClientPickerComponent {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((list) => {
-        this.results.set(list);
+        this.results.set(list.filter((c) => !this.exclure.includes(c.id_client)));
         this.activeIndex.set(0);
         this.loading.set(false);
       });
@@ -64,7 +69,8 @@ export class ClientPickerComponent {
   }
 
   onKeydown(event: KeyboardEvent): void {
-    const total = this.results().length + 1; // + « Nouveau client »
+    const total = this.results().length + (this.sansNouveau ? 0 : 1); // + « Nouveau client »
+    if (total === 0) return;
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       this.open.set(true);
@@ -78,7 +84,7 @@ export class ClientPickerComponent {
       const idx = this.activeIndex();
       const list = this.results();
       if (idx < list.length) this.choisir(list[idx]);
-      else this.creer();
+      else if (!this.sansNouveau) this.creer();
     } else if (event.key === 'Escape') {
       this.open.set(false);
     }

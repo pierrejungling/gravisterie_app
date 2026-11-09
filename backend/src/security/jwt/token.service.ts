@@ -55,10 +55,6 @@ export class TokenService {
             }
         }
 
-        async deleteForCredential(credential: Credential): Promise<void> {
-            await this.repository.delete({credential});
-        }
-
         async refresh(payload: RefreshTokenPayload): Promise<Token> {
             try {
                 const id = this.jwtService.verify(payload.refresh, {secret:

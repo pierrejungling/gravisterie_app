@@ -1,8 +1,8 @@
-import {Body, Controller, Delete, Get, Param, Post} from '@nestjs/common';
-import {ApiBearerAuth, ApiTags, ApiOperation, ApiResponse, ApiParam} from '@nestjs/swagger';
+import {Body, Controller, Get, Post} from '@nestjs/common';
+import {ApiBearerAuth, ApiTags} from '@nestjs/swagger';
 import {Public} from '@common/config/metadata/public.metadata';
 import {User} from '@common/config/metadata/user.metadata';
-import {RefreshTokenPayload, SignInPayload, SignupPayload, Credential} from './model';
+import {RefreshTokenPayload, SignInPayload, Credential} from './model';
 import {SecurityService} from './service';
 
 @ApiBearerAuth('access-token')
@@ -20,11 +20,8 @@ export class SecurityController {
         return this.service.signIn(payload, false);
     }
 
-    @Public()
-    @Post('signup') // ACCOUNT_SIGNUP_SUCCESS
-    public signUp(@Body() payload: SignupPayload) {
-        return this.service.signup(payload);
-    }
+    // Pas de création ni de suppression de compte via l'API :
+    // l'app n'a qu'un compte admin, géré directement en base.
 
     @Public()
     @Post('refresh') // ACCOUNT_REFRESH_SUCCESS
@@ -35,10 +32,5 @@ export class SecurityController {
     @Get('me') // ACCOUNT_ME_SUCCESS
     public me(@User() user: Credential) {
         return user;
-    }
-    
-    @Delete('delete/:id') // ACCOUNT_DELETE_SUCCESS
-    public delete(@Param('id') id: string) {
-        return this.service.delete(id);
     }
 }

@@ -18,24 +18,6 @@ export class TokenExpiredException extends ApiException {
     }
 }
 
-export class SignupException extends ApiException {
-    constructor() {
-        super(ApiCodeResponse.SIGNUP_ERROR, 200);
-    }
-}
-
-export class CredentialDeleteException extends ApiException {
-    constructor() {
-        super(ApiCodeResponse.CREDENTIAL_DELETE_ERROR, 200);
-    }
-}
-
-export class UserAlreadyExistException extends ApiException {
-    constructor() {
-        super(ApiCodeResponse.USER_ALREADY_EXIST, 200);
-    }
-}
-
 export class TokenGenerationException extends ApiException {
     constructor() {
         super(ApiCodeResponse.TOKEN_GEN_ERROR, 500);

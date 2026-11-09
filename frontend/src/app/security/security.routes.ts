@@ -15,12 +15,6 @@ export const securityRoutes: Routes = [
     },
 
     {
-        path: AppNode.SIGN_UP,
-        loadComponent: () =>
-        import('./page/sign-up-page/sign-up-page.component').then(c => c.SignUpPageComponent),
-    },
-
-    {
         path: AppNode.FALL_BACK,
         loadComponent: () =>
         import('./page/security-fall-back-page/security-fall-back-page.component').then(c => c.SecurityFallBackPageComponent)

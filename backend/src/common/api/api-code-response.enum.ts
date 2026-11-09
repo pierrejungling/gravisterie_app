@@ -3,9 +3,6 @@ export enum ApiCodeResponse {
     NO_TOKEN_FOUNDED = 'api.security.no_token_founded',
     USER_NOT_FOUND = 'api.security.user_not_found',
     TOKEN_EXPIRED = 'api.security.token_expired',
-    SIGNUP_ERROR = 'api.security.signup_error',
-    CREDENTIAL_DELETE_ERROR = 'api.security.credential_delete_error',
-    USER_ALREADY_EXIST = 'api.security.user_already_exist',
     TOKEN_GEN_ERROR = 'api.security.token_gen_error',
     PAYLOAD_IS_NOT_VALID = 'api.validation.payload_is_not_valid',
     PAYLOAD_PARAM_IS_MISSING = 'api.validation.payload_param_is_missing',
@@ -18,9 +15,7 @@ export enum ApiCodeResponse {
     COMMON_SUCCESS = 'api.common.success',
     ACCOUNT_SIGNIN_SUCCESS = 'api.signin_success',
     ACCOUNT_ADMIN_SIGNIN_SUCCESS = 'api.admin_signin_success',
-    ACCOUNT_SIGNUP_SUCCESS = 'api.signup_success',
     ACCOUNT_REFRESH_SUCCESS = 'api.refresh_success',
     ACCOUNT_ME_SUCCESS = 'api.me_success',
-    ACCOUNT_DELETE_SUCCESS = 'api.delete_success',
 }
 

@@ -17,8 +17,6 @@ const baseURL: string = environment.apiURL;
 const publicRoute: string[] = [
   `${baseURL}`,
   `${baseURL}account/signin`,
-  `${baseURL}account/admin-signin`,
-  `${baseURL}account/signup`,
   `${baseURL}account/refresh`
 ];
 

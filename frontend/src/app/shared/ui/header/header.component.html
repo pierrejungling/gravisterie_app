@@ -18,6 +18,8 @@
     <span class="gv-top__coords">50°29′N 5°51′E</span>
   </div>
 
+  <gv-ligne-du-jour class="gv-top__ldj" *ngIf="isAuthenticated()"></gv-ligne-du-jour>
+
   <div class="gv-top__actions">
     <button
       *ngIf="showSearchBar()"

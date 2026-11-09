@@ -971,3 +971,31 @@ body.gv-shell .commandes-en-cours-wrapper {
   min-height: 0;
   min-width: 0;
 }
+
+/* ===== Pied de page décoratif (easter eggs) : discret, en bas des modules ===== */
+.gv-pied-deco {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 1.4rem;
+  margin: 2.4rem 0 0.4rem;
+  pointer-events: none;
+
+  gv-easter {
+    height: 52px;
+    pointer-events: auto;
+  }
+
+  .gv-pied-deco__petit {
+    height: 30px;
+  }
+}
+
+@media (max-width: 899px) {
+  .gv-pied-deco {
+    justify-content: center;
+    gv-code-deco {
+      display: none;
+    }
+  }
+}

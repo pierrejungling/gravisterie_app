@@ -72,10 +72,12 @@ interface FormEvenement {
   forfait_carburant: number | null;
 }
 
+import { CodeDecoComponent, EasterComponent } from '../../../../../shared/ui/deco';
+
 @Component({
   selector: 'app-evenement-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, HeaderComponent, SafeResourceUrlPipe, ClientPickerComponent],
+  imports: [CodeDecoComponent, EasterComponent, CommonModule, FormsModule, RouterModule, HeaderComponent, SafeResourceUrlPipe, ClientPickerComponent],
   templateUrl: './evenement-detail-page.component.html',
   styleUrl: './evenement-detail-page.component.scss',
 })

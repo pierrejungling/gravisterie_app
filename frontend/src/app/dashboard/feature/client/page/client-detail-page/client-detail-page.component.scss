@@ -458,22 +458,6 @@
   }
 }
 
-/* Très large : l'historique se lit sur deux colonnes */
-@media (min-width: 1700px) {
-  .cd .timeline {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 1.5rem;
-
-    li,
-    li:first-child {
-      border-top: 0;
-      border-bottom: 1px solid var(--gv-line);
-    }
-  }
-}
-
-/* Bande étroite et téléphone : l'historique passe avant les coordonnées */
 @media (max-width: 980px) {
   .cd {
     .layout {
@@ -550,4 +534,22 @@
       }
     }
   }
+}
+
+/* Une seule colonne (Pierre, 09/11/2026 : plus lisible) */
+.cd {
+  max-width: 1200px;
+}
+
+.layout,
+.cd .layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Carte plus basse maintenant qu'elle prend toute la largeur */
+.map,
+.cd .map,
+.evd .map {
+  aspect-ratio: auto;
+  height: 240px;
 }

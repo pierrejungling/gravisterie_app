@@ -23,10 +23,12 @@ import {
 
 type Vue = 'a_venir' | 'passes' | 'tous';
 
+import { CodeDecoComponent, EasterComponent } from '../../../../../shared/ui/deco';
+
 @Component({
   selector: 'app-evenements-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, HeaderComponent],
+  imports: [CodeDecoComponent, EasterComponent, CommonModule, FormsModule, HeaderComponent],
   templateUrl: './evenements-page.component.html',
   styleUrl: './evenements-page.component.scss',
 })

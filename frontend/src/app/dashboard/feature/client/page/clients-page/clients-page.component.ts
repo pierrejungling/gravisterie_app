@@ -31,10 +31,12 @@ function normaliser(valeur: string | null | undefined): string {
     .toLowerCase();
 }
 
+import { CodeDecoComponent, EasterComponent } from '../../../../../shared/ui/deco';
+
 @Component({
   selector: 'app-clients-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, HeaderComponent, ClientPickerComponent],
+  imports: [CodeDecoComponent, EasterComponent, CommonModule, FormsModule, HeaderComponent, ClientPickerComponent],
   templateUrl: './clients-page.component.html',
   styleUrl: './clients-page.component.scss',
 })

@@ -35,6 +35,45 @@ navire.cap("Pamplemousse"); // un jour`,
   idees.noter();
 }
 return "à demain";`,
+  edc: `const edc = {
+  immediat:      ["couteau", "lampe", "briquet"],
+  intermediaire: ["paracord", "trousse", "multitool"],
+  etendu:        ["sac", "bivouac", "carte"],
+};
+
+if (imprevu) { edc.deployer(); }`,
+  bivouac: `const nuit = new Bivouac({ lieu: "Hautes Fagnes" });
+nuit.tente.monter();
+nuit.lanterne.allumer();
+
+while (etoiles.visibles()) {
+  regarder();
+}`,
+  ecriture: `// écrire d'abord, graver ensuite
+const idee = carnet.noter(encre);
+
+if (idee.tient()) {
+  laser.graver(idee);
+}`,
+  orcades: `const verre = { malt: "Highland Park", age: 12 };
+
+if (journee.finie()) {
+  savourer(verre, { glace: false });
+}`,
+  maraudeur: `jureSolennellement(); // mes intentions sont mauvaises
+atelier.carte.reveler();
+
+// ...
+mefaitAccompli();`,
+  force: `const faisceau = laser.calibrer();
+
+if (faisceau.force === "avec toi") {
+  graver(); // toujours
+}`,
+  meute: `const meute = ["Fanfreluche"];
+
+meute.push("Saarloos"); // un jour
+meute.forEach((m) => m.balade("Spa"));`,
 };
 
 const MOTS = /\b(const|let|new|if|while|for|of|return|true|false)\b/g;

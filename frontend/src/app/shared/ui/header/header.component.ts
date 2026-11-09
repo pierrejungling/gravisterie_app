@@ -8,6 +8,7 @@ import { Subject, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Commande, StatutCommande } from '../../../dashboard/feature/commande/model/commande.interface';
 import { SafeSvgPipe } from './safe-svg.pipe';
+import { LigneDuJourComponent } from '../deco/ligne-du-jour.component';
 import { OngletsCommandesComponent } from '../../../dashboard/feature/commande/component/onglets-commandes/onglets-commandes.component';
 import { CommandeOngletsService } from '../../../dashboard/feature/commande/service/commande-onglets.service';
 
@@ -22,7 +23,7 @@ interface NavItem {
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule, SafeSvgPipe, OngletsCommandesComponent],
+  imports: [CommonModule, RouterModule, SafeSvgPipe, OngletsCommandesComponent, LigneDuJourComponent],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })

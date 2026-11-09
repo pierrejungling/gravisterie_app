@@ -20,10 +20,12 @@ import {
   toneStatut,
 } from '../../model/client.interface';
 
+import { CodeDecoComponent, EasterComponent } from '../../../../../shared/ui/deco';
+
 @Component({
   selector: 'app-client-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, HeaderComponent, SafeResourceUrlPipe],
+  imports: [CodeDecoComponent, EasterComponent, CommonModule, FormsModule, RouterModule, HeaderComponent, SafeResourceUrlPipe],
   templateUrl: './client-detail-page.component.html',
   styleUrl: './client-detail-page.component.scss',
 })

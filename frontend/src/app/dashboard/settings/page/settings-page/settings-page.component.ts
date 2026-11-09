@@ -15,10 +15,12 @@ interface CredentialsForm {
   confirmPassword: FormControl<string>;
 }
 
+import { CodeDecoComponent, EasterComponent } from '../../../../shared/ui/deco';
+
 @Component({
   selector: 'app-settings-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent],
+  imports: [CodeDecoComponent, EasterComponent, CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent],
   templateUrl: './settings-page.component.html',
   styleUrl: './settings-page.component.scss'
 })

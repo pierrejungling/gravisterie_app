@@ -28,10 +28,12 @@ import {
   isExternalFileDrag,
 } from '../../util/commande-fichier-upload.util';
 
+import { CodeDecoComponent, EasterComponent } from '../../../../../shared/ui/deco';
+
 @Component({
   selector: 'app-nouvelle-commande-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent, ClientPickerComponent, ApercuLienComponent, EvenementLienComponent],
+  imports: [CodeDecoComponent, EasterComponent, CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent, ClientPickerComponent, ApercuLienComponent, EvenementLienComponent],
   templateUrl: './nouvelle-commande-page.component.html',
   styleUrl: './nouvelle-commande-page.component.scss'
 })

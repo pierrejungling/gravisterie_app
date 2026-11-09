@@ -469,3 +469,12 @@
     }
   }
 }
+
+/* Une seule colonne (Pierre, 09/11/2026 : plus lisible) */
+.evp {
+  max-width: 1200px;
+
+  .liste {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

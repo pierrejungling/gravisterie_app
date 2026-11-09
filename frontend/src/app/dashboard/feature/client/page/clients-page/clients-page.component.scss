@@ -517,26 +517,6 @@
   }
 }
 
-@media (min-width: 1500px) {
-  .cl .client-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 0;
-
-    .client-row {
-      border-bottom: 1px solid var(--gv-line);
-    }
-
-    .client-row:nth-child(odd) {
-      border-right: 1px solid var(--gv-line);
-    }
-
-    .client-row--head2 {
-      display: grid;
-    }
-  }
-}
-
 @media (max-width: 760px) {
   .cl {
     padding-top: 0.7rem;
@@ -629,4 +609,13 @@
       font-size: 0.84rem;
     }
   }
+}
+
+/* Une seule colonne (Pierre, 09/11/2026 : plus lisible) */
+.cl {
+  max-width: 1200px;
+}
+
+.groups {
+  grid-template-columns: minmax(0, 1fr);
 }

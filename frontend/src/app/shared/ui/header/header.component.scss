@@ -93,6 +93,16 @@ svg {
     }
   }
 
+  /* Ligne de code qui s'écrit, dans l'espace libre */
+  &__ldj {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 52ch;
+    margin: 0 auto 0 1.5rem;
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+    mask-image: linear-gradient(90deg, #000 85%, transparent);
+  }
+
   &__actions {
     margin-left: auto;
     display: flex;
@@ -664,5 +674,11 @@ svg {
   .gv-top__tc {
     min-width: 0;
     font-size: 0.66rem;
+  }
+}
+
+@media (max-width: 1199px) {
+  .gv-top__ldj {
+    display: none;
   }
 }

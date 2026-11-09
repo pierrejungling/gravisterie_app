@@ -19,10 +19,12 @@ interface BonFormValue {
   date_echeance?: string | null;
 }
 
+import { CodeDecoComponent, EasterComponent } from '../../../../../shared/ui/deco';
+
 @Component({
   selector: 'app-bons-cadeaux-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HeaderComponent],
+  imports: [CodeDecoComponent, EasterComponent, CommonModule, ReactiveFormsModule, HeaderComponent],
   templateUrl: './bons-cadeaux-page.component.html',
   styleUrl: './bons-cadeaux-page.component.scss',
 })

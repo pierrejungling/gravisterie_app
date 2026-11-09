@@ -77,6 +77,9 @@
   </div>
 </nav>
 
+<!-- Onglets des commandes ouvertes -->
+<gv-onglets-commandes *ngIf="isAuthenticated()"></gv-onglets-commandes>
+
 <!-- Barre du bas (téléphone) -->
 <nav class="gv-bottom" *ngIf="isAuthenticated()" aria-label="Navigation">
   <a class="gv-bottom__item" [class.is-active]="isNavActive(navItems[0])" (click)="navigate(navItems[0])">

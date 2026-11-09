@@ -8,6 +8,8 @@ import { Subject, of } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Commande, StatutCommande } from '../../../dashboard/feature/commande/model/commande.interface';
 import { SafeSvgPipe } from './safe-svg.pipe';
+import { OngletsCommandesComponent } from '../../../dashboard/feature/commande/component/onglets-commandes/onglets-commandes.component';
+import { CommandeOngletsService } from '../../../dashboard/feature/commande/service/commande-onglets.service';
 
 interface NavItem {
   label: string;
@@ -20,7 +22,7 @@ interface NavItem {
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule, SafeSvgPipe],
+  imports: [CommonModule, RouterModule, SafeSvgPipe, OngletsCommandesComponent],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
 })
@@ -33,6 +35,7 @@ export class HeaderComponent {
   private readonly realtime = inject(RealtimeService);
   private readonly themeService: ThemeService = inject(ThemeService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly ongletsCommandes = inject(CommandeOngletsService);
   private readonly searchInput$ = new Subject<string>();
   private readonly searchMinLength = 2;
   private readonly searchMaxResults = 8;
@@ -215,6 +218,9 @@ export class HeaderComponent {
     // Décale le contenu des pages pour laisser la place au menu
     effect(() => {
       document.body.classList.toggle('gv-shell', this.isAuthenticated());
+      // Hauteur de la barre d'onglets des commandes : décale le contenu quand elle est affichée.
+      const onglets = this.isAuthenticated() && this.ongletsCommandes.visible();
+      document.body.classList.toggle('gv-has-tabs', onglets);
     });
   }
 

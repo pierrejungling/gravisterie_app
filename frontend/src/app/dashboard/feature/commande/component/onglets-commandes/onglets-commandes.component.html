@@ -1,0 +1,39 @@
+@if (onglets.visible()) {
+  <nav class="tabs" aria-label="Commandes ouvertes">
+    <button type="button" class="tabs__board" [class.is-active]="onglets.surTableau()" (click)="onglets.allerTableau()" title="Tableau des commandes en cours">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="7" height="16" /><rect x="14" y="4" width="7" height="10" /></svg>
+      <span>Tableau</span>
+    </button>
+
+    <div class="tabs__scroll" #defilement>
+      @for (o of onglets.onglets(); track o.id) {
+        <div
+          class="tab"
+          role="link"
+          tabindex="0"
+          [attr.data-id]="o.id"
+          [class.is-active]="o.id === onglets.actif()"
+          [attr.title]="o.titre + (o.client ? ' · ' + o.client : '')"
+          (click)="onglets.aller(o.id)"
+          (keydown.enter)="onglets.aller(o.id)"
+          (auxclick)="clicMolette($event, o.id)"
+        >
+          <span class="tab__dot" [ngClass]="'tab__dot--' + ton(o)"></span>
+          <span class="tab__text">
+            <span class="tab__title">{{ o.titre }}</span>
+            @if (o.client) {
+              <span class="tab__client">{{ o.client }}</span>
+            }
+          </span>
+          <button type="button" class="tab__close" (click)="fermer($event, o.id)" aria-label="Fermer l'onglet">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+          </button>
+        </div>
+      }
+    </div>
+
+    @if (onglets.onglets().length > 1) {
+      <button type="button" class="tabs__clear" (click)="onglets.fermerTout()" title="Fermer tous les onglets">Tout fermer</button>
+    }
+  </nav>
+}

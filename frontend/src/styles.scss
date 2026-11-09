@@ -345,10 +345,23 @@ h1.page-title {
   outline-offset: 2px;
 }
 
+/* Barre d'onglets des commandes ouvertes (sous la barre du haut) */
+:root {
+  --gv-tabs-h: 0px;
+}
+
+body.gv-has-tabs {
+  --gv-tabs-h: 44px;
+}
+
 /* Commandes en cours : la page occupe tout l'écran, on retire la barre du bas sur téléphone */
+body.gv-shell .commandes-en-cours-wrapper {
+  height: calc(100vh - var(--gv-tabs-h));
+}
+
 @media (max-width: 899px) {
   body.gv-shell .commandes-en-cours-wrapper {
-    height: calc(100dvh - var(--gv-shell-bottom) - env(safe-area-inset-bottom));
+    height: calc(100dvh - var(--gv-shell-bottom) - env(safe-area-inset-bottom) - var(--gv-tabs-h));
   }
 }
 

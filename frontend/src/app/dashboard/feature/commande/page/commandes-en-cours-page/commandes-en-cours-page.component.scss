@@ -1318,10 +1318,10 @@
   // Désactiver le scroll global en rendant le host fixe, mais en dessous du header
   :host {
     display: block;
-    height: calc(100vh - 60px); // Hauteur totale moins le header (44px logo + 16px padding)
+    height: calc(100vh - 60px - var(--gv-tabs-h, 0px)); // Hauteur totale moins le header et la barre d'onglets
     overflow: hidden;
     position: fixed;
-    top: 60px; // Commencer après le header fixe (44px logo + 8px padding top + 8px padding bottom)
+    top: calc(60px + var(--gv-tabs-h, 0px)); // Sous le header fixe et la barre d'onglets
     left: 0;
     right: 0;
     bottom: 0;

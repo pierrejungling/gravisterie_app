@@ -1103,7 +1103,7 @@
     // Positionner juste en dessous du header
     // Header: logo (50px) + padding (~16px) + border (1px) = ~67px
     // Utiliser une valeur sûre avec un peu de marge pour éviter le chevauchement
-    top: 70px;
+    top: calc(var(--gv-shell-top) + var(--gv-tabs-h, 0px) + 10px);
     left: 0;
     right: 0;
     z-index: 999; // Juste en dessous du header (z-index: 1000)

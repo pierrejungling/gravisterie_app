@@ -3,5 +3,5 @@
 :host {
   display: block;
   min-height: 100%;
-  padding-top: var(--gv-shell-top);
+  padding-top: calc(var(--gv-shell-top) + var(--gv-tabs-h, 0px));
 }

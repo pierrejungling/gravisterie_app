@@ -5,6 +5,7 @@ import { nettoyerAdresse } from '../../util/adresse.util';
 import { ClientPickerComponent } from '../../../client/component/client-picker/client-picker.component';
 import { CorrespondanceClient, FicheClient, initialesClient, nomClient } from '../../../client/model/client.interface';
 import { ClientApiService } from '../../../client/service/client-api.service';
+import { CommandeOngletsService } from '../../service/commande-onglets.service';
 import { of as ofObs } from 'rxjs';
 import { catchError as catchErrorOp, debounceTime as debounceTimeOp, distinctUntilChanged as distinctOp, map as mapOp, switchMap as switchMapOp } from 'rxjs/operators';
 import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -63,6 +64,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
   // Mode Modifier : suggestions de fiches existantes pendant la saisie des coordonnées
   private readonly clientApi = inject(ClientApiService);
+  private readonly ongletsCommandes = inject(CommandeOngletsService);
   suggestionsEdition: WritableSignal<CorrespondanceClient[]> = signal([]);
   /** Fiche choisie pendant la modification : la commande y sera rattachée à l'enregistrement. */
   clientLieEdition: WritableSignal<FicheClient | null> = signal(null);
@@ -584,6 +586,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       next: (response) => {
         if (response.result && response.data) {
           this.commande.set(response.data);
+          this.ongletsCommandes.renseigner(response.data as Commande);
           if (!silent) {
             this.showAdresseMap.set(false);
             this.clearTrajetResult();

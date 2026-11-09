@@ -659,13 +659,13 @@
   }
 
   .btn-fichier.btn-download {
-    background: #1565c0;
-    border-color: #0d47a1;
-    color: #ffffff;
+    background: var(--gv-accent-soft);
+    border-color: color-mix(in srgb, var(--gv-accent) 60%, transparent);
+    color: var(--gv-accent);
 
     &:hover {
-      background: #0d47a1;
-      border-color: #0277bd;
+      background: color-mix(in srgb, var(--gv-accent) 22%, transparent);
+      border-color: var(--gv-accent);
     }
   }
 
@@ -1239,8 +1239,8 @@
 
     :root[data-theme="dark"] &:hover,
     [data-theme="dark"] &:hover {
-      background: #0d47a1 !important;
-      border-color: #0277bd !important;
+      background: color-mix(in srgb, var(--gv-accent) 22%, transparent) !important;
+      border-color: var(--gv-accent) !important;
       color: #ffffff !important;
     }
   }
@@ -1476,13 +1476,13 @@
 ::ng-deep [data-theme="dark"] .btn-action-bar.btn-toggle-prix,
 :root[data-theme="dark"] .btn-toggle-prix,
 [data-theme="dark"] .btn-toggle-prix {
-  background: #1565c0 !important;
-  border-color: #0d47a1 !important;
-  color: #ffffff !important;
+  background: var(--gv-accent-soft) !important;
+  border-color: color-mix(in srgb, var(--gv-accent) 60%, transparent) !important;
+  color: var(--gv-accent) !important;
 
   &:hover {
-    background: #0d47a1 !important;
-    border-color: #0277bd !important;
+    background: color-mix(in srgb, var(--gv-accent) 22%, transparent) !important;
+    border-color: var(--gv-accent) !important;
     color: #ffffff !important;
   }
 }
@@ -3092,23 +3092,23 @@
 
 /* Mode sombre : bouton ajouter support */
 :host-context([data-theme="dark"]) .btn-add-support {
-  background: #1565c0;
-  border-color: #0d47a1;
-  color: #ffffff;
+  background: var(--gv-accent-soft);
+  border-color: color-mix(in srgb, var(--gv-accent) 60%, transparent);
+  color: var(--gv-accent);
 }
 
 :host-context([data-theme="dark"]) .btn-add-support:hover:not(:disabled) {
-  background: #0d47a1;
-  border-color: #0277bd;
+  background: color-mix(in srgb, var(--gv-accent) 22%, transparent);
+  border-color: var(--gv-accent);
   color: #ffffff;
 }
 
 /* Mode sombre robuste : bouton Afficher/Masquer frais (barre + footer mobile) */
 :host-context([data-theme="dark"]) .btn-action-bar.btn-toggle-prix,
 :host-context([data-theme="dark"]) .detail-actions-footer .btn-footer-prix {
-  background: #1565c0 !important;
-  border-color: #0d47a1 !important;
-  color: #ffffff !important;
+  background: var(--gv-accent-soft) !important;
+  border-color: color-mix(in srgb, var(--gv-accent) 60%, transparent) !important;
+  color: var(--gv-accent) !important;
 }
 
 :host-context([data-theme="dark"]) .btn-action-bar.btn-toggle-prix:hover,
@@ -3119,8 +3119,8 @@
 :host-context([data-theme="dark"]) .detail-actions-footer .btn-footer-prix:focus,
 :host-context([data-theme="dark"]) .detail-actions-footer .btn-footer-prix:focus-visible,
 :host-context([data-theme="dark"]) .detail-actions-footer .btn-footer-prix:active {
-  background: #0d47a1 !important;
-  border-color: #0277bd !important;
+  background: color-mix(in srgb, var(--gv-accent) 22%, transparent) !important;
+  border-color: var(--gv-accent) !important;
   color: #ffffff !important;
 }
 
@@ -3877,8 +3877,8 @@
 
   :root[data-theme="dark"] &:hover:not(:disabled),
   [data-theme="dark"] &:hover:not(:disabled) {
-    background: #0d47a1 !important;
-    border-color: #0277bd !important;
+    background: color-mix(in srgb, var(--gv-accent) 22%, transparent) !important;
+    border-color: var(--gv-accent) !important;
     color: #ffffff !important;
   }
 }
@@ -4342,20 +4342,20 @@
   /* Mode sombre : couleurs adaptées pour le footer mobile */
   :root[data-theme="dark"] .detail-actions-footer .btn-footer-prix,
   [data-theme="dark"] .detail-actions-footer .btn-footer-prix {
-    background: #1565c0 !important;
-    border-color: #0d47a1 !important;
-    color: #ffffff !important;
+    background: var(--gv-accent-soft) !important;
+    border-color: color-mix(in srgb, var(--gv-accent) 60%, transparent) !important;
+    color: var(--gv-accent) !important;
   }
   :root[data-theme="dark"] .detail-actions-footer .btn-footer-prix:hover,
   [data-theme="dark"] .detail-actions-footer .btn-footer-prix:hover {
-    background: #0d47a1 !important;
-    border-color: #0277bd !important;
+    background: color-mix(in srgb, var(--gv-accent) 22%, transparent) !important;
+    border-color: var(--gv-accent) !important;
     color: #ffffff !important;
   }
   :root[data-theme="dark"] .detail-actions-footer .btn-footer-prix:active,
   [data-theme="dark"] .detail-actions-footer .btn-footer-prix:active {
-    background: #0d47a1 !important;
-    border-color: #0277bd !important;
+    background: color-mix(in srgb, var(--gv-accent) 22%, transparent) !important;
+    border-color: var(--gv-accent) !important;
     color: #ffffff !important;
   }
 
@@ -4888,6 +4888,8 @@
   cursor: pointer;
   font: inherit;
   font-size: 0.72rem;
+  min-height: 0;
+  min-width: 0;
 
   &:hover {
     border-color: var(--gv-accent);

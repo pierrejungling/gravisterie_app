@@ -179,3 +179,14 @@ export interface Commande {
     dimensions?: string;
   };
 }
+
+/**
+ * Vrai dès que la commande a passé l'étape Livraison (ou est terminée / annulée) :
+ * à partir de là, la deadline ne compte plus (retards, priorités, alertes).
+ */
+export function livraisonFaite(c: Pick<Commande, 'statut_commande' | 'statuts_actifs'> | null | undefined): boolean {
+  if (!c) return false;
+  if (c.statut_commande === StatutCommande.TERMINE || c.statut_commande === StatutCommande.ANNULEE) return true;
+  if (Array.isArray(c.statuts_actifs)) return !c.statuts_actifs.includes(StatutCommande.A_LIVRER);
+  return [StatutCommande.A_METTRE_EN_LIGNE, StatutCommande.A_FACTURER, StatutCommande.DEMANDE_AVIS].includes(c.statut_commande);
+}

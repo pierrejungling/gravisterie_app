@@ -21,6 +21,11 @@
     <div class="gv-panel panel jour">
       <div class="panel__head">
         <h2><span class="num">01</span>Aujourd'hui</h2>
+        @if (nbSiteNew() > 0) {
+          <button type="button" class="site-new" (click)="allerEnCours()" title="Commandes arrivées du site, à traiter">
+            <span class="site-new__dot" aria-hidden="true"></span>{{ nbSiteNew() }} du site
+          </button>
+        }
         <button type="button" class="lien" (click)="allerEnCours()">Kanban →</button>
       </div>
       <div class="jour__cols">

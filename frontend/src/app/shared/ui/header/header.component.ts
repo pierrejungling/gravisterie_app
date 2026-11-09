@@ -122,39 +122,11 @@ export class HeaderComponent implements AfterViewInit {
   // Signal pour le thème actuel
   isDarkMode = computed(() => this.themeService.isDarkMode());
   
-  // Liste des fichiers logo possibles à essayer (ordre de priorité)
-  // Logo carré en priorité (demande de Pierre, étape 6), puis les autres formats en secours
-  private readonly possibleLogosLight = [
-    'assets/images/Logo/La Gravisterie carré_N.svg',
-    'assets/images/Logo/logo_carre.png',
-    'assets/images/Logo/La Gravisterie_N.svg',
-    'assets/images/Logo/La Gravisterie avec noir txt_N.svg',
-  ];
+  // Logo carré (PNG transparents, noms sans espace ni accent) : noir le jour, blanc la nuit
+  logoPath = computed(() => this.themeService.isDarkMode()
+    ? 'assets/images/Logo/logo-carre-blanc.png'
+    : 'assets/images/Logo/logo-carre-noir.png');
 
-  private readonly possibleLogosDark = [
-    'assets/images/Logo/La Gravisterie  blanc carré.svg',
-    'assets/images/Logo/La Gravisterie Blanc.svg',
-    'assets/images/Logo/La Gravisterie blanc sans fond copie.svg',
-    'assets/images/Logo/La Gravisterie avec txt blanc sans fond copie.svg',
-  ];
-
-  // Signal pour le logo de fallback (en cas d'erreur)
-  private fallbackLogoPath = signal<string>('');
-
-  // Computed signal pour le logo selon le thème
-  logoPath = computed(() => {
-    // Si un fallback a été défini, l'utiliser
-    const fallback = this.fallbackLogoPath();
-    if (fallback) {
-      return fallback;
-    }
-    
-    // Sinon, utiliser le logo selon le thème
-    const isDark = this.themeService.isDarkMode();
-    const possibleLogos = isDark ? this.possibleLogosDark : this.possibleLogosLight;
-    return possibleLogos[0];
-  });
-  
   // Signal computed pour l'authentification (réactif)
   isAuthenticated = computed(() => {
     const token = this.tokenService.token();
@@ -231,13 +203,6 @@ export class HeaderComponent implements AfterViewInit {
     this.realtime.on('commande')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.refreshOpenSearch());
-
-    // Réinitialiser le fallback quand le thème change
-    effect(() => {
-      this.themeService.theme(); // S'abonner aux changements de thème
-      this.fallbackLogoPath.set(''); // Réinitialiser le fallback
-      this.logoLoaded = false; // Forcer le rechargement du logo
-    });
 
     // Décale le contenu des pages pour laisser la place au menu
     effect(() => {
@@ -488,52 +453,19 @@ export class HeaderComponent implements AfterViewInit {
     return client?.mail || client?.téléphone || 'Client inconnu';
   }
 
-  private encodeLogoPath(path: string): string {
-    // Encoder les espaces et caractères spéciaux dans l'URL
-    return path.split('/').map(part => encodeURIComponent(part)).join('/');
-  }
-  
   onLogoLoad(): void {
     this.logoLoaded = true;
     this.logoError = false;
-    // Réinitialiser le fallback quand le logo charge avec succès
-    this.fallbackLogoPath.set('');
-    console.log('Logo chargé avec succès:', this.logoPath());
   }
-  
+
   onLogoError(): void {
-    const isDark = this.themeService.isDarkMode();
-    const possibleLogos = isDark ? this.possibleLogosDark : this.possibleLogosLight;
-    const currentPath = this.logoPath();
-    
-    // Trouver l'index du logo actuel dans la liste appropriée
-    const currentIndex = possibleLogos.indexOf(currentPath);
-    
-    console.error('Erreur de chargement du logo:', currentPath, 'Index:', currentIndex);
-    
-    // Essayer le logo suivant
-    if (currentIndex < possibleLogos.length - 1 && currentIndex >= 0) {
-      // Essayer sans encodage d'abord
-      const nextLogo = possibleLogos[currentIndex + 1];
-      this.fallbackLogoPath.set(nextLogo);
-      this.logoLoaded = false;
-      console.log('Essai du logo suivant (sans encodage):', nextLogo);
-    } else if (currentIndex === -1 && !currentPath.includes('%20')) {
-      // Le logo actuel n'est pas dans la liste, essayer avec encodage
-      console.log('Tentative avec encodage des espaces...');
-      const encodedLogo = this.encodeLogoPath(possibleLogos[0]);
-      this.fallbackLogoPath.set(encodedLogo);
-      this.logoLoaded = false;
-    } else {
-      // Tous les logos ont échoué
-      this.logoError = true;
-      this.logoLoaded = false;
-      console.error('Tous les logos ont échoué à charger');
-    }
+    // Pas de nouvel essai en boucle : on affiche le nom en texte
+    this.logoError = true;
+    this.logoLoaded = false;
   }
-  
+
   showTextFallback(): boolean {
-    return !this.logoLoaded && this.logoError;
+    return this.logoError;
   }
 
   toggleTheme(): void {

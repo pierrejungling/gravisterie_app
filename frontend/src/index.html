@@ -9,12 +9,30 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
   <meta name="theme-color" content="#f6f4f1">
   <script>
-    // Initialiser le thème avant le chargement d'Angular pour éviter le flash
+    // Thème posé avant Angular pour éviter le flash : choix manuel encore valable,
+    // sinon jour / nuit selon le soleil à Spa (même calcul que ThemeService)
     (function() {
-      const theme = localStorage.getItem('theme') || 'light';
+      var theme = 'light';
+      try {
+        var manuel = JSON.parse(localStorage.getItem('theme-manuel') || 'null');
+        if (manuel && Date.now() < Number(manuel.jusqu)) {
+          theme = manuel.theme === 'dark' ? 'dark' : 'light';
+        } else {
+          var R = Math.PI / 180, now = Date.now();
+          var j = Math.floor(now / 864e5) + 2440588 - 2451545 - 5.864 / 360;
+          var m = ((357.5291 + 0.98560028 * j) % 360) * R;
+          var c = 1.9148 * Math.sin(m) + 0.02 * Math.sin(2 * m) + 0.0003 * Math.sin(3 * m);
+          var l = ((m / R + c + 282.9372) % 360) * R;
+          var midi = 2451545 + j + 0.0053 * Math.sin(m) - 0.0069 * Math.sin(2 * l);
+          var d = Math.asin(Math.sin(l) * Math.sin(23.4397 * R));
+          var ca = (Math.sin(-0.833 * R) - Math.sin(50.492 * R) * Math.sin(d)) / (Math.cos(50.492 * R) * Math.cos(d));
+          var w = Math.acos(Math.max(-1, Math.min(1, ca))) / R / 360;
+          var lever = (midi - w - 2440587.5) * 864e5, coucher = (midi + w - 2440587.5) * 864e5;
+          theme = now >= lever && now < coucher ? 'light' : 'dark';
+        }
+      } catch (e) {}
       document.documentElement.setAttribute('data-theme', theme);
-      const themeColor = theme === 'dark' ? '#0d0c0b' : '#f6f4f1';
-      document.querySelector('meta[name="theme-color"]').setAttribute('content', themeColor);
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'dark' ? '#0d0c0b' : '#f6f4f1');
     })();
   </script>
 </head>

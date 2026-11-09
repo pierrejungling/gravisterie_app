@@ -23,6 +23,7 @@ import {
   QuantiteProduitCompteur,
   isCommandeSite,
   isCommandeSiteNonTraitee,
+  livraisonFaite,
 } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
@@ -278,7 +279,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   // Calculer le statut de la deadline pour la coloration
   getDeadlineStatus(): 'warning' | 'danger' | null {
     const cmd = this.commande();
-    if (!cmd || !cmd.deadline) {
+    if (!cmd || !cmd.deadline || livraisonFaite(cmd)) {
       return null;
     }
 
@@ -3990,6 +3991,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     const j = this.joursAvantDeadline();
     if (j === null) return '';
     const date = new Date(this.commande()!.deadline as string).toLocaleDateString('fr-BE', { day: 'numeric', month: 'short' });
+    // Livrée : la date reste affichée, sans retard ni compte à rebours
+    if (livraisonFaite(this.commande())) return date;
     if (j < 0) return `${date} · ${-j} j de retard`;
     if (j === 0) return `${date} · aujourd'hui`;
     if (j === 1) return `${date} · demain`;

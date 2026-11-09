@@ -41,8 +41,9 @@ svg {
   }
 
   &__logo {
-    height: 46px;
-    width: auto;
+    height: 50px;
+    width: 50px;
+    object-fit: contain;
     display: block;
   }
 
@@ -183,16 +184,18 @@ svg {
   border-right: 1px solid var(--gv-line);
 
   &__logo {
-    width: 66px;
-    height: 58px;
-    margin-bottom: 14px;
-    display: grid;
-    place-items: center;
+    flex: 0 0 auto;
+    width: 68px;
+    height: 68px;
+    margin-bottom: 10px;
+    display: block;
     cursor: pointer;
 
     img {
-      width: 66px;
-      height: auto;
+      display: block;
+      width: 68px;
+      height: 68px;
+      object-fit: contain;
     }
   }
 
@@ -360,7 +363,8 @@ svg {
     }
 
     &__logo {
-      height: 40px;
+      height: 46px;
+      width: 46px;
     }
 
     &__meta {

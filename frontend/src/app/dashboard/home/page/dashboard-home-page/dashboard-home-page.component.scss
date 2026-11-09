@@ -84,6 +84,35 @@
   }
 }
 
+.site-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: auto;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--gv-accent) 60%, transparent);
+  border-radius: 999px;
+  background: var(--gv-accent-soft);
+  color: var(--gv-accent);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 0;
+
+  &__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--gv-accent);
+    animation: site-new-pouls 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes site-new-pouls {
+  50% { opacity: 0.35; }
+}
+
 .num {
   margin-right: 0.55rem;
   font-family: var(--font-mono);
@@ -566,6 +595,11 @@
       justify-content: center;
       padding-left: 0.5rem;
       padding-right: 0.5rem;
+    }
+
+    // Le bouton principal prend toute la ligne, les deux autres se partagent la suivante
+    .gv-btn--primary {
+      flex-basis: 100%;
     }
   }
 

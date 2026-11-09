@@ -4,10 +4,13 @@ import { Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HeaderComponent } from '@shared';
 import { ApiService, ApiURI, ApiResponse, RealtimeService } from '@api';
-import { Commande, StatutCommande } from '../../../feature/commande/model/commande.interface';
+import { Commande, StatutCommande, livraisonFaite, isCommandeSiteNonTraitee } from '../../../feature/commande/model/commande.interface';
 import { Bon } from '../../../feature/bon/model/bon.interface';
 import { BonService } from '../../../feature/bon/service/bon.service';
-import { Evenement, aVenir, joursAvant, typeEvenement } from '../../../feature/evenement/model/evenement.interface';
+import { Evenement, aVenir, joursAvant as joursAvantDate, typeEvenement } from '../../../feature/evenement/model/evenement.interface';
+
+/** Jours avant la deadline d'une commande ; null sans deadline ou si elle est déjà livrée. */
+const joursDeadline = (c: Commande): number | null => (c.deadline && !livraisonFaite(c) ? joursAvantDate(c.deadline) : null);
 
 /** Étapes de l'atelier, dans l'ordre du Kanban. */
 const ETAPES: Array<{ cle: string; label: string; couleur: string; statuts: StatutCommande[] }> = [
@@ -71,15 +74,20 @@ export class DashboardHomePageComponent implements OnInit {
   );
 
   /** Le travail du jour : ce qui est à graver, à finir, et les clients qui attendent une réponse. */
+  /** Nouvelles commandes arrivées du site, pas encore traitées (même règle que la pastille du Kanban). */
+  readonly nbSiteNew = computed(
+    () => this.commandes().filter((c) => c.statut_commande === StatutCommande.EN_ATTENTE_INFORMATION && isCommandeSiteNonTraitee(c)).length,
+  );
+
   readonly aujourdhui = computed(() => {
     const enCours = this.enCours();
-    const parDeadline = (a: Commande, b: Commande) => t(a.deadline) - t(b.deadline) || t(a.date_commande) - t(b.date_commande);
+    const parDeadline = (a: Commande, b: Commande) => tDeadline(a) - tDeadline(b) || t(a.date_commande) - t(b.date_commande);
     const bloc = (liste: Commande[]) => ({
       nb: liste.length,
       items: [...liste].sort(parDeadline).slice(0, 4).map((c) => ({
         id: c.id_commande,
         titre: c.produit || 'Commande',
-        deadline: c.deadline ? joursAvant(c.deadline) : null,
+        deadline: joursDeadline(c),
       })),
     });
     return {
@@ -99,7 +107,7 @@ export class DashboardHomePageComponent implements OnInit {
   readonly kpis = computed(() => {
     const enCours = this.enCours();
     const impayes = this.actives().filter((c) => !c['payé'] && montant(c.prix_final) > 0);
-    const retard = enCours.filter((c) => (joursAvant(c.deadline) ?? 0) < 0);
+    const retard = enCours.filter((c) => (joursDeadline(c) ?? 0) < 0);
     return {
       enCours: enCours.length,
       clientAttend: enCours.filter((c) => c.attente_reponse === false).length,
@@ -115,7 +123,7 @@ export class DashboardHomePageComponent implements OnInit {
     const enCours = this.enCours();
     const etapes = ETAPES.map((e) => {
       const liste = enCours.filter((c) => e.statuts.includes(c.statut_commande));
-      return { ...e, nb: liste.length, retard: liste.filter((c) => (joursAvant(c.deadline) ?? 0) < 0).length };
+      return { ...e, nb: liste.length, retard: liste.filter((c) => (joursDeadline(c) ?? 0) < 0).length };
     }).filter((e) => e.nb > 0);
     const total = etapes.reduce((s, e) => s + e.nb, 0);
     return { etapes, total };
@@ -132,7 +140,7 @@ export class DashboardHomePageComponent implements OnInit {
   readonly taches = computed<Tache[]>(() => {
     const out: Tache[] = [];
     for (const c of this.enCours()) {
-      const j = joursAvant(c.deadline);
+      const j = joursDeadline(c);
       if (j === null || j > 7) continue;
       out.push({
         id: c.id_commande,
@@ -145,7 +153,7 @@ export class DashboardHomePageComponent implements OnInit {
       });
     }
     for (const e of this.prochains()) {
-      const j = joursAvant(e.date_debut);
+      const j = joursAvantDate(e.date_debut);
       if (j === null || j > 7) continue;
       const fait = (e.materiel ?? []).filter((m) => m.fait).length;
       const total = (e.materiel ?? []).length;
@@ -164,7 +172,7 @@ export class DashboardHomePageComponent implements OnInit {
 
   readonly nbAutresTaches = computed(() => {
     const n = this.enCours().filter((c) => {
-      const j = joursAvant(c.deadline);
+      const j = joursDeadline(c);
       return j !== null && j <= 7;
     }).length;
     return Math.max(n - this.taches().filter((x) => x.lien[1] === 'commandes').length, 0);
@@ -255,7 +263,7 @@ export class DashboardHomePageComponent implements OnInit {
   }
 
   compteurEvenement(e: Evenement): string {
-    const j = joursAvant(e.date_debut);
+    const j = joursAvantDate(e.date_debut);
     if (j === null) return '';
     if (j <= 0) return "Aujourd'hui";
     if (j === 1) return 'Demain';
@@ -290,6 +298,10 @@ function montant(v: unknown): number {
 
 function t(v: string | null | undefined): number {
   return v ? new Date(v).getTime() : Infinity;
+}
+
+function tDeadline(c: Commande): number {
+  return livraisonFaite(c) ? Infinity : t(c.deadline);
 }
 
 function dateCourte(v: string | null | undefined): string {

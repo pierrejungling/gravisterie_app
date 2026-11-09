@@ -9,3 +9,4 @@ export * from './commande_ligne_prix.entity';
 export * from './commande_fichier.entity';
 export * from './frais_commission.entity';
 export * from './enum';
+export * from './apercu_lien.entity';

@@ -612,6 +612,9 @@
                   </div>
                 </div>
 
+                <!-- Aperçu du lien (image et titre de la page) -->
+                <gv-apercu-lien class="support-apercu" [url]="$any(supportControl).get('url_support')?.value" [delai]="700"></gv-apercu-lien>
+
                 <!-- Texte "Le prix ci-dessus correspond à X unité(s)" (en dessous du champ prix support total) -->
                 <div class="support-prix-pour-unites" *ngIf="!isPrixUnitaire($any(supportControl))">
                   <span>Le prix ci-dessus correspond à</span>
@@ -685,8 +688,8 @@
                     <td class="quantity-cell">{{ ligne.quantite }}</td>
                     <td class="total-cell">{{ ligne.prixFinal | number:'1.2-2' }} €</td>
                   </tr>
-                  <tr *ngFor="let frais of ligne.frais" class="recap-fee">
-                    <td class="support-name-cell">{{ frais.nom }}</td>
+                  <tr *ngFor="let frais of ligne.frais; trackBy: trackFrais" class="recap-fee">
+                    <td class="support-name-cell"><span class="frais-nom"><gv-apercu-lien taille="mini" [url]="frais.url"></gv-apercu-lien>{{ frais.nom }}</span></td>
                     <td class="price-cell">{{ frais.prixUnitaire | number:'1.2-2' }} €</td>
                     <td class="quantity-cell">{{ frais.quantite }}</td>
                     <td class="total-cell">{{ frais.total | number:'1.2-2' }} €</td>
@@ -712,8 +715,8 @@
                   <tr class="recap-separator">
                     <td colspan="4"><span class="recap-separator-label">Frais non rattachés</span></td>
                   </tr>
-                  <tr *ngFor="let frais of recapFraisOrphelins()" class="recap-fee">
-                    <td class="support-name-cell">{{ frais.nom }}</td>
+                  <tr *ngFor="let frais of recapFraisOrphelins(); trackBy: trackFrais" class="recap-fee">
+                    <td class="support-name-cell"><span class="frais-nom"><gv-apercu-lien taille="mini" [url]="frais.url"></gv-apercu-lien>{{ frais.nom }}</span></td>
                     <td class="price-cell">{{ frais.prixUnitaire | number:'1.2-2' }} €</td>
                     <td class="quantity-cell">{{ frais.quantite }}</td>
                     <td class="total-cell">{{ frais.total | number:'1.2-2' }} €</td>

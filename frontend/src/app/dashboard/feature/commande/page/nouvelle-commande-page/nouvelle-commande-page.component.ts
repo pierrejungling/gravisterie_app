@@ -12,6 +12,7 @@ import { NouvelleCommandeForm, CoordonneesContactForm } from '../../data/form/no
 import { Couleur, StatutCommande, ModeContact } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
+import { ApercuLienComponent } from '../../component/apercu-lien/apercu-lien.component';
 import { ClientPickerComponent } from '../../../client/component/client-picker/client-picker.component';
 import { ClientApiService } from '../../../client/service/client-api.service';
 import { CorrespondanceClient, FicheClient, initialesClient, nomClient } from '../../../client/model/client.interface';
@@ -28,7 +29,7 @@ import {
 @Component({
   selector: 'app-nouvelle-commande-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent, ClientPickerComponent],
+  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent, ClientPickerComponent, ApercuLienComponent],
   templateUrl: './nouvelle-commande-page.component.html',
   styleUrl: './nouvelle-commande-page.component.scss'
 })
@@ -940,7 +941,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     quantite: number;
     prixUnitaire: number | null;
     prixFinal: number;
-    frais: Array<{ nom: string; prixUnitaire: number; quantite: number; total: number }>;
+    frais: Array<{ nom: string; prixUnitaire: number; quantite: number; total: number; url: string | null }>;
     totalFrais: number;
     resteUnitaire: number;
     reste: number;
@@ -960,7 +961,12 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     });
   }
 
-  recapFraisOrphelins(): Array<{ nom: string; prixUnitaire: number; quantite: number; total: number }> {
+  /** Garde les lignes du récap (et leurs vignettes) d'un affichage à l'autre. */
+  trackFrais(index: number, frais: { nom: string; url: string | null }): string {
+    return `${index}|${frais.nom}|${frais.url ?? ''}`;
+  }
+
+  recapFraisOrphelins(): Array<{ nom: string; prixUnitaire: number; quantite: number; total: number; url: string | null }> {
     const ids = new Set(
       (this.lignesPrixFormArray?.controls ?? [])
         .filter((control) => !this.estRemise(control as FormGroup))
@@ -989,7 +995,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   private fraisActifsPourLigne(
     ligneId: string | null,
     idsLignes: Set<string>
-  ): Array<{ nom: string; prixUnitaire: number; quantite: number; total: number }> {
+  ): Array<{ nom: string; prixUnitaire: number; quantite: number; total: number; url: string | null }> {
     return (this.supportsFormArray?.controls ?? [])
       .map((control, index) => ({ group: control as FormGroup, index }))
       .filter(({ group }) => {
@@ -1003,6 +1009,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
         const quantite = this.quantiteLignePrix(group);
         return {
           nom: String(group.get('nom_support')?.value || '').trim() || `Support ${index + 1}`,
+          url: String(group.get('url_support')?.value || '').trim() || null,
           prixUnitaire,
           quantite,
           total: prixUnitaire * quantite,

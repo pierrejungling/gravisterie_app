@@ -4741,3 +4741,18 @@
     &__actions { width: 100%; justify-content: flex-end; }
   }
 }
+
+/* Aperçu des liens de frais */
+.support-apercu {
+  margin: 0.25rem 0 0.75rem;
+}
+
+.frais-nom {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+
+  gv-apercu-lien:empty {
+    display: none;
+  }
+}

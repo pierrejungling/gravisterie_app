@@ -55,6 +55,11 @@ export class DashboardHomePageComponent implements OnInit {
 
   // Signal pour le logo de fallback (en cas d'erreur)
   private fallbackLogoPath = signal<string>('');
+  // Réinitialiser le fallback quand le thème change (effect doit être créé dans le contexte d'injection)
+  private readonly resetFallbackLogo = effect(() => {
+    this.themeService.theme();
+    this.fallbackLogoPath.set('');
+  }, { allowSignalWrites: true });
 
   // Computed signal pour le logo selon le thème
   logoPath = computed(() => {
@@ -150,11 +155,6 @@ export class DashboardHomePageComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.loadBonsCount());
 
-    // Réinitialiser le fallback quand le thème change
-    effect(() => {
-      this.themeService.theme(); // S'abonner aux changements de thème
-      this.fallbackLogoPath.set(''); // Réinitialiser le fallback
-    });
   }
 
   loadCommandesCount(): void {

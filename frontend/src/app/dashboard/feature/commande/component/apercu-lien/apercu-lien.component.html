@@ -1,0 +1,84 @@
+@if (lien()) {
+  @if (taille === 'mini') {
+    <button
+      type="button"
+      class="mini"
+      [class.is-loading]="etat() === 'chargement'"
+      [title]="apercu()?.titre || site()"
+      (click)="ouvrir()">
+      @if (image(); as src) {
+        <img [src]="src" alt="" loading="lazy" referrerpolicy="no-referrer" (load)="onLoad($event)" (error)="imageKo.set(true)" />
+      } @else {
+        <span class="ph">{{ initiale() }}</span>
+      }
+    </button>
+  } @else {
+    <div class="carte" [class.is-loading]="etat() === 'chargement'">
+      <button type="button" class="vignette" [class.has-img]="!!image()" (click)="image() ? basculerGrand($event) : ouvrir()" [attr.aria-label]="image() ? 'Agrandir l’image' : 'Ouvrir le lien'">
+        @if (image(); as src) {
+          <img [src]="src" alt="" loading="lazy" referrerpolicy="no-referrer" (load)="onLoad($event)" (error)="imageKo.set(true)" />
+        } @else if (etat() === 'chargement') {
+          <span class="ph ph--pulse"></span>
+        } @else {
+          <span class="ph">{{ initiale() }}</span>
+        }
+      </button>
+
+      <div class="infos">
+        <a class="titre" [href]="lien()" target="_blank" rel="noopener">
+          @if (etat() === 'chargement') {
+            Chargement de l’aperçu…
+          } @else {
+            {{ apercu()?.titre || (image() ? 'Voir la page du produit' : 'Pas d’aperçu pour ce lien') }}
+          }
+        </a>
+        <span class="site">
+          {{ site() }}
+          @if (apercu()?.manuel) { <span class="tag">image choisie</span> }
+        </span>
+        @if (!edition()) {
+          <span class="actions">
+            <button type="button" class="lien-btn" (click)="ouvrirEdition()">{{ image() ? 'Changer l’image' : 'Ajouter une image' }}</button>
+            @if (!apercu()?.manuel && etat() !== 'chargement') {
+              <button type="button" class="lien-btn" (click)="recharger()">Réessayer</button>
+            }
+          </span>
+        }
+      </div>
+    </div>
+
+    @if (edition()) {
+      <div class="edition">
+        <input
+          class="gv-input"
+          type="text"
+          placeholder="Colle ici l’image ou son adresse"
+          [value]="saisie()"
+          (input)="onSaisie($event)"
+          (paste)="onPaste($event)"
+          (keydown.enter)="$event.preventDefault(); valider()"
+          (keydown.escape)="fermerEdition()" />
+        <div class="edition__actions">
+          <button type="button" class="gv-btn gv-btn--sm gv-btn--primary" [disabled]="envoi()" (click)="valider()">OK</button>
+          <label class="gv-btn gv-btn--sm">
+            Choisir un fichier
+            <input type="file" accept="image/*" hidden (change)="onFichier($event)" />
+          </label>
+          @if (apercu()?.manuel) {
+            <button type="button" class="gv-btn gv-btn--sm" [disabled]="envoi()" (click)="automatique()">Image automatique</button>
+          }
+          <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="fermerEdition()">Annuler</button>
+        </div>
+        <p class="aide">Sur la page du produit : clic droit sur la photo, « Copier l’image », puis colle ici. Une capture d’écran marche aussi.</p>
+        @if (erreur()) { <p class="erreur">{{ erreur() }}</p> }
+      </div>
+    }
+
+    @if (grand() && image(); as src) {
+      <div class="zoom" (click)="grand.set(false)">
+        <img [src]="src" alt="" referrerpolicy="no-referrer" />
+        <a class="zoom__lien" [href]="lien()" target="_blank" rel="noopener" (click)="$event.stopPropagation()">Ouvrir la page</a>
+      </div>
+    }
+  }
+}

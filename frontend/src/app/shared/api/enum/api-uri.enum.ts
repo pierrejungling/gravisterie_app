@@ -18,6 +18,8 @@ export enum ApiURI {
   LISTE_CLIENTS = 'client/liste',
   RECHERCHE_CLIENTS = 'client/recherche',
   CORRESPONDANCES_CLIENTS = 'client/correspondances',
+  APERCU_LIEN = 'apercu-lien',
+  APERCU_LIEN_IMAGE = 'apercu-lien/image',
   DOUBLONS_CLIENTS = 'client/doublons',
   AJOUTER_CLIENT = 'client/ajouter',
   FUSIONNER_CLIENTS = 'client/fusionner',

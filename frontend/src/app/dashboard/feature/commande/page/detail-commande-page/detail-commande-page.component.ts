@@ -26,6 +26,7 @@ import {
 } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
+import { ApercuLienComponent } from '../../component/apercu-lien/apercu-lien.component';
 import { formatTelephoneBE } from '../../util/format-telephone.util';
 import {
   COMMANDE_UPLOAD_EXTENSIONS,
@@ -45,7 +46,7 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 @Component({
   selector: 'app-detail-commande-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, FraisCommissionPickerComponent, ClientPickerComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, FraisCommissionPickerComponent, ClientPickerComponent, ApercuLienComponent],
   templateUrl: './detail-commande-page.component.html',
   styleUrl: './detail-commande-page.component.scss'
 })
@@ -2646,7 +2647,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     quantite: number;
     prixUnitaire: number | null;
     prixFinal: number;
-    frais: Array<{ nom: string; prixUnitaire: number; quantite: number; total: number }>;
+    frais: Array<{ nom: string; prixUnitaire: number; quantite: number; total: number; url: string | null }>;
     totalFrais: number;
     resteUnitaire: number;
     reste: number;
@@ -2666,7 +2667,12 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     });
   }
 
-  recapFraisOrphelins(): Array<{ nom: string; prixUnitaire: number; quantite: number; total: number }> {
+  /** Garde les lignes du récap (et leurs vignettes) d'un affichage à l'autre. */
+  trackFrais(index: number, frais: { nom: string; url: string | null }): string {
+    return `${index}|${frais.nom}|${frais.url ?? ''}`;
+  }
+
+  recapFraisOrphelins(): Array<{ nom: string; prixUnitaire: number; quantite: number; total: number; url: string | null }> {
     const ids = new Set(
       (this.lignesPrixFormArray?.controls ?? [])
         .filter((control) => !this.estRemise(control as FormGroup))
@@ -2695,7 +2701,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private fraisActifsPourLigne(
     ligneId: string | null,
     idsLignes: Set<string>
-  ): Array<{ nom: string; prixUnitaire: number; quantite: number; total: number }> {
+  ): Array<{ nom: string; prixUnitaire: number; quantite: number; total: number; url: string | null }> {
     return (this.supportsFormArray?.controls ?? [])
       .map((control, index) => ({ group: control as FormGroup, index }))
       .filter(({ group }) => {
@@ -2709,6 +2715,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         const quantite = this.quantiteLignePrix(group);
         return {
           nom: String(group.get('nom_support')?.value || '').trim() || `Support ${index + 1}`,
+          url: String(group.get('url_support')?.value || '').trim() || null,
           prixUnitaire,
           quantite,
           total: prixUnitaire * quantite,

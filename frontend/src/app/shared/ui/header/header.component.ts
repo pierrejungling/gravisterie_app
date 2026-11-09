@@ -124,8 +124,8 @@ export class HeaderComponent implements AfterViewInit {
   
   // Logo carré (PNG transparents, noms sans espace ni accent) : noir le jour, blanc la nuit
   logoPath = computed(() => this.themeService.isDarkMode()
-    ? 'assets/images/Logo/logo-carre-blanc.png'
-    : 'assets/images/Logo/logo-carre-noir.png');
+    ? 'assets/images/Logo/logo-carre-blanc.svg'
+    : 'assets/images/Logo/logo-carre-noir.svg');
 
   // Signal computed pour l'authentification (réactif)
   isAuthenticated = computed(() => {

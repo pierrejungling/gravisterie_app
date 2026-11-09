@@ -74,6 +74,12 @@ export class HeaderComponent {
       icon: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.4M18 14c1.9.8 3 2.9 3 6"/>',
     },
     {
+      label: 'Événements',
+      path: ['/dashboard', 'evenements'],
+      match: '/dashboard/evenements',
+      icon: '<rect x="3.5" y="5" width="17" height="15"/><path d="M3.5 10h17M8 3v4M16 3v4"/><circle cx="12" cy="15" r="1.6"/>',
+    },
+    {
       label: 'Bons',
       path: ['/dashboard', 'bons'],
       match: '/dashboard/bons',
@@ -83,7 +89,7 @@ export class HeaderComponent {
 
   /** Téléphone : « Clients » dans la barre du bas, le reste dans « Plus » (sauf Nouvelle, déjà le bouton +). */
   readonly clientsItem = this.navItems.find((item) => item.match === '/dashboard/clients')!;
-  readonly moreItems = this.navItems.filter((item) => ['/dashboard/commandes/terminees', '/dashboard/bons'].includes(item.match));
+  readonly moreItems = this.navItems.filter((item) => ['/dashboard/commandes/terminees', '/dashboard/evenements', '/dashboard/bons'].includes(item.match));
 
   readonly iconSettings = '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>';
   readonly iconLogout = '<path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h11"/>';

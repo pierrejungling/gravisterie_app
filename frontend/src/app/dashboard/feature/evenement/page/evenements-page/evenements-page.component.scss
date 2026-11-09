@@ -1,0 +1,260 @@
+:host {
+  display: block;
+}
+
+.spaced {
+  margin-bottom: 1rem;
+}
+
+.tab-count {
+  margin-left: 0.35rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0;
+}
+
+.kpis {
+  margin-bottom: 1.25rem;
+}
+
+.kpi-btn {
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &:not(:disabled):hover {
+    border-color: var(--gv-accent);
+  }
+}
+
+.kpi-next {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+
+  &__nom {
+    font-family: var(--font-title, inherit);
+    font-size: 1rem;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* ---------- Liste ---------- */
+.liste {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.ev {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--gv-accent);
+    outline: none;
+  }
+
+  &.is-off {
+    opacity: 0.55;
+  }
+
+  &__date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 64px;
+    border: 1px solid var(--gv-line-strong);
+    border-radius: var(--border-radius);
+    line-height: 1;
+  }
+
+  &__jour {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+
+  &__mois {
+    margin-top: 0.2rem;
+    font-family: var(--font-title);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gv-accent);
+  }
+
+  &__main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  &__titre {
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  &__icone {
+    margin-right: 0.2rem;
+  }
+
+  &__meta {
+    font-size: 0.8rem;
+    color: var(--gv-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin-top: 0.1rem;
+  }
+
+  &__prix {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: 1.05rem;
+
+    .mono {
+      font-family: var(--font-mono);
+    }
+  }
+
+  &__sous {
+    font-size: 0.65rem;
+    color: var(--gv-muted);
+    letter-spacing: 0.1em;
+  }
+}
+
+.gv-empty .gv-btn {
+  margin-top: 0.8rem;
+}
+
+/* ---------- Modale création ---------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(13, 12, 11, 0.45);
+    backdrop-filter: blur(3px);
+  }
+
+  &__panel {
+    position: relative;
+    width: min(560px, 100%);
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    padding: 1.4rem;
+    background: var(--gv-paper);
+
+    h2 {
+      font-family: var(--font-title);
+      font-size: 1.3rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin: 0.2rem 0 1rem;
+    }
+
+    .gv-error {
+      margin-top: 0.8rem;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.1rem;
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+
+  .span-2 {
+    grid-column: span 2;
+  }
+}
+
+/* ---------- Téléphone ---------- */
+@media (max-width: 760px) {
+  .ev {
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 0.75rem;
+    padding: 0.75rem;
+
+    &__date {
+      height: 52px;
+    }
+
+    &__jour {
+      font-size: 1.2rem;
+    }
+
+    &__meta {
+      white-space: normal;
+    }
+
+    &__prix {
+      grid-column: 2;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 0.35rem;
+      font-size: 0.9rem;
+    }
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+
+    .span-2 {
+      grid-column: auto;
+    }
+  }
+
+  .modal {
+    place-items: end center;
+    padding: 0;
+
+    &__panel {
+      width: 100%;
+      max-height: 92dvh;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      padding-bottom: calc(1.4rem + env(safe-area-inset-bottom));
+    }
+  }
+}

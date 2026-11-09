@@ -524,6 +524,7 @@ export class CommandeService {
             mode_contact: commande.mode_contact,
             source_web: Boolean(commande.source_web),
             site_traitee: Boolean(commande.site_traitee),
+            id_evenement: commande.id_evenement ?? null,
             client: commande.client,
             lignes_prix: this.toLignesPrixDto(commande.lignes_prix),
             supports: supports as any,

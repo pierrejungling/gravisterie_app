@@ -27,6 +27,7 @@ import {
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
 import { ApercuLienComponent } from '../../component/apercu-lien/apercu-lien.component';
+import { EvenementLienComponent } from '../../../evenement/component/evenement-lien/evenement-lien.component';
 import { formatTelephoneBE } from '../../util/format-telephone.util';
 import {
   COMMANDE_UPLOAD_EXTENSIONS,
@@ -46,7 +47,7 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 @Component({
   selector: 'app-detail-commande-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, FraisCommissionPickerComponent, ClientPickerComponent, ApercuLienComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, FraisCommissionPickerComponent, ClientPickerComponent, ApercuLienComponent, EvenementLienComponent],
   templateUrl: './detail-commande-page.component.html',
   styleUrl: './detail-commande-page.component.scss'
 })

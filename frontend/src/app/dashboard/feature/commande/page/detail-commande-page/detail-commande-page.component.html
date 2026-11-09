@@ -88,6 +88,12 @@
           <div class="detail-status-badge detail-status-badge--terminee" *ngIf="isCommandeTerminee()">Terminée</div>
           <div class="detail-status-badge detail-status-badge--annulee" *ngIf="isCommandeAnnulee()">Annulée</div>
         </div>
+        <gv-evenement-lien
+          class="evenement-lien"
+          *ngIf="!isEditMode()"
+          [idCommande]="commande()?.id_commande ?? null"
+          [idEvenement]="commande()?.id_evenement ?? null">
+        </gv-evenement-lien>
         <div class="commande-title-edit" *ngIf="isEditMode()">
           <app-floating-label-input
             [label]="isVente() ? 'Nom / Intitulé de la vente' : 'Nom / Intitulé de la commande'"

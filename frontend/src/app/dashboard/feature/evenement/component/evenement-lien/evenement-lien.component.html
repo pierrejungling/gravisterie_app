@@ -1,0 +1,51 @@
+<div class="lien">
+  @if (actuel(); as ev) {
+    <a class="lien__chip" [routerLink]="['/dashboard', 'evenements', ev.id_evenement]">
+      <span aria-hidden="true">📍</span>
+      <span class="lien__label">Événement</span>
+      <span class="lien__nom">{{ ev.nom }}</span>
+      <span class="lien__date">{{ dateLongue(ev.date_debut) }}</span>
+    </a>
+    <button type="button" class="lien__btn" (click)="ouvert() ? fermer() : ouvrir()">Changer</button>
+  } @else {
+    <button type="button" class="lien__btn lien__btn--add" (click)="ouvert() ? fermer() : ouvrir()">
+      <span aria-hidden="true">📍</span> Rattacher à un événement
+    </button>
+  }
+</div>
+
+@if (ouvert()) {
+  <div class="choix">
+    @if (liste() === null) {
+      <div class="choix__vide">Chargement…</div>
+    } @else if (choix().venir.length === 0 && choix().passes.length === 0) {
+      <div class="choix__vide">Aucun événement. Crée-le d'abord dans le module Événements.</div>
+    } @else {
+      @if (choix().venir.length) {
+        <div class="choix__titre">À venir</div>
+        @for (e of choix().venir; track e.id_evenement) {
+          <button type="button" class="choix__item" [class.is-on]="actuel()?.id_evenement === e.id_evenement" [disabled]="envoi()" (click)="choisir(e)">
+            <span>{{ typeEvenement(e.type).icone }} {{ e.nom }}</span>
+            <span class="choix__date">{{ dateLongue(e.date_debut) }}</span>
+          </button>
+        }
+      }
+      @if (choix().passes.length) {
+        <div class="choix__titre">Passés</div>
+        @for (e of choix().passes; track e.id_evenement) {
+          <button type="button" class="choix__item" [class.is-on]="actuel()?.id_evenement === e.id_evenement" [disabled]="envoi()" (click)="choisir(e)">
+            <span>{{ typeEvenement(e.type).icone }} {{ e.nom }}</span>
+            <span class="choix__date">{{ dateLongue(e.date_debut) }}</span>
+          </button>
+        }
+      }
+    }
+    <div class="choix__actions">
+      @if (actuel()) {
+        <button type="button" class="lien__btn" [disabled]="envoi()" (click)="choisir(null)">Retirer l'événement</button>
+      }
+      <button type="button" class="lien__btn" (click)="fermer()">Fermer</button>
+    </div>
+    @if (erreur()) { <div class="choix__erreur">{{ erreur() }}</div> }
+  </div>
+}

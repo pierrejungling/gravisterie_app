@@ -1,4 +1,4 @@
-export type RealtimeResource = 'commande' | 'bon' | 'frais' | 'client';
+export type RealtimeResource = 'commande' | 'bon' | 'frais' | 'client' | 'evenement';
 export type RealtimeAction = 'created' | 'updated' | 'deleted';
 
 export interface RealtimeEvent {

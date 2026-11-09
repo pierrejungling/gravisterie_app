@@ -89,6 +89,10 @@ export class Commande {
     @Column({type: 'boolean', default: false})
     site_traitee: boolean;
 
+    /** Événement auquel la commande est rattachée (gravure en direct, salon...). */
+    @Column({ type: 'varchar', length: 26, nullable: true })
+    id_evenement: string | null;
+
     @ManyToOne(() => Client, (client) => client.id_client)
     @JoinColumn({name: 'id_client'})
     client: Client;

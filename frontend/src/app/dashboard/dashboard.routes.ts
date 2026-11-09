@@ -30,6 +30,10 @@ export const DashboardRoutes: Routes = [
                 loadChildren: () => import('./feature/client/client.routes').then(r => r.clientRoutes)
             },
             {
+                path: AppNode.EVENEMENTS,
+                loadChildren: () => import('./feature/evenement/evenement.routes').then(r => r.evenementRoutes)
+            },
+            {
                 path: AppNode.BONS,
                 loadChildren: () => import('./feature/bon/bon.routes').then(r => r.bonRoutes)
             }

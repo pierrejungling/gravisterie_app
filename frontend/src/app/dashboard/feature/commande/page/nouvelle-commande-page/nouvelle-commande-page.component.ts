@@ -13,6 +13,8 @@ import { Couleur, StatutCommande, ModeContact } from '../../model/commande.inter
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
 import { ApercuLienComponent } from '../../component/apercu-lien/apercu-lien.component';
+import { EvenementLienComponent } from '../../../evenement/component/evenement-lien/evenement-lien.component';
+import { EvenementApiService } from '../../../evenement/service/evenement-api.service';
 import { ClientPickerComponent } from '../../../client/component/client-picker/client-picker.component';
 import { ClientApiService } from '../../../client/service/client-api.service';
 import { CorrespondanceClient, FicheClient, initialesClient, nomClient } from '../../../client/model/client.interface';
@@ -29,7 +31,7 @@ import {
 @Component({
   selector: 'app-nouvelle-commande-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent, ClientPickerComponent, ApercuLienComponent],
+  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent, ClientPickerComponent, ApercuLienComponent, EvenementLienComponent],
   templateUrl: './nouvelle-commande-page.component.html',
   styleUrl: './nouvelle-commande-page.component.scss'
 })
@@ -57,6 +59,9 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
   /** Fiche client existante liée à la commande (null = nouveau client créé avec la commande). */
   clientLie: WritableSignal<FicheClient | null> = signal(null);
+  /** Événement auquel la commande sera rattachée à la création. */
+  readonly evenementLie = signal<string | null>(null);
+  private readonly evenementApi = inject(EvenementApiService);
   /** Fiches existantes qui ressemblent à ce qui est tapé (évite les doublons). */
   suggestionsClient: WritableSignal<CorrespondanceClient[]> = signal([]);
   private readonly suggestionsIgnorees = new Set<string>();
@@ -149,6 +154,9 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     this.surveillerCorrespondances();
 
     // Arrivée depuis une fiche client (« Nouvelle commande ») : lier directement la fiche.
+    // Arrivée depuis un événement (« Commande liée ») : rattacher la commande à la création.
+    this.evenementLie.set(this.route.snapshot.queryParamMap.get('evenement'));
+
     const idClient = this.route.snapshot.queryParamMap.get('client');
     if (idClient) {
       this.clientApi.detail(idClient).subscribe((client) => {
@@ -1365,6 +1373,8 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
           }
           const idCommande = response.data?.id_commande as string | undefined;
           this.lastCreatedCommandeId.set(idCommande || null);
+          const idEvenement = this.evenementLie();
+          if (idCommande && idEvenement) this.evenementApi.lierCommande(idEvenement, idCommande).subscribe();
           const filesToUpload = [...this.uploadedFiles];
 
           if (!idCommande || filesToUpload.length === 0) {

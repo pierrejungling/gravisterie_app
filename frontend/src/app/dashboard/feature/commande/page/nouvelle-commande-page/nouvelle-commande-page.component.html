@@ -94,6 +94,7 @@
           <span class="commande-type-toggle__option" [class.active]="isVente()">Vente</span>
         </div>
         <h1 class="page-title">Nouvelle {{ isVente() ? 'Vente' : 'Commande' }}</h1>
+        <gv-evenement-lien class="evenement-lien" [idEvenement]="evenementLie()" (choisi)="evenementLie.set($event)"></gv-evenement-lien>
         <div class="commande-title-edit">
           <app-floating-label-input
             [label]="isVente() ? 'Nom / Intitulé de la vente' : 'Nom / Intitulé de la commande'"

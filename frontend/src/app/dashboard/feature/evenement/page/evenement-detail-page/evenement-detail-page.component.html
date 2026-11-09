@@ -1,0 +1,348 @@
+<app-header></app-header>
+
+<div class="gv-page">
+  <a class="back" routerLink="/dashboard/evenements">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>Événements
+  </a>
+
+  @if (loading()) {
+    <div class="gv-empty">Chargement de l'événement…</div>
+  } @else if (erreur() && !evenement()) {
+    <div class="gv-error">{{ erreur() }}</div>
+  } @else {
+  @if (evenement(); as e) {
+    <header class="hero">
+      <div class="hero__date">
+        <span class="hero__jour">{{ jour() }}</span>
+        <span class="hero__mois">{{ mois() }}</span>
+      </div>
+      <div class="hero__body">
+        <div class="gv-eyebrow">
+          {{ typeEvenement(e.type).icone }} {{ typeEvenement(e.type).label }}
+          @if (compteur()) { · <span class="accent">{{ compteur() }}</span> }
+        </div>
+        <h1>{{ e.nom }}</h1>
+        <div class="hero__sub">
+          {{ dateLongue(e.date_debut) }}@if (horaire(e)) { · {{ horaire(e) }} }@if (e.lieu) { · {{ e.lieu }} }
+        </div>
+      </div>
+      <div class="hero__actions">
+        <label class="statut" [ngClass]="'statut--' + (statutEvenement(e.statut).ton || 'neutre')">
+          <span class="sr-only">Statut</span>
+          <select class="gv-select" (change)="changerStatut($event)" [disabled]="action() === 'statut'">
+            @for (s of statuts; track s.valeur) { <option [value]="s.valeur" [selected]="s.valeur === e.statut">{{ s.label }}</option> }
+          </select>
+        </label>
+        <button type="button" class="gv-btn gv-btn--primary" (click)="nouvelleCommande()">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>Commande liée
+        </button>
+      </div>
+    </header>
+
+    @if (erreur()) {
+      <div class="gv-error spaced">{{ erreur() }}</div>
+    }
+
+    <section class="gv-kpis kpis">
+      <div class="gv-kpi">
+        <div class="gv-kpi__label">01 · Prestation</div>
+        <div class="gv-kpi__value">{{ e.stats.prestation > 0 ? euros(e.stats.prestation) : '-' }} <small>HTVA</small></div>
+      </div>
+      <div class="gv-kpi">
+        <div class="gv-kpi__label">02 · Commandes liées</div>
+        <div class="gv-kpi__value">{{ e.stats.nb_commandes }} <small>{{ euros(e.stats.ca_commandes) }}</small></div>
+      </div>
+      <div class="gv-kpi gv-kpi--accent">
+        <div class="gv-kpi__label">03 · Total</div>
+        <div class="gv-kpi__value">{{ euros(e.stats.total) }}</div>
+      </div>
+      <button type="button" class="gv-kpi kpi-btn" [class.gv-kpi--warn]="!e.paye && e.stats.prestation > 0" [disabled]="action() === 'paye'" (click)="basculerPaye()">
+        <div class="gv-kpi__label">04 · Paiement prestation</div>
+        <div class="gv-kpi__value paiement">
+          <span class="dot" [class.is-on]="e.paye"></span>{{ e.paye ? 'Payé' : 'À encaisser' }}
+          <small>toucher pour changer</small>
+        </div>
+      </button>
+    </section>
+
+    <div class="layout">
+      <!-- ===== Colonne gauche ===== -->
+      <div class="col">
+        <section class="gv-panel card">
+          <div class="card__head">
+            <h2 class="gv-section-title"><span class="gv-num">01</span>Infos pratiques</h2>
+            @if (!edition()) {
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="commencerEdition()">Modifier</button>
+            }
+          </div>
+
+          @if (!edition()) {
+            <dl class="infos">
+              <div><dt>Date</dt><dd>{{ dateLongue(e.date_debut) }}</dd></div>
+              <div><dt>Horaire</dt><dd>{{ horaire(e) || '-' }}</dd></div>
+              <div><dt>Arrivée</dt><dd>{{ e.heure_arrivee || '-' }}</dd></div>
+              <div><dt>Lieu</dt><dd>{{ e.lieu || '-' }}</dd></div>
+              <div>
+                <dt>Adresse</dt>
+                <dd>
+                  @if (e.adresse) { <a [href]="mapsUrl(e.adresse)" target="_blank" rel="noopener">{{ e.adresse }}</a> }
+                  @else { <span class="muted">-</span> }
+                </dd>
+              </div>
+              <div>
+                <dt>Contact</dt>
+                <dd class="contact">
+                  @if (e.contact_nom || e.contact_telephone || e.contact_mail) {
+                    @if (e.contact_nom) { <span>{{ e.contact_nom }}</span> }
+                    @if (e.contact_telephone) { <a [href]="telUrl(e.contact_telephone)">{{ e.contact_telephone }}</a> }
+                    @if (e.contact_mail) { <a [href]="'mailto:' + e.contact_mail">{{ e.contact_mail }}</a> }
+                  } @else { <span class="muted">-</span> }
+                </dd>
+              </div>
+              <div>
+                <dt>Organisateur</dt>
+                <dd>
+                  @if (e.client) {
+                    <a [routerLink]="['/dashboard', 'clients', e.client.id_client]">{{ nomClientEvenement(e.client) }}</a>
+                    <button type="button" class="copy" (click)="retirerOrganisateur()">Retirer</button>
+                  } @else if (!choixOrganisateur()) {
+                    <button type="button" class="copy copy--left" (click)="choixOrganisateur.set(true)">Lier une fiche client</button>
+                  }
+                </dd>
+              </div>
+            </dl>
+            @if (choixOrganisateur()) {
+              <div class="picker">
+                <gv-client-picker [sansNouveau]="true" placeholder="Fiche du magasin, de l'organisateur…" (choisi)="choisirOrganisateur($event)"></gv-client-picker>
+                <button type="button" class="copy copy--left" (click)="choixOrganisateur.set(false)">Annuler</button>
+              </div>
+            }
+
+            @if (e.adresse) {
+              <div class="map">
+                <iframe class="map__frame" [src]="mapEmbedUrl(e.adresse) | safeResourceUrl" title="Carte du lieu" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+              </div>
+            }
+          } @else {
+            <form class="edit" (ngSubmit)="enregistrerEdition()">
+              <div class="edit__grid">
+                <div class="gv-field span-2"><label for="f-nom">Nom</label><input id="f-nom" class="gv-input" name="nom" [(ngModel)]="form.nom" /></div>
+                <div class="gv-field span-2">
+                  <label for="f-type">Type</label>
+                  <select id="f-type" class="gv-select" name="type" [(ngModel)]="form.type">
+                    @for (t of types; track t.valeur) { <option [value]="t.valeur">{{ t.icone }} {{ t.label }}</option> }
+                  </select>
+                </div>
+                <div class="gv-field"><label for="f-debut">Début</label><input id="f-debut" class="gv-input" type="datetime-local" name="debut" [(ngModel)]="form.debut" (ngModelChange)="onDebutChange()" /></div>
+                <div class="gv-field"><label for="f-fin">Fin</label><input id="f-fin" class="gv-input" type="datetime-local" name="fin" [(ngModel)]="form.fin" /></div>
+                <div class="gv-field span-2"><label for="f-arrivee">Arrivée / installation</label><input id="f-arrivee" class="gv-input" name="arrivee" [(ngModel)]="form.heure_arrivee" placeholder="Ex. 15 h 30" /></div>
+                <div class="gv-field span-2"><label for="f-lieu">Lieu</label><input id="f-lieu" class="gv-input" name="lieu" [(ngModel)]="form.lieu" placeholder="Nom du magasin, de la salle…" /></div>
+                <div class="gv-field span-2"><label for="f-adresse">Adresse</label><input id="f-adresse" class="gv-input" name="adresse" [(ngModel)]="form.adresse" /></div>
+                <div class="gv-field span-2"><label for="f-cnom">Contact sur place</label><input id="f-cnom" class="gv-input" name="cnom" [(ngModel)]="form.contact_nom" /></div>
+                <div class="gv-field"><label for="f-ctel">Téléphone</label><input id="f-ctel" class="gv-input" type="tel" name="ctel" [(ngModel)]="form.contact_telephone" /></div>
+                <div class="gv-field"><label for="f-cmail">Mail</label><input id="f-cmail" class="gv-input" type="email" name="cmail" [(ngModel)]="form.contact_mail" /></div>
+
+                <div class="edit__sep span-2">Formule et prix</div>
+                <div class="gv-field span-2">
+                  <label for="f-formule">Formule</label>
+                  <select id="f-formule" class="gv-select" name="formule" [(ngModel)]="form.formule">
+                    @for (f of formules; track f.valeur) { <option [value]="f.valeur">{{ f.label }}</option> }
+                  </select>
+                </div>
+                <div class="gv-field"><label for="f-forfait">{{ form.formule === 'a_la_gravure' ? 'Partie fixe (€ HTVA)' : 'Forfait (€ HTVA)' }}</label><input id="f-forfait" class="gv-input" type="number" step="0.01" name="forfait" [(ngModel)]="form.prix_forfait" /></div>
+                <div class="gv-field"><label for="f-pg">Prix par gravure (€)</label><input id="f-pg" class="gv-input" type="number" step="0.01" name="pg" [(ngModel)]="form.prix_gravure" /></div>
+                <div class="gv-field"><label for="f-hsp">Heures sur place</label><input id="f-hsp" class="gv-input" type="number" step="0.25" name="hsp" [(ngModel)]="form.heures_sur_place" /></div>
+                <div class="gv-field"><label for="f-htr">Heures de trajet (A/R)</label><input id="f-htr" class="gv-input" type="number" step="0.25" name="htr" [(ngModel)]="form.heures_trajet" /></div>
+                <div class="gv-field"><label for="f-carb">Forfait carburant (€)</label><input id="f-carb" class="gv-input" type="number" step="1" name="carb" [(ngModel)]="form.forfait_carburant" /></div>
+                <div class="gv-field"><label for="f-nb">Gravures réalisées</label><input id="f-nb" class="gv-input" type="number" step="1" min="0" name="nb" [(ngModel)]="form.nb_gravures" /></div>
+              </div>
+              @if (editionErreur()) { <div class="gv-error spaced-top">{{ editionErreur() }}</div> }
+              <div class="edit__actions">
+                <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="annulerEdition()">Annuler</button>
+                <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary" [disabled]="sauvegarde()">{{ sauvegarde() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+              </div>
+            </form>
+          }
+        </section>
+
+        <section class="gv-panel card">
+          <div class="card__head">
+            <h2 class="gv-section-title"><span class="gv-num">02</span>Formule et prix</h2>
+            @if (!edition()) {
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="commencerEdition()">Modifier</button>
+            }
+          </div>
+          <dl class="infos">
+            <div><dt>Formule</dt><dd>{{ libelleFormule(e.formule) }}</dd></div>
+            @if (e.formule === 'a_la_gravure') {
+              <div><dt>Partie fixe</dt><dd class="mono">{{ euros(nombre(e.prix_forfait), true) }}</dd></div>
+              <div><dt>Par gravure</dt><dd class="mono">{{ euros(nombre(e.prix_gravure), true) }}</dd></div>
+            } @else if (e.formule !== 'stand') {
+              <div><dt>Forfait</dt><dd class="mono">{{ euros(nombre(e.prix_forfait), true) }}</dd></div>
+            }
+            <div>
+              <dt>Heures</dt>
+              <dd class="mono">
+                @if (nombre(e.heures_sur_place) !== null || nombre(e.heures_trajet) !== null) {
+                  {{ nombre(e.heures_sur_place) ?? 0 }} h sur place + {{ nombre(e.heures_trajet) ?? 0 }} h trajet
+                } @else { <span class="muted">-</span> }
+              </dd>
+            </div>
+            <div><dt>Carburant</dt><dd class="mono">{{ euros(nombre(e.forfait_carburant)) }}</dd></div>
+          </dl>
+
+          <div class="compteur">
+            <span class="compteur__label">Gravures réalisées</span>
+            <div class="compteur__ctrl">
+              <button type="button" (click)="ajusterGravures(-1)" [disabled]="!e.nb_gravures" aria-label="Retirer une gravure">−</button>
+              <span class="compteur__val">{{ e.nb_gravures || 0 }}</span>
+              <button type="button" (click)="ajusterGravures(1)" aria-label="Ajouter une gravure">+</button>
+            </div>
+            @if (e.formule === 'a_la_gravure' && nombre(e.prix_gravure)) {
+              <span class="compteur__total mono">= {{ euros((e.nb_gravures || 0) * (nombre(e.prix_gravure) || 0)) }}</span>
+            }
+          </div>
+
+          @if (calcul(); as c) {
+            <div class="calcul">
+              <div class="calcul__titre">Calcul sur {{ c.heures }} h (sur place + trajet)</div>
+              <div class="calcul__ligne">
+                <span>À la gravure : {{ tarifs.heureAlaGravure }} €/h + carburant</span>
+                <span class="mono">{{ euros(c.alaGravure) }} + {{ tarifs.prixGravure }} €/grav.</span>
+                <button type="button" class="copy" [disabled]="action() === 'formule'" (click)="appliquerFormule('a_la_gravure')">Appliquer</button>
+              </div>
+              <div class="calcul__ligne">
+                <span>Illimité : {{ tarifs.heureIllimite }} €/h + carburant</span>
+                <span class="mono">{{ euros(c.illimite) }}</span>
+                <button type="button" class="copy" [disabled]="action() === 'formule'" (click)="appliquerFormule('illimite')">Appliquer</button>
+              </div>
+            </div>
+          } @else {
+            <p class="aide">Indique les heures sur place et de trajet pour avoir le calcul des deux formules.</p>
+          }
+        </section>
+
+        <section class="gv-panel card">
+          <div class="card__head">
+            <h2 class="gv-section-title"><span class="gv-num">03</span>Notes</h2>
+            <span class="notes-state">
+              @if (notesEtat() === 'saving') { Enregistrement… }
+              @else if (notesEtat() === 'saved' && !notesModifiees()) { Enregistré }
+            </span>
+          </div>
+          <textarea class="gv-textarea" placeholder="Demandes du magasin, réservations, accès, parking…" [value]="notes()" (input)="setNotes($event)" (blur)="enregistrerNotes()"></textarea>
+          @if (notesModifiees()) {
+            <div class="notes-actions"><button type="button" class="gv-btn gv-btn--sm" (click)="enregistrerNotes()">Enregistrer les notes</button></div>
+          }
+        </section>
+      </div>
+
+      <!-- ===== Colonne droite ===== -->
+      <div class="col">
+        <section class="gv-panel card">
+          <div class="card__head">
+            <h2 class="gv-section-title">
+              <span class="gv-num">04</span>Matériel
+              @if (e.materiel.length) { <span class="mono progress">{{ materielFait() }}/{{ e.materiel.length }}</span> }
+            </h2>
+            @if (materielFait() > 0) {
+              <button type="button" class="copy" (click)="toutDecocher()">Tout décocher</button>
+            }
+          </div>
+          @if (e.materiel.length) {
+            <ul class="materiel">
+              @for (m of e.materiel; track $index) {
+                <li [class.is-done]="m.fait">
+                  <label>
+                    <input type="checkbox" [checked]="m.fait" (change)="basculerElement($index)" />
+                    <span>{{ m.texte }}</span>
+                  </label>
+                  <button type="button" class="materiel__del" (click)="retirerElement($index)" aria-label="Retirer">×</button>
+                </li>
+              }
+            </ul>
+          } @else {
+            <p class="aide">Rien à préparer pour l'instant.</p>
+          }
+          <form class="materiel__add" (ngSubmit)="ajouterElement()">
+            <input class="gv-input" name="element" placeholder="Ajouter un élément…" [ngModel]="nouvelElement()" (ngModelChange)="nouvelElement.set($event)" />
+            <button type="submit" class="gv-btn gv-btn--sm" [disabled]="!nouvelElement().trim()">Ajouter</button>
+          </form>
+          <button type="button" class="copy copy--left" (click)="ajouterListeType()">+ Liste type gravure en direct</button>
+        </section>
+
+        <section class="gv-panel card">
+          <div class="card__head">
+            <h2 class="gv-section-title"><span class="gv-num">05</span>Commandes liées · {{ e.commandes.length }}</h2>
+            @if (!rattachement()) {
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="ouvrirRattachement()">Rattacher</button>
+            }
+          </div>
+
+          @if (rattachement()) {
+            <div class="rattacher">
+              <input class="gv-input" type="search" placeholder="Produit ou client…" [value]="rechercheCommande()" (input)="setRechercheCommande($event)" />
+              @if (toutesCommandes() === null) {
+                <div class="aide">Chargement des commandes…</div>
+              } @else if (resultatsCommandes().length === 0) {
+                <div class="aide">Aucune commande trouvée.</div>
+              } @else {
+                <ul class="rattacher__liste">
+                  @for (c of resultatsCommandes(); track c.id_commande) {
+                    <li>
+                      <span class="rattacher__txt">
+                        <strong>{{ titreCommande(c) }}</strong>
+                        <span class="muted">{{ clientCommande(c) }}@if (c.date_commande) { · {{ dateCourte($any(c.date_commande)) }} }</span>
+                      </span>
+                      <button type="button" class="gv-btn gv-btn--sm" [disabled]="action() === 'lier-' + c.id_commande" (click)="rattacher(c)">Rattacher</button>
+                    </li>
+                  }
+                </ul>
+              }
+              <button type="button" class="copy copy--left" (click)="rattachement.set(false)">Fermer</button>
+            </div>
+          }
+
+          @if (e.commandes.length === 0) {
+            <div class="gv-empty small">Aucune commande liée. Les commandes prises sur place ou pour l'événement se rattachent ici.</div>
+          } @else {
+            <ol class="timeline">
+              @for (cmd of e.commandes; track cmd.id_commande) {
+                <li>
+                  <a class="cmd" (click)="ouvrirCommande(cmd)" tabindex="0" (keydown.enter)="ouvrirCommande(cmd)">
+                    <span class="cmd__main">
+                      <span class="cmd__title">
+                        {{ cmd.produit || 'Commande' }}
+                        @if (cmd['quantité'] && cmd['quantité'] > 1) { <span class="muted mono">×{{ cmd['quantité'] }}</span> }
+                      </span>
+                      <span class="cmd__meta">{{ cmd.client || 'Client inconnu' }} · {{ dateCourte(cmd.date_commande) }}</span>
+                      <span class="cmd__chips">
+                        <span class="gv-chip" [ngClass]="'gv-chip--' + toneStatut(cmd.statut_commande)">{{ libelleStatut(cmd) }}</span>
+                        @if (cmd.prix_final && cmd.statut_commande !== 'annulee') {
+                          <span class="gv-chip" [class.gv-chip--ok]="cmd['payé']" [class.gv-chip--warn]="!cmd['payé']">{{ cmd['payé'] ? 'Payé' : 'À payer' }}</span>
+                        }
+                      </span>
+                    </span>
+                    <span class="cmd__price">
+                      <span class="mono">{{ cmd.prix_final !== null ? euros(cmd.prix_final, true) : '-' }}</span>
+                      <button type="button" class="copy" [disabled]="action() === 'delier-' + cmd.id_commande" (click)="detacher(cmd, $event)">Détacher</button>
+                    </span>
+                  </a>
+                </li>
+              }
+            </ol>
+          }
+        </section>
+
+        <section class="danger">
+          @if (suppressionConfirm()) {
+            <span>Supprimer cet événement ? Les commandes liées sont gardées.</span>
+            <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="suppressionConfirm.set(false)">Non</button>
+          }
+          <button type="button" class="gv-btn gv-btn--sm gv-btn--danger" (click)="supprimer()">{{ suppressionConfirm() ? 'Oui, supprimer' : "Supprimer l'événement" }}</button>
+        </section>
+      </div>
+    </div>
+  }
+  }
+</div>

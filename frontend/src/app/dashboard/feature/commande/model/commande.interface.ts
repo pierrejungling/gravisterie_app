@@ -130,6 +130,8 @@ export interface CommandeLignePrix {
 
 export interface Commande {
   id_commande: string;
+  /** Événement auquel la commande est rattachée. */
+  id_evenement?: string | null;
   date_commande: string;
   deadline?: string;
   produit?: string;

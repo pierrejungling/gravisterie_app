@@ -16,9 +16,10 @@ export interface DashboardCard {
   count?: number;
   countTerminees?: number;
   countAnnulees?: number;
-  countUnit?: 'commande' | 'bon actif' | 'fiche client';
+  countUnit?: 'commande' | 'bon actif' | 'fiche client' | 'événement à venir';
 }
 
+import { Evenement, aVenir } from '../../../feature/evenement/model/evenement.interface';
 @Component({
   selector: 'app-dashboard-home-page',
   standalone: true,
@@ -106,6 +107,14 @@ export class DashboardHomePageComponent implements OnInit {
       countUnit: 'fiche client',
     },
     {
+      title: 'Événements',
+      description: 'Gravure en direct, nocturnes, salons et leurs commandes',
+      route: '/dashboard/evenements',
+      icon: '📍',
+      count: 0,
+      countUnit: 'événement à venir',
+    },
+    {
       title: 'Bons cadeaux',
       description: 'Créer et suivre vos bons cadeaux',
       route: '/dashboard/bons',
@@ -144,6 +153,10 @@ export class DashboardHomePageComponent implements OnInit {
     // Charger les bons pour afficher le nombre de bons actifs
     this.loadBonsCount();
     this.loadClientsCount();
+    this.loadEvenementsCount();
+    this.realtime.on('evenement')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadEvenementsCount());
     this.realtime.on('client', 'commande')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.loadClientsCount());
@@ -155,6 +168,19 @@ export class DashboardHomePageComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.loadBonsCount());
 
+  }
+
+  /** Événements à venir (non terminés, annulés ou refusés). */
+  loadEvenementsCount(): void {
+    this.apiService.get(ApiURI.LISTE_EVENEMENTS).subscribe({
+      next: (response: ApiResponse) => {
+        if (response.result && Array.isArray(response.data)) {
+          const card = this.dashboardCards.find((c) => c.route === '/dashboard/evenements');
+          if (card) card.count = (response.data as Evenement[]).filter((e) => aVenir(e)).length;
+        }
+      },
+      error: () => undefined,
+    });
   }
 
   loadCommandesCount(): void {

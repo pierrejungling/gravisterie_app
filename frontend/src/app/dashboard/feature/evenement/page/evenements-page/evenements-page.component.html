@@ -1,0 +1,131 @@
+<app-header></app-header>
+
+<div class="gv-page">
+  <header class="gv-page-head">
+    <div>
+      <div class="gv-eyebrow">Gravure en direct, nocturnes, salons · {{ evenements().length }} événements</div>
+      <h1>Événements</h1>
+    </div>
+    <div class="gv-page-head__actions">
+      <div class="gv-tabs" role="tablist">
+        <button type="button" [class.is-active]="vue() === 'a_venir'" (click)="vue.set('a_venir')">
+          À venir @if (aVenirList().length) { <span class="tab-count">{{ aVenirList().length }}</span> }
+        </button>
+        <button type="button" [class.is-active]="vue() === 'passes'" (click)="vue.set('passes')">Passés</button>
+        <button type="button" [class.is-active]="vue() === 'tous'" (click)="vue.set('tous')">Tous</button>
+      </div>
+      <button type="button" class="gv-btn gv-btn--primary" (click)="ouvrirCreation()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>Nouvel événement
+      </button>
+    </div>
+  </header>
+
+  @if (erreur()) {
+    <div class="gv-error spaced">{{ erreur() }}</div>
+  }
+
+  <section class="gv-kpis kpis">
+    <div class="gv-kpi">
+      <div class="gv-kpi__label">01 · À venir</div>
+      <div class="gv-kpi__value">{{ kpis().aVenir }}</div>
+    </div>
+    <button type="button" class="gv-kpi gv-kpi--accent kpi-btn" [disabled]="!kpis().prochain" (click)="kpis().prochain && ouvrir(kpis().prochain!)">
+      <div class="gv-kpi__label">02 · Prochain</div>
+      <div class="gv-kpi__value kpi-next">
+        @if (kpis().prochain; as p) {
+          <span class="kpi-next__nom">{{ p.nom }}</span>
+          <small>{{ dateLongue(p.date_debut) }}@if (compteur(p); as c) { · {{ c }} }</small>
+        } @else { - }
+      </div>
+    </button>
+    <div class="gv-kpi">
+      <div class="gv-kpi__label">03 · CA {{ annee }}</div>
+      <div class="gv-kpi__value">{{ euros(kpis().caAnnee) }} <small>{{ kpis().nbAnnee }} évén.</small></div>
+    </div>
+    <div class="gv-kpi" [class.gv-kpi--warn]="kpis().aEncaisser > 0">
+      <div class="gv-kpi__label">04 · Prestations à encaisser</div>
+      <div class="gv-kpi__value">{{ euros(kpis().aEncaisser) }} <small>{{ kpis().nbAEncaisser }} évén.</small></div>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <div class="gv-empty">Chargement des événements…</div>
+  } @else if (visibles().length === 0) {
+    <div class="gv-empty">
+      @if (vue() === 'a_venir') { Aucun événement à venir. } @else { Aucun événement ici. }
+      <div><button type="button" class="gv-btn gv-btn--sm" (click)="ouvrirCreation()">Créer un événement</button></div>
+    </div>
+  } @else {
+    <div class="liste">
+      @for (e of visibles(); track e.id_evenement) {
+        <a class="ev gv-panel" [class.is-off]="e.statut === 'annule' || e.statut === 'refuse'" tabindex="0" (click)="ouvrir(e)" (keydown.enter)="ouvrir(e)">
+          <div class="ev__date">
+            <span class="ev__jour">{{ jour(e) }}</span>
+            <span class="ev__mois">{{ mois(e) }}</span>
+          </div>
+          <div class="ev__main">
+            <div class="ev__titre">
+              <span class="ev__icone" aria-hidden="true">{{ typeEvenement(e.type).icone }}</span>
+              {{ e.nom }}
+            </div>
+            <div class="ev__meta">
+              {{ dateLongue(e.date_debut) }}@if (horaire(e)) { · {{ horaire(e) }} }
+              @if (e.lieu) { · {{ e.lieu }} }
+              @if (e.client) { · {{ nomClientEvenement(e.client) }} }
+            </div>
+            <div class="ev__chips">
+              <span class="gv-chip" [ngClass]="statutEvenement(e.statut).ton ? 'gv-chip--' + statutEvenement(e.statut).ton : ''">{{ statutEvenement(e.statut).label }}</span>
+              <span class="gv-chip">{{ typeEvenement(e.type).label }}</span>
+              @if (compteur(e); as c) { <span class="gv-chip gv-chip--accent">{{ c }}</span> }
+              @if (e.stats.nb_commandes) { <span class="gv-chip">{{ e.stats.nb_commandes }} cmd</span> }
+              @if (e.stats.prestation > 0 && (e.statut === 'confirme' || e.statut === 'termine')) {
+                <span class="gv-chip" [class.gv-chip--ok]="e.paye" [class.gv-chip--warn]="!e.paye">{{ e.paye ? 'Payé' : 'À encaisser' }}</span>
+              }
+            </div>
+          </div>
+          <div class="ev__prix">
+            <span class="mono">{{ e.stats.total > 0 ? euros(e.stats.total) : '-' }}</span>
+            <span class="ev__sous">HTVA</span>
+          </div>
+        </a>
+      }
+    </div>
+  }
+</div>
+
+@if (creationOuverte()) {
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="titre-creation">
+    <div class="modal__backdrop" (click)="fermerCreation()"></div>
+    <form class="modal__panel gv-panel" (ngSubmit)="creer()">
+      <div class="gv-eyebrow">Nouvel événement</div>
+      <h2 id="titre-creation">Créer un événement</h2>
+      <div class="form-grid">
+        <div class="gv-field span-2">
+          <label for="ev-nom">Nom</label>
+          <input id="ev-nom" class="gv-input" name="nom" [(ngModel)]="nouveau.nom" placeholder="Ex. Nocturne de Durbuy" autofocus />
+        </div>
+        <div class="gv-field">
+          <label for="ev-type">Type</label>
+          <select id="ev-type" class="gv-select" name="type" [(ngModel)]="nouveau.type">
+            @for (t of types; track t.valeur) { <option [value]="t.valeur">{{ t.icone }} {{ t.label }}</option> }
+          </select>
+        </div>
+        <div class="gv-field">
+          <label for="ev-date">Début</label>
+          <input id="ev-date" class="gv-input" type="datetime-local" name="date" [(ngModel)]="nouveau.date" />
+        </div>
+        <div class="gv-field span-2">
+          <label for="ev-lieu">Lieu</label>
+          <input id="ev-lieu" class="gv-input" name="lieu" [(ngModel)]="nouveau.lieu" placeholder="Magasin, salle, ville…" />
+        </div>
+      </div>
+      @if (creationErreur()) { <div class="gv-error">{{ creationErreur() }}</div> }
+      <div class="modal__actions">
+        <button type="button" class="gv-btn gv-btn--ghost" (click)="fermerCreation()">Annuler</button>
+        <button type="submit" class="gv-btn gv-btn--primary" [disabled]="creationEnCours()">
+          {{ creationEnCours() ? 'Création…' : 'Créer' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}

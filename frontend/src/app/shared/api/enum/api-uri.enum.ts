@@ -18,6 +18,8 @@ export enum ApiURI {
   LISTE_CLIENTS = 'client/liste',
   RECHERCHE_CLIENTS = 'client/recherche',
   CORRESPONDANCES_CLIENTS = 'client/correspondances',
+  LISTE_EVENEMENTS = 'evenement/liste',
+  EVENEMENT = 'evenement',
   APERCU_LIEN = 'apercu-lien',
   APERCU_LIEN_IMAGE = 'apercu-lien/image',
   DOUBLONS_CLIENTS = 'client/doublons',
@@ -42,3 +44,5 @@ export const COMMANDE_DUPLIQUER = (idCommande: string) => `commande/${idCommande
 
 /** Fiche client (lecture, modification, suppression). */
 export const CLIENT_BY_ID = (idClient: string) => `client/${idClient}`;
+
+export const EVENEMENT_BY_ID = (idEvenement: string) => `evenement/${idEvenement}`;

@@ -27,5 +27,9 @@ export class Client {
 
     @Column({type: 'varchar', length: 20, nullable: true})
     tva: string | null;
-    
+
+    /** Notes libres sur le client (préférences, historique, remarques). */
+    @Column({type: 'text', nullable: true})
+    notes: string | null;
+
 }

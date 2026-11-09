@@ -200,6 +200,16 @@
       <!-- Coordonnées de contact -->
       <section class="form-section">
         <h2 class="section-title">Coordonnées de contact</h2>
+
+        <div class="client-picker-slot">
+          <gv-client-picker
+            [selected]="clientLie()"
+            (choisi)="choisirClient($event)"
+            (nouveau)="nouveauClient($event)"
+            (retire)="retirerClient()">
+          </gv-client-picker>
+          <p class="client-picker-hint" *ngIf="clientLie()">Les coordonnées ci-dessous viennent de la fiche. Si tu les modifies, la fiche sera mise à jour.</p>
+        </div>
         
         <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('nom')">
           <app-floating-label-input

@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, AfterViewChecked, AfterViewInit, HostListener, inject, signal, WritableSignal, ViewChild, ElementRef } from '@angular/core';
 import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HeaderComponent, FloatingLabelInputComponent, getFormValidationErrors, FormError } from '@shared';
 import { ApiService } from '@api';
 import { ApiURI, COMMANDE_FICHIERS_UPLOAD } from '@api';
@@ -10,6 +10,10 @@ import { NouvelleCommandeForm, CoordonneesContactForm } from '../../data/form/no
 import { Couleur, StatutCommande, ModeContact } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
+import { ClientPickerComponent } from '../../../client/component/client-picker/client-picker.component';
+import { ClientApiService } from '../../../client/service/client-api.service';
+import { FicheClient } from '../../../client/model/client.interface';
+import { adresseUtile } from '../../util/adresse.util';
 import { formatTelephoneBE } from '../../util/format-telephone.util';
 import {
   COMMANDE_UPLOAD_EXTENSIONS,
@@ -22,7 +26,7 @@ import {
 @Component({
   selector: 'app-nouvelle-commande-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent],
+  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent, ClientPickerComponent],
   templateUrl: './nouvelle-commande-page.component.html',
   styleUrl: './nouvelle-commande-page.component.scss'
 })
@@ -45,6 +49,11 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   @ViewChild('supportInput', { read: ElementRef }) supportInputRef?: ElementRef<HTMLElement>;
   
   private readonly apiService: ApiService = inject(ApiService);
+  private readonly clientApi = inject(ClientApiService);
+  private readonly route = inject(ActivatedRoute);
+
+  /** Fiche client existante liée à la commande (null = nouveau client créé avec la commande). */
+  clientLie: WritableSignal<FicheClient | null> = signal(null);
   private readonly scrollKey = 'nouvelle-commande-scroll';
   private readonly clearScrollKey = 'nouvelle-commande-clear-scroll';
 
@@ -127,6 +136,53 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       }
     } catch {}
     this.formGroup.get('coordonnees_contact.pays')?.setValue('Belgique');
+
+    // Arrivée depuis une fiche client (« Nouvelle commande ») : lier directement la fiche.
+    const idClient = this.route.snapshot.queryParamMap.get('client');
+    if (idClient) {
+      this.clientApi.detail(idClient).subscribe((client) => {
+        if (client) this.choisirClient(client);
+      });
+    }
+  }
+
+  // ---------- Fiche client ----------
+  private readonly champsContact = ['nom', 'prenom', 'societe', 'mail', 'telephone', 'tva', 'rue', 'code_postal', 'ville', 'pays'];
+
+  /** Lie une fiche existante et recopie ses coordonnées (modifiables : elles mettent la fiche à jour). */
+  choisirClient(client: FicheClient): void {
+    this.clientLie.set(client);
+    this.formGroup.patchValue({
+      nom: client.nom || '',
+      prenom: client.prénom || '',
+      societe: client.société || '',
+      mail: client.mail || '',
+      telephone: client.téléphone || '',
+      tva: client.tva || '',
+      // L'adresse de la fiche est déjà complète : tout dans « rue ».
+      rue: adresseUtile(client.adresse) || '',
+      code_postal: '',
+      ville: '',
+      pays: '',
+    });
+  }
+
+  /** Nouveau client : on repart d'un formulaire vide, prérempli avec ce qui a été tapé. */
+  nouveauClient(saisie: string): void {
+    this.retirerClient();
+    const texte = (saisie || '').trim();
+    if (!texte) return;
+    if (texte.includes('@')) this.formGroup.patchValue({ mail: texte });
+    else if (texte.replace(/[\s+./-]/g, '').match(/^\d{6,}$/)) this.formGroup.patchValue({ telephone: texte });
+    else this.formGroup.patchValue({ nom: texte });
+  }
+
+  retirerClient(): void {
+    this.clientLie.set(null);
+    const vide: Record<string, string> = {};
+    this.champsContact.forEach((champ) => (vide[champ] = ''));
+    vide['pays'] = 'Belgique';
+    this.formGroup.patchValue(vide);
   }
 
   ngAfterViewChecked(): void {
@@ -1199,6 +1255,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
           : null,
         frais_commission_id: isVente ? (formValue.frais_commission_id || null) : null,
         frais_commission_libelle: isVente ? (formValue.frais_commission_libelle?.trim() || null) : null,
+        ...(this.clientLie() && { id_client: this.clientLie()!.id_client }),
         ...(Object.keys(coordonneesContact).length > 0 && { coordonnees_contact: coordonneesContact }),
         supports: formValue.supports && Array.isArray(formValue.supports) 
           ? formValue.supports
@@ -1300,6 +1357,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   onCreateNewCommande(): void {
     this.showSuccessPopup.set(false);
     this.lastCreatedCommandeId.set(null);
+    this.clientLie.set(null);
     this.formGroup.reset();
     
     // Réinitialiser les valeurs par défaut

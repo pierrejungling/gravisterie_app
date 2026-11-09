@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, AfterViewChecked, HostListener, inject, signal, WritableSignal, computed, ElementRef, ViewChild, NgZone, DestroyRef } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, RouterModule } from '@angular/router';
+import { nettoyerAdresse } from '../../util/adresse.util';
 import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, Payload } from '@shared';
 import { ApiService, RealtimeService } from '@api';
@@ -38,7 +39,7 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 @Component({
   selector: 'app-detail-commande-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, FraisCommissionPickerComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, FraisCommissionPickerComponent],
   templateUrl: './detail-commande-page.component.html',
   styleUrl: './detail-commande-page.component.scss'
 })
@@ -1706,6 +1707,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   extractAdressePart(adresse: string | null | undefined, index: number): string {
+    adresse = nettoyerAdresse(adresse);
     if (!adresse) return '';
     const parts = adresse.split(',').map(p => p.trim());
     // Compatibilité anciennes données: "Belgique" seule => pays uniquement.
@@ -1716,7 +1718,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   hasAdresseDetails(adresse: string | null | undefined): boolean {
-    if (!adresse) return false;
+    adresse = nettoyerAdresse(adresse);
+    if (!adresse || adresse === 'Belgique') return false;
     const parts = adresse.split(',').map((p) => p.trim());
     const rue = parts[0] || '';
     const codePostal = parts[1] || '';

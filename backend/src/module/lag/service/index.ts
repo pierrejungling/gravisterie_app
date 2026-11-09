@@ -3,3 +3,4 @@ export * from './r2.service';
 export * from './commande-fichier.service';
 export * from './bon.service';
 export * from './frais_commission.service';
+export * from './client.service';

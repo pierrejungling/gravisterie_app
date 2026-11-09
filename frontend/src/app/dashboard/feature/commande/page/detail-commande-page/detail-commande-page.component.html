@@ -1231,7 +1231,13 @@
 
       <!-- Coordonnées de contact -->
       <section class="form-section">
-        <h2 class="section-title">Coordonnées de contact</h2>
+        <div class="section-title-row">
+          <h2 class="section-title">Coordonnées de contact</h2>
+          <a class="fiche-client-link" *ngIf="commande()?.client?.id_client as idClient" [routerLink]="['/dashboard', 'clients', idClient]">
+            Fiche client
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6" /></svg>
+          </a>
+        </div>
         
         <div class="input-wrapper">
           <ng-container *ngIf="isEditMode(); else nomCopyField">

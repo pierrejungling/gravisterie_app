@@ -15,6 +15,11 @@ export enum ApiURI {
   UPDATE_BON = 'bon',
   LISTE_FRAIS_COMMISSIONS = 'frais-commission/liste',
   AJOUTER_FRAIS_COMMISSION = 'frais-commission/ajouter',
+  LISTE_CLIENTS = 'client/liste',
+  RECHERCHE_CLIENTS = 'client/recherche',
+  DOUBLONS_CLIENTS = 'client/doublons',
+  AJOUTER_CLIENT = 'client/ajouter',
+  FUSIONNER_CLIENTS = 'client/fusionner',
 }
 /** URL pour marquer un bon comme utilisé (remplacer :id par id_bon). */
 export const BON_MARQUER_UTILISE = (idBon: string) => `bon/${idBon}/utilise`;
@@ -31,3 +36,6 @@ export const COMMANDE_FICHIERS_LIST = (idCommande: string) => `commande/${idComm
 export const COMMANDE_FICHIER_DOWNLOAD = (idCommande: string, idFichier: string) => `commande/${idCommande}/fichiers/${idFichier}/download`;
 /** URL pour dupliquer une commande. */
 export const COMMANDE_DUPLIQUER = (idCommande: string) => `commande/${idCommande}/dupliquer`;
+
+/** Fiche client (lecture, modification, suppression). */
+export const CLIENT_BY_ID = (idClient: string) => `client/${idClient}`;

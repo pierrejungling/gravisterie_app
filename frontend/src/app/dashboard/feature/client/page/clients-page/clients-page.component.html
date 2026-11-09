@@ -1,0 +1,229 @@
+<app-header></app-header>
+
+<div class="gv-page">
+  <header class="gv-page-head">
+    <div>
+      <div class="gv-eyebrow">Fichier clients · {{ totaux().fiches }} fiches</div>
+      <h1>Clients</h1>
+    </div>
+    <div class="gv-page-head__actions">
+      <div class="gv-tabs" role="tablist">
+        <button type="button" [class.is-active]="onglet() === 'liste'" (click)="onglet.set('liste')">Fiches</button>
+        <button type="button" [class.is-active]="onglet() === 'doublons'" (click)="onglet.set('doublons')">
+          Doublons @if (doublons().length) { <span class="tab-count">{{ doublons().length }}</span> }
+        </button>
+      </div>
+      <button type="button" class="gv-btn gv-btn--primary" (click)="ouvrirCreation()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>Nouveau client
+      </button>
+    </div>
+  </header>
+
+  @if (erreur()) {
+    <div class="gv-error">{{ erreur() }}</div>
+  }
+
+  <!-- ======================= Fiches ======================= -->
+  @if (onglet() === 'liste') {
+    <section class="gv-kpis kpis">
+      <div class="gv-kpi">
+        <div class="gv-kpi__label">01 · Fiches</div>
+        <div class="gv-kpi__value">{{ totaux().fiches }}</div>
+      </div>
+      <button type="button" class="gv-kpi kpi-btn" [class.is-on]="filtre() === 'en_cours'" (click)="setFiltre('en_cours')">
+        <div class="gv-kpi__label">02 · Clients actifs</div>
+        <div class="gv-kpi__value">{{ totaux().actifs }}</div>
+      </button>
+      <div class="gv-kpi gv-kpi--accent">
+        <div class="gv-kpi__label">03 · CA cumulé</div>
+        <div class="gv-kpi__value">{{ euros(totaux().ca) }}</div>
+      </div>
+      <button type="button" class="gv-kpi gv-kpi--warn kpi-btn" [class.is-on]="filtre() === 'a_payer'" (click)="setFiltre('a_payer')">
+        <div class="gv-kpi__label">04 · Reste à payer</div>
+        <div class="gv-kpi__value">{{ euros(totaux().aPayer) }} <small>{{ totaux().nbAPayer }} clients</small></div>
+      </button>
+    </section>
+
+    <div class="toolbar">
+      <div class="toolbar__search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <input class="gv-input" type="search" placeholder="Nom, société, mail, téléphone, adresse…" [value]="recherche()" (input)="setRecherche($event)" />
+      </div>
+      <select class="gv-select toolbar__sort" [ngModel]="tri()" (ngModelChange)="tri.set($event)" aria-label="Trier">
+        <option value="recent">Dernière commande</option>
+        <option value="ca">Chiffre d'affaires</option>
+        <option value="commandes">Nombre de commandes</option>
+        <option value="nom">Nom (A à Z)</option>
+      </select>
+    </div>
+
+    @if (filtre() !== 'tous') {
+      <div class="active-filter">
+        <span class="gv-chip gv-chip--accent">
+          {{ filtre() === 'en_cours' ? 'Commande en cours' : 'Reste à payer' }}
+        </span>
+        <button type="button" class="link-btn" (click)="setFiltre(filtre())">Retirer le filtre</button>
+      </div>
+    }
+
+    @if (loading()) {
+      <div class="gv-empty">Chargement des fiches…</div>
+    } @else if (filtres().length === 0) {
+      <div class="gv-empty">Aucune fiche ne correspond.</div>
+    } @else {
+      <div class="client-list gv-panel">
+        <div class="client-row client-row--head" aria-hidden="true">
+          <span></span>
+          <span>Client</span>
+          <span class="num">Cmd</span>
+          <span class="num">CA</span>
+          <span class="num">Panier</span>
+          <span class="num">Dernière</span>
+        </div>
+        @for (c of visibles(); track c.id_client) {
+          <a class="client-row" (click)="ouvrir(c)" tabindex="0" (keydown.enter)="ouvrir(c)">
+            <span class="gv-avatar">{{ initialesClient(c) }}</span>
+            <span class="client-row__main">
+              <span class="client-row__name">
+                {{ nomClient(c) }}
+                @if (c.stats.nb_en_cours > 0) {
+                  <span class="gv-chip gv-chip--accent">{{ c.stats.nb_en_cours }} en cours</span>
+                }
+                @if (c.stats.reste_a_payer > 0) {
+                  <span class="gv-chip gv-chip--warn">{{ euros(c.stats.reste_a_payer) }} à payer</span>
+                }
+              </span>
+              <span class="client-row__meta">{{ contact(c) || 'Pas de coordonnées' }}</span>
+            </span>
+            <span class="num" data-label="Cmd">{{ c.stats.nb_commandes }}</span>
+            <span class="num" data-label="CA">{{ c.stats.ca_total > 0 ? euros(c.stats.ca_total) : '-' }}</span>
+            <span class="num" data-label="Panier">{{ c.stats.panier_moyen > 0 ? euros(c.stats.panier_moyen) : '-' }}</span>
+            <span class="num" data-label="Dernière">{{ dateCourte(c.stats.derniere_commande) }}</span>
+          </a>
+        }
+      </div>
+      @if (filtres().length > visibles().length) {
+        <div class="more">
+          <button type="button" class="gv-btn gv-btn--ghost" (click)="afficherPlus()">
+            Afficher plus ({{ filtres().length - visibles().length }} restantes)
+          </button>
+        </div>
+      }
+    }
+  }
+
+  <!-- ======================= Doublons ======================= -->
+  @if (onglet() === 'doublons') {
+    <p class="intro">
+      Fiches qui partagent un mail, un téléphone ou un nom. Choisis la fiche à garder (●), décoche celles qui ne sont pas la même
+      personne, puis fusionne : les commandes passent sur la fiche gardée et les champs vides sont complétés.
+    </p>
+
+    @if (fusionErreur()) {
+      <div class="gv-error">{{ fusionErreur() }}</div>
+    }
+
+    @if (doublonsLoading() && !doublonsCharges()) {
+      <div class="gv-empty">Recherche des doublons…</div>
+    } @else if (doublons().length === 0) {
+      <div class="gv-empty">Aucun doublon détecté. Fichier propre.</div>
+    } @else {
+      <div class="eyebrow-line gv-eyebrow">{{ doublons().length }} groupes · {{ nbFichesDoublons() }} fiches</div>
+      <div class="groups">
+        @for (g of doublons(); track g.cible + $index; let gi = $index) {
+          <article class="group gv-panel">
+            <header class="group__head">
+              <span class="gv-section-title"><span class="gv-num">{{ (gi + 1).toString().padStart(2, '0') }}</span>{{ nomClient(cibleDe(g)) }}</span>
+              <button type="button" class="link-btn" (click)="ignorerGroupe(gi)">Ignorer</button>
+            </header>
+
+            <div class="group__fiches">
+              @for (f of g.fiches; track f.id_client) {
+                <div class="fiche" [class.is-target]="f.id_client === g.cible" [class.is-out]="!g.inclus.has(f.id_client)">
+                  <button type="button" class="fiche__radio" (click)="choisirCible(gi, f.id_client)" [attr.aria-pressed]="f.id_client === g.cible" title="Garder cette fiche">
+                    <span></span>
+                  </button>
+                  <div class="fiche__body">
+                    <div class="fiche__name">
+                      {{ nomClient(f) }}
+                      @if (f.id_client === g.cible) { <span class="gv-chip gv-chip--accent">Gardée</span> }
+                    </div>
+                    <div class="fiche__meta">{{ contact(f) || 'Pas de coordonnées' }}</div>
+                    @if (adresseUtile(f.adresse); as adr) { <div class="fiche__meta">{{ adr }}</div> }
+                    <div class="fiche__stats">
+                      <span class="gv-chip">{{ f.stats.nb_commandes }} cmd</span>
+                      @if (f.stats.ca_total > 0) { <span class="gv-chip">{{ euros(f.stats.ca_total) }}</span> }
+                      <span class="gv-chip">{{ dateCourte(f.stats.derniere_commande) }}</span>
+                    </div>
+                  </div>
+                  @if (f.id_client !== g.cible) {
+                    <label class="fiche__check">
+                      <input type="checkbox" [checked]="g.inclus.has(f.id_client)" (change)="basculerInclus(gi, f.id_client)" />
+                      <span>Fusionner</span>
+                    </label>
+                  }
+                </div>
+              }
+            </div>
+
+            <footer class="group__foot">
+              @if (sources(g).length === 0) {
+                <span class="muted">Coche au moins une fiche à fusionner.</span>
+              } @else if (fusionConfirm() === gi) {
+                <span class="warn">
+                  {{ sources(g).length }} fiche(s) seront supprimées, leurs commandes passent sur « {{ nomClient(cibleDe(g)) }} ». Confirmer ?
+                </span>
+              } @else {
+                <span class="muted">{{ sources(g).length }} fiche(s) → {{ nomClient(cibleDe(g)) }}</span>
+              }
+              <div class="group__actions">
+                @if (fusionConfirm() === gi) {
+                  <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="fusionConfirm.set(null)">Annuler</button>
+                }
+                <button
+                  type="button"
+                  class="gv-btn gv-btn--sm"
+                  [class.gv-btn--primary]="fusionConfirm() === gi"
+                  [disabled]="sources(g).length === 0 || fusionEnCours() !== null"
+                  (click)="fusionner(gi)"
+                >
+                  {{ fusionEnCours() === gi ? 'Fusion…' : fusionConfirm() === gi ? 'Oui, fusionner' : 'Fusionner' }}
+                </button>
+              </div>
+            </footer>
+          </article>
+        }
+      </div>
+    }
+  }
+</div>
+
+<!-- ======================= Création ======================= -->
+@if (creationOuverte()) {
+  <div class="modal">
+    <div class="modal__backdrop" (click)="fermerCreation()"></div>
+    <form class="modal__panel gv-panel gv-brackets" (ngSubmit)="creer()" role="dialog" aria-label="Nouveau client">
+      <div class="gv-eyebrow">Nouvelle fiche</div>
+      <h2>Nouveau client</h2>
+      <div class="form-grid">
+        <div class="gv-field"><label for="nc-prenom">Prénom</label><input id="nc-prenom" class="gv-input" name="prenom" [(ngModel)]="nouveau.prenom" /></div>
+        <div class="gv-field"><label for="nc-nom">Nom</label><input id="nc-nom" class="gv-input" name="nom" [(ngModel)]="nouveau.nom" /></div>
+        <div class="gv-field span-2"><label for="nc-societe">Société</label><input id="nc-societe" class="gv-input" name="societe" [(ngModel)]="nouveau.societe" /></div>
+        <div class="gv-field"><label for="nc-mail">Mail</label><input id="nc-mail" class="gv-input" type="email" name="mail" [(ngModel)]="nouveau.mail" /></div>
+        <div class="gv-field"><label for="nc-tel">Téléphone</label><input id="nc-tel" class="gv-input" type="tel" name="telephone" [(ngModel)]="nouveau.telephone" /></div>
+        <div class="gv-field span-2"><label for="nc-adresse">Adresse</label><input id="nc-adresse" class="gv-input" name="adresse" [(ngModel)]="nouveau.adresse" placeholder="Rue, code postal, ville" /></div>
+        <div class="gv-field"><label for="nc-tva">TVA</label><input id="nc-tva" class="gv-input" name="tva" [(ngModel)]="nouveau.tva" /></div>
+        <div class="gv-field span-2"><label for="nc-notes">Notes</label><textarea id="nc-notes" class="gv-textarea" name="notes" [(ngModel)]="nouveau.notes"></textarea></div>
+      </div>
+      @if (creationErreur()) {
+        <div class="gv-error">{{ creationErreur() }}</div>
+      }
+      <div class="modal__actions">
+        <button type="button" class="gv-btn gv-btn--ghost" (click)="fermerCreation()">Annuler</button>
+        <button type="submit" class="gv-btn gv-btn--primary" [disabled]="creationEnCours()">
+          {{ creationEnCours() ? 'Création…' : 'Créer la fiche' }}
+        </button>
+      </div>
+    </form>
+  </div>
+}

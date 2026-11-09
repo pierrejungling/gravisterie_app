@@ -364,3 +364,300 @@ h1.page-title {
 #sign-in-wrapper {
   background: transparent !important;
 }
+
+/* =====================================================================
+ * Composants Gravisterie (gv-*) : base commune des nouveaux modules
+ * ===================================================================== */
+.gv-page {
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 1.75rem 1.75rem 3rem;
+}
+
+.gv-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+
+  h1 {
+    font-family: var(--font-title);
+    font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 0.35rem;
+  }
+}
+
+.gv-page-head__actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.gv-panel {
+  background: var(--gv-panel);
+  border: 1px solid var(--gv-line);
+  border-radius: var(--border-radius);
+}
+
+.gv-section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin-bottom: 0.8rem;
+
+  .gv-num {
+    font-family: var(--font-mono);
+    color: var(--gv-accent);
+    letter-spacing: 0.04em;
+  }
+}
+
+.gv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 40px;
+  padding: 0 1rem;
+  border: 1px solid var(--gv-line);
+  border-radius: var(--border-radius);
+  background: var(--gv-panel);
+  color: var(--color-text);
+  font-family: var(--font-title);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-decoration: none;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: var(--gv-line-strong);
+    opacity: 1;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    background: var(--gv-accent);
+    border-color: var(--gv-accent);
+    color: var(--gv-accent-contrast);
+    box-shadow: var(--gv-glow);
+
+    &:hover:not(:disabled) {
+      border-color: var(--gv-accent);
+      filter: brightness(1.08);
+    }
+  }
+
+  &--ghost {
+    background: transparent;
+  }
+
+  &--danger {
+    color: var(--btn-delete-color);
+    border-color: var(--btn-delete-border);
+    background: var(--btn-delete-bg);
+  }
+
+  &--sm {
+    min-height: 32px;
+    padding: 0 0.7rem;
+    font-size: 0.64rem;
+  }
+}
+
+.gv-input,
+.gv-textarea,
+.gv-select {
+  width: 100%;
+  min-height: 42px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--border-radius);
+  background: var(--gv-panel);
+  color: var(--color-text);
+  font-size: 0.92rem;
+
+  &::placeholder {
+    color: var(--gv-muted);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--gv-accent);
+    box-shadow: 0 0 0 3px var(--gv-accent-soft);
+  }
+}
+
+.gv-textarea {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.gv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+
+  > label {
+    font-family: var(--font-title);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--gv-muted);
+  }
+}
+
+.gv-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.12rem 0.45rem;
+  border: 1px solid var(--gv-line);
+  border-radius: var(--border-radius);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--gv-muted);
+  white-space: nowrap;
+
+  &--accent { color: var(--gv-accent); border-color: color-mix(in srgb, var(--gv-accent) 55%, transparent); }
+  &--ok { color: var(--gv-ok); border-color: color-mix(in srgb, var(--gv-ok) 55%, transparent); }
+  &--warn { color: var(--gv-warn); border-color: color-mix(in srgb, var(--gv-warn) 55%, transparent); }
+  &--bad { color: var(--color-error); border-color: color-mix(in srgb, var(--color-error) 55%, transparent); }
+}
+
+.gv-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.gv-kpi {
+  position: relative;
+  padding: 0.85rem 1rem;
+  background: var(--gv-panel);
+  border: 1px solid var(--gv-line);
+  border-radius: var(--border-radius);
+
+  &__label {
+    font-family: var(--font-title);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gv-muted);
+  }
+
+  &__value {
+    margin-top: 0.3rem;
+    font-family: var(--font-mono);
+    font-size: 1.45rem;
+    font-weight: 500;
+    line-height: 1.1;
+
+    small {
+      font-size: 0.75rem;
+      color: var(--gv-muted);
+    }
+  }
+
+  &--accent .gv-kpi__value { color: var(--gv-accent); }
+  &--warn .gv-kpi__value { color: var(--gv-warn); }
+}
+
+.gv-avatar {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--gv-line-strong);
+  border-radius: var(--border-radius);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+  background: var(--gv-panel);
+
+  &--lg {
+    width: 64px;
+    height: 64px;
+    font-size: 1.2rem;
+  }
+}
+
+.gv-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--gv-muted);
+  font-size: 0.9rem;
+}
+
+.gv-error {
+  padding: 0.7rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--color-error) 50%, transparent);
+  border-radius: var(--border-radius);
+  color: var(--color-error);
+  font-size: 0.85rem;
+}
+
+.gv-tabs {
+  display: inline-flex;
+  border: 1px solid var(--gv-line);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  background: var(--gv-panel);
+
+  button {
+    padding: 0.55rem 0.95rem;
+    border: none;
+    border-right: 1px solid var(--gv-line);
+    background: transparent;
+    color: var(--gv-muted);
+    font-family: var(--font-title);
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+
+    &:last-child { border-right: none; }
+
+    &.is-active {
+      background: var(--gv-accent);
+      color: var(--gv-accent-contrast);
+    }
+  }
+}
+
+@media (max-width: 899px) {
+  .gv-page {
+    padding: 1rem 1rem 2rem;
+  }
+}

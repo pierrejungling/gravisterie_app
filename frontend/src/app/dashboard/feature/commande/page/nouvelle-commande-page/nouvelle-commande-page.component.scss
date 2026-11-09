@@ -2868,3 +2868,14 @@
     transform: translateY(0) scale(1);
   }
 }
+
+// Sélecteur de fiche client (module Clients)
+.client-picker-slot {
+  margin-bottom: 1.25rem;
+}
+
+.client-picker-hint {
+  margin: 0.45rem 0 0;
+  font-size: 0.78rem;
+  color: var(--gv-muted);
+}

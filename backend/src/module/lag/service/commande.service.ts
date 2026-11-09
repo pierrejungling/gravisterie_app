@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Commande, Client, Gravure, Personnalisation, Support, CommandeSupport, CommandeLignePrix } from '../model/entity';
@@ -156,9 +156,17 @@ export class CommandeService {
         // Créer ou récupérer le client
         let client: Client | null = null;
         const forcerNouveauClient = payload.forcer_nouveau_client === true;
+
+        // Fiche client choisie explicitement
+        if (payload.id_client) {
+            client = await this.clientRepository.findOne({ where: { id_client: payload.id_client } });
+            if (!client) {
+                throw new NotFoundException('Client introuvable');
+            }
+        }
         
-        // Chercher un client existant seulement si un email est fourni
-        if (!forcerNouveauClient && payload.coordonnees_contact?.mail && payload.coordonnees_contact.mail.trim()) {
+        // Sinon, chercher un client existant seulement si un email est fourni
+        if (!client && !forcerNouveauClient && payload.coordonnees_contact?.mail && payload.coordonnees_contact.mail.trim()) {
             client = await this.clientRepository.findOne({
                 where: { mail: payload.coordonnees_contact.mail.trim() }
             });
@@ -610,7 +618,9 @@ export class CommandeService {
             statut_initial: isVente ? StatutCommande.TERMINE : StatutCommande.EN_ATTENTE_INFORMATION,
             supports: supports as any,
             lignes_prix: isVente ? undefined : this.toLignesPrixDto(commande.lignes_prix),
-            forcer_nouveau_client: true,
+            // La copie reste rattachée à la même fiche client
+            id_client: commande.client?.id_client ?? undefined,
+            forcer_nouveau_client: commande.client ? undefined : true,
             prix_final: isVente ? (commande.prix_final ?? undefined) : undefined,
             prix_unitaire_final: isVente ? (commande.prix_unitaire_final ?? undefined) : undefined,
             frais_pourcentage: isVente ? (commande.frais_pourcentage ?? undefined) : undefined,
@@ -678,8 +688,17 @@ export class CommandeService {
             commande.frais_commission_libelle = payload.frais_commission_libelle?.trim() || null;
         }
 
+        // Changer de fiche client
+        if (payload.id_client && payload.id_client !== commande.client?.id_client) {
+            const nouveauClient = await this.clientRepository.findOne({ where: { id_client: payload.id_client } });
+            if (!nouveauClient) {
+                throw new NotFoundException('Client introuvable');
+            }
+            commande.client = nouveauClient;
+        }
+
         // Mettre à jour les coordonnées du client si fournies
-        if (payload.coordonnees_contact) {
+        if (payload.coordonnees_contact && commande.client) {
             const client = commande.client;
             if (payload.coordonnees_contact.nom !== undefined) client.nom = payload.coordonnees_contact.nom?.trim() || null;
             if (payload.coordonnees_contact.prenom !== undefined) client.prénom = payload.coordonnees_contact.prenom?.trim() || null;

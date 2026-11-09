@@ -172,6 +172,12 @@ export class AjouterCommandePayload {
     @IsBoolean()
     forcer_nouveau_client?: boolean;
 
+    @ApiProperty({ required: false, description: 'Client existant à lier à la commande (fiche client)' })
+    @IsOptional()
+    @IsString()
+    @Length(1, 26)
+    id_client?: string;
+
     @ApiProperty({ required: false, description: 'Frais/commission en pourcentage (par exemple 35 pour 35%)' })
     @IsOptional()
     @IsNumber()

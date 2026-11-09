@@ -1,0 +1,76 @@
+@if (selected) {
+  <div class="picker-card">
+    <div class="gv-avatar">{{ initialesClient(selected) }}</div>
+    <div class="picker-card__body">
+      <div class="picker-card__eyebrow gv-eyebrow">Fiche client liée</div>
+      <div class="picker-card__name">{{ nomClient(selected) }}</div>
+      <div class="picker-card__meta">{{ contact(selected) || 'Pas de coordonnées' }}</div>
+      @if (selected.stats) {
+        <div class="picker-card__stats">
+          <span class="gv-chip">{{ selected.stats.nb_commandes }} cmd</span>
+          @if (selected.stats.ca_total > 0) {
+            <span class="gv-chip">{{ euros(selected.stats.ca_total) }}</span>
+          }
+          @if (selected.stats.reste_a_payer > 0) {
+            <span class="gv-chip gv-chip--warn">{{ euros(selected.stats.reste_a_payer) }} à payer</span>
+          }
+        </div>
+      }
+    </div>
+    <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="retirer()">Changer</button>
+  </div>
+} @else {
+  <div class="picker">
+    <svg class="picker__icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+    <input
+      class="gv-input picker__input"
+      type="text"
+      autocomplete="off"
+      placeholder="Client existant ? Nom, société, mail, téléphone…"
+      [value]="query()"
+      (input)="onInput($event)"
+      (focus)="open.set(true)"
+      (keydown)="onKeydown($event)"
+    />
+    @if (open() && query().trim().length >= 2) {
+      <div class="picker__menu" role="listbox">
+        @if (loading() && results().length === 0) {
+          <div class="picker__hint">Recherche…</div>
+        }
+        @for (client of results(); track client.id_client; let i = $index) {
+          <button
+            type="button"
+            class="picker__option"
+            role="option"
+            [class.is-active]="activeIndex() === i"
+            (mouseenter)="activeIndex.set(i)"
+            (click)="choisir(client)"
+          >
+            <span class="gv-avatar">{{ initialesClient(client) }}</span>
+            <span class="picker__option-body">
+              <span class="picker__option-name">{{ nomClient(client) }}</span>
+              <span class="picker__option-meta">{{ contact(client) }}</span>
+            </span>
+            <span class="gv-chip">{{ client.stats.nb_commandes }} cmd</span>
+          </button>
+        }
+        @if (!loading() && results().length === 0) {
+          <div class="picker__hint">Aucune fiche trouvée.</div>
+        }
+        <button
+          type="button"
+          class="picker__option picker__option--new"
+          [class.is-active]="activeIndex() === results().length"
+          (mouseenter)="activeIndex.set(results().length)"
+          (click)="creer()"
+        >
+          <span class="gv-avatar">+</span>
+          <span class="picker__option-body">
+            <span class="picker__option-name">Nouveau client</span>
+            <span class="picker__option-meta">Remplir les coordonnées ci-dessous, la fiche sera créée avec la commande</span>
+          </span>
+        </button>
+      </div>
+    }
+  </div>
+}

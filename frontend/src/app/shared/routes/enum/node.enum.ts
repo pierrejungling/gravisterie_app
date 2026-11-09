@@ -12,6 +12,8 @@ export enum AppNode {
   COMMANDES_TERMINEES = 'terminees',
   DETAIL_COMMANDE = 'detail/:id',
   BONS = 'bons',
+  CLIENTS = 'clients',
+  DETAIL_CLIENT = ':id',
   FALL_BACK = '**',
 }
 

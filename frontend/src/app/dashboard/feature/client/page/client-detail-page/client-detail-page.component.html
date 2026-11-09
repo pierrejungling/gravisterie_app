@@ -1,0 +1,218 @@
+<app-header></app-header>
+
+<div class="gv-page">
+  <a class="back" routerLink="/dashboard/clients">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 6l-6 6 6 6" /></svg>Clients
+  </a>
+
+  @if (loading()) {
+    <div class="gv-empty">Chargement de la fiche…</div>
+  } @else if (erreur() && !client()) {
+    <div class="gv-error">{{ erreur() }}</div>
+  } @else {
+  @if (client(); as c) {
+    <header class="hero">
+      <div class="gv-avatar gv-avatar--lg">{{ initialesClient(c) }}</div>
+      <div class="hero__body">
+        <div class="gv-eyebrow">
+          Fiche client
+          @if (clientDepuis()) { · client depuis {{ clientDepuis() }} }
+        </div>
+        <h1>{{ nomClient(c) }}</h1>
+        @if (c['société'] && nomClient(c) !== c['société']) {
+          <div class="hero__sub">{{ c['société'] }}</div>
+        }
+      </div>
+      <div class="hero__actions">
+        <button type="button" class="gv-btn gv-btn--primary" (click)="nouvelleCommande()">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>Nouvelle commande
+        </button>
+      </div>
+    </header>
+
+    @if (erreur()) {
+      <div class="gv-error spaced">{{ erreur() }}</div>
+    }
+
+    <section class="gv-kpis kpis">
+      <div class="gv-kpi">
+        <div class="gv-kpi__label">01 · Commandes</div>
+        <div class="gv-kpi__value">
+          {{ c.stats.nb_commandes }}
+          <small>{{ c.stats.nb_en_cours }} en cours · {{ c.stats.nb_terminees }} finies</small>
+        </div>
+      </div>
+      <div class="gv-kpi gv-kpi--accent">
+        <div class="gv-kpi__label">02 · CA total</div>
+        <div class="gv-kpi__value">{{ euros(c.stats.ca_total) }}</div>
+      </div>
+      <div class="gv-kpi">
+        <div class="gv-kpi__label">03 · Panier moyen</div>
+        <div class="gv-kpi__value">{{ c.stats.panier_moyen > 0 ? euros(c.stats.panier_moyen) : '-' }}</div>
+      </div>
+      <div class="gv-kpi" [class.gv-kpi--warn]="c.stats.reste_a_payer > 0">
+        <div class="gv-kpi__label">04 · Reste à payer</div>
+        <div class="gv-kpi__value">{{ euros(c.stats.reste_a_payer) }}</div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <!-- Colonne gauche : coordonnées + notes -->
+      <div class="col">
+        <section class="gv-panel card">
+          <div class="card__head">
+            <h2 class="gv-section-title"><span class="gv-num">01</span>Coordonnées</h2>
+            @if (!edition()) {
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="commencerEdition()">Modifier</button>
+            }
+          </div>
+
+          @if (!edition()) {
+            <dl class="infos">
+              <div>
+                <dt>Mail</dt>
+                <dd>
+                  @if (c.mail) {
+                    <a [href]="'mailto:' + c.mail">{{ c.mail }}</a>
+                    <button type="button" class="copy" (click)="copier(c.mail, 'mail')">{{ copie() === 'mail' ? 'Copié' : 'Copier' }}</button>
+                  } @else { <span class="muted">-</span> }
+                </dd>
+              </div>
+              <div>
+                <dt>Téléphone</dt>
+                <dd>
+                  @if (c['téléphone']) {
+                    <a [href]="telUrl(c['téléphone'])">{{ c['téléphone'] }}</a>
+                    <button type="button" class="copy" (click)="copier(c['téléphone'], 'tel')">{{ copie() === 'tel' ? 'Copié' : 'Copier' }}</button>
+                  } @else { <span class="muted">-</span> }
+                </dd>
+              </div>
+              <div>
+                <dt>Adresse</dt>
+                <dd>
+                  @if (adresseUtile(c.adresse); as adr) {
+                    <a [href]="mapsUrl(adr)" target="_blank" rel="noopener">{{ adr }}</a>
+                    <button type="button" class="copy" (click)="copier(adr, 'adresse')">{{ copie() === 'adresse' ? 'Copié' : 'Copier' }}</button>
+                  } @else { <span class="muted">-</span> }
+                </dd>
+              </div>
+              <div>
+                <dt>Société</dt>
+                <dd>{{ c['société'] || '-' }}</dd>
+              </div>
+              <div>
+                <dt>TVA</dt>
+                <dd>
+                  @if (c.tva) {
+                    <span class="mono">{{ c.tva }}</span>
+                    <button type="button" class="copy" (click)="copier(c.tva, 'tva')">{{ copie() === 'tva' ? 'Copié' : 'Copier' }}</button>
+                  } @else { <span class="muted">-</span> }
+                </dd>
+              </div>
+            </dl>
+          } @else {
+            <form class="edit" (ngSubmit)="enregistrer()">
+              <div class="edit__grid">
+                <div class="gv-field"><label for="ed-prenom">Prénom</label><input id="ed-prenom" class="gv-input" name="prenom" [(ngModel)]="form.prenom" /></div>
+                <div class="gv-field"><label for="ed-nom">Nom</label><input id="ed-nom" class="gv-input" name="nom" [(ngModel)]="form.nom" /></div>
+                <div class="gv-field span-2"><label for="ed-societe">Société</label><input id="ed-societe" class="gv-input" name="societe" [(ngModel)]="form.societe" /></div>
+                <div class="gv-field span-2"><label for="ed-mail">Mail</label><input id="ed-mail" class="gv-input" type="email" name="mail" [(ngModel)]="form.mail" /></div>
+                <div class="gv-field"><label for="ed-tel">Téléphone</label><input id="ed-tel" class="gv-input" type="tel" name="telephone" [(ngModel)]="form.telephone" /></div>
+                <div class="gv-field"><label for="ed-tva">TVA</label><input id="ed-tva" class="gv-input" name="tva" [(ngModel)]="form.tva" /></div>
+                <div class="gv-field span-2"><label for="ed-adresse">Adresse</label><input id="ed-adresse" class="gv-input" name="adresse" [(ngModel)]="form.adresse" /></div>
+              </div>
+              @if (editionErreur()) {
+                <div class="gv-error spaced">{{ editionErreur() }}</div>
+              }
+              <div class="edit__actions">
+                <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="annulerEdition()">Annuler</button>
+                <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary" [disabled]="sauvegarde()">
+                  {{ sauvegarde() ? 'Enregistrement…' : 'Enregistrer' }}
+                </button>
+              </div>
+            </form>
+          }
+        </section>
+
+        <section class="gv-panel card">
+          <div class="card__head">
+            <h2 class="gv-section-title"><span class="gv-num">02</span>Notes</h2>
+            <span class="notes-state">
+              @if (notesSauvegarde() === 'saving') { Enregistrement… }
+              @else if (notesSauvegarde() === 'saved' && !notesModifiees()) { Enregistré }
+            </span>
+          </div>
+          <textarea
+            class="gv-textarea"
+            placeholder="Préférences, police habituelle, contact privilégié…"
+            [value]="notes()"
+            (input)="setNotes($event)"
+            (blur)="enregistrerNotes()"
+          ></textarea>
+          @if (notesModifiees()) {
+            <div class="notes-actions">
+              <button type="button" class="gv-btn gv-btn--sm" (click)="enregistrerNotes()">Enregistrer les notes</button>
+            </div>
+          }
+        </section>
+
+        @if (c.stats.nb_commandes === 0) {
+          <section class="danger">
+            @if (suppressionConfirm()) {
+              <span>Supprimer définitivement cette fiche ?</span>
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="suppressionConfirm.set(false)">Non</button>
+            }
+            <button type="button" class="gv-btn gv-btn--sm gv-btn--danger" (click)="supprimer()">
+              {{ suppressionConfirm() ? 'Oui, supprimer' : 'Supprimer la fiche' }}
+            </button>
+          </section>
+        }
+      </div>
+
+      <!-- Colonne droite : historique -->
+      <section class="gv-panel card history">
+        <div class="card__head">
+          <h2 class="gv-section-title"><span class="gv-num">03</span>Historique · {{ c.commandes.length }}</h2>
+          <div class="gv-tabs gv-tabs--sm">
+            <button type="button" [class.is-active]="filtreHistorique() === 'toutes'" (click)="filtreHistorique.set('toutes')">Toutes</button>
+            <button type="button" [class.is-active]="filtreHistorique() === 'en_cours'" (click)="filtreHistorique.set('en_cours')">En cours</button>
+            <button type="button" [class.is-active]="filtreHistorique() === 'terminees'" (click)="filtreHistorique.set('terminees')">Finies</button>
+          </div>
+        </div>
+
+        @if (commandes().length === 0) {
+          <div class="gv-empty">Aucune commande ici.</div>
+        } @else {
+          <ol class="timeline">
+            @for (cmd of commandes(); track cmd.id_commande) {
+              <li>
+                <a class="cmd" (click)="ouvrirCommande(cmd)" tabindex="0" (keydown.enter)="ouvrirCommande(cmd)">
+                  <span class="cmd__date mono">{{ dateCourte(cmd.date_commande) }}</span>
+                  <span class="cmd__main">
+                    <span class="cmd__title">
+                      {{ cmd.produit || 'Commande' }}
+                      @if (cmd['quantité'] && cmd['quantité'] > 1) { <span class="muted mono">×{{ cmd['quantité'] }}</span> }
+                    </span>
+                    <span class="cmd__chips">
+                      <span class="gv-chip" [ngClass]="'gv-chip--' + toneStatut(cmd.statut_commande)">{{ libelleStatut(cmd) }}</span>
+                      @if (cmd.deadline && cmd.statut_commande !== 'termine' && cmd.statut_commande !== 'annulee') {
+                        <span class="gv-chip">Deadline {{ dateCourte(cmd.deadline) }}</span>
+                      }
+                    </span>
+                  </span>
+                  <span class="cmd__price">
+                    <span class="mono">{{ cmd.prix_final !== null ? euros(cmd.prix_final, true) : '-' }}</span>
+                    @if (cmd.prix_final && cmd.statut_commande !== 'annulee') {
+                      <span class="gv-chip" [class.gv-chip--ok]="cmd['payé']" [class.gv-chip--warn]="!cmd['payé']">{{ cmd['payé'] ? 'Payé' : 'À payer' }}</span>
+                    }
+                  </span>
+                </a>
+              </li>
+            }
+          </ol>
+        }
+      </section>
+    </div>
+  }
+  }
+</div>

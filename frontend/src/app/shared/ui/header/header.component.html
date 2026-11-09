@@ -90,9 +90,9 @@
   <button class="gv-bottom__fab" type="button" (click)="goToNouvelleCommande()" aria-label="Nouvelle commande">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
   </button>
-  <a class="gv-bottom__item" [class.is-active]="isNavActive(navItems[2])" (click)="navigate(navItems[2])">
-    <svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="navItems[2].icon | gvSafeSvg"></svg>
-    <span>Terminées</span>
+  <a class="gv-bottom__item" [class.is-active]="isNavActive(clientsItem)" (click)="navigate(clientsItem)">
+    <svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="clientsItem.icon | gvSafeSvg"></svg>
+    <span>Clients</span>
   </a>
   <button class="gv-bottom__item" type="button" (click)="toggleMore()" [class.is-active]="moreOpen()">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>
@@ -105,7 +105,7 @@
   <div class="gv-sheet__backdrop" (click)="toggleMore()"></div>
   <div class="gv-sheet__panel" role="dialog" aria-label="Plus">
     <div class="gv-sheet__grip" aria-hidden="true"></div>
-    <a class="gv-sheet__item" *ngFor="let item of navItems.slice(3)" (click)="navigate(item); toggleMore()">
+    <a class="gv-sheet__item" *ngFor="let item of moreItems" (click)="navigate(item); toggleMore()">
       <svg viewBox="0 0 24 24" aria-hidden="true" [innerHTML]="item.icon | gvSafeSvg"></svg>{{ item.label }}
     </a>
     <a class="gv-sheet__item" (click)="toggleSearch(); toggleMore()">

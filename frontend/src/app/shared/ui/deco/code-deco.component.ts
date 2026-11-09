@@ -22,9 +22,14 @@ laser.focus(atelier);
 for (const idee of idees) {
   grave(idee, { precision: 0.1 });
 }`,
-  lumiere: `// pas de laiton, pas de CNC : juste de la lumière
-const faisceau = new Laser({ puissance: 40 });
-faisceau.on("matiere", (m) => m.revele());`,
+  lumiere: `// que la lumière soit
+lumos();
+
+while (idee.brille()) {
+  graver();
+}
+
+nox();`,
   cap: `const navire = "Black Pearl";
 const equipage = ["Pierre", "Fanfreluche"];
 
@@ -42,19 +47,19 @@ return "à demain";`,
 };
 
 if (imprevu) { edc.deployer(); }`,
-  bivouac: `const nuit = new Bivouac({ lieu: "Hautes Fagnes" });
-nuit.tente.monter();
-nuit.lanterne.allumer();
+  bivouac: `function partir(lieu) {
+  sac.boucler();
+  tente.monter(lieu);
+  feu.allumer();
+  return etoiles.compter();
+}
 
-while (etoiles.visibles()) {
-  regarder();
-}`,
-  ecriture: `// écrire d'abord, graver ensuite
-const idee = carnet.noter(encre);
+partir("au bout du monde");`,
+  ecriture: `const carte = new Carte("au trésor");
 
-if (idee.tient()) {
-  laser.graver(idee);
-}`,
+carte.suivre("X"); // dix pas vers le nord
+coffre.ouvrir();
+equipage.partager(butin);`,
   orcades: `const verre = { malt: "Highland Park", age: 12 };
 
 if (journee.finie()) {
@@ -65,10 +70,9 @@ atelier.carte.reveler();
 
 // ...
 mefaitAccompli();`,
-  force: `const faisceau = laser.calibrer();
-
-if (faisceau.force === "avec toi") {
-  graver(); // toujours
+  force: `// fais-le, ou ne le fais pas
+function essayer() {
+  return null; // il n'y a pas d'essai
 }`,
   meute: `const meute = ["Fanfreluche"];
 
@@ -76,7 +80,7 @@ meute.push("Saarloos"); // un jour
 meute.forEach((m) => m.balade("Spa"));`,
 };
 
-const MOTS = /\b(const|let|new|if|while|for|of|return|true|false)\b/g;
+const MOTS = /\b(const|let|new|function|null|if|while|for|of|return|true|false)\b/g;
 
 function colorer(code: string): string {
   const echappe = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

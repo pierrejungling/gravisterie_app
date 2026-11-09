@@ -535,21 +535,3 @@
     }
   }
 }
-
-/* Une seule colonne (Pierre, 09/11/2026 : plus lisible) */
-.cd {
-  max-width: 1200px;
-}
-
-.layout,
-.cd .layout {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-/* Carte plus basse maintenant qu'elle prend toute la largeur */
-.map,
-.cd .map,
-.evd .map {
-  aspect-ratio: auto;
-  height: 240px;
-}

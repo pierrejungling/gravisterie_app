@@ -31,7 +31,7 @@
 
 .rg-grille {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
   align-items: start;
   gap: 0.9rem;
 }

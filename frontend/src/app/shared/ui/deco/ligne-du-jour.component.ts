@@ -50,7 +50,7 @@ const LIGNES: { de: number; a: number; lignes: string[] }[] = [
     a: 22,
     lignes: [
       'soleil.coucher("Spa"); laser.refroidir();',
-      'bivouac.monter({ lieu: "Hautes Fagnes", lanterne: true });',
+      'bivouac.monter({ lieu: "Monteriggioni, Italie", lanterne: true });',
       'verre.servir({ malt: "Highland Park", age: 12 });',
       'rhum.arranger({ origine: "Maurice", patience: Infinity });',
     ],

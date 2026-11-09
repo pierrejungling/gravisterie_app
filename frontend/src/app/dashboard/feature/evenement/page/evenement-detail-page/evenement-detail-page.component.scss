@@ -844,6 +844,25 @@
   }
 }
 
+/* Très large : trois colonnes, la checklist sur deux */
+@media (min-width: 1500px) {
+  .evd {
+    .layout {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    }
+
+    .col:first-child {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .card--infos {
+      grid-row: span 2;
+    }
+  }
+}
+
 @media (min-width: 981px) {
   .evd .materiel {
     column-count: 2;
@@ -927,22 +946,4 @@
     font-size: 0.52rem;
     letter-spacing: 0.08em;
   }
-}
-
-/* Une seule colonne (Pierre, 09/11/2026 : plus lisible) */
-.evd {
-  max-width: 1200px;
-}
-
-.layout,
-.evd .layout {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-/* Carte plus basse maintenant qu'elle prend toute la largeur */
-.map,
-.cd .map,
-.evd .map {
-  aspect-ratio: auto;
-  height: 240px;
 }

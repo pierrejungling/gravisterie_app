@@ -211,7 +211,7 @@ svg {
 
   &__item {
     position: relative;
-    width: 76px;
+    width: 96px;
     padding: 9px 0;
     display: flex;
     flex-direction: column;
@@ -265,7 +265,7 @@ svg {
   }
 
   &__ridge {
-    width: 84px;
+    width: 100%;
     height: 40px;
     margin-top: 10px;
     color: var(--gv-muted);

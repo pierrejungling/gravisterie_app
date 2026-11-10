@@ -216,7 +216,8 @@ body {
   background-color: transparent;
   color: var(--color-text);
   line-height: 1.6;
-  overflow-x: hidden;
+  /* clip et pas hidden : hidden ferait de body une zone de défilement et casserait les en-têtes collants (sticky) */
+  overflow-x: clip;
   min-width: 0;
   /* Zones de sécurité pour encoches / barre d’accueil */
   padding-left: env(safe-area-inset-left);

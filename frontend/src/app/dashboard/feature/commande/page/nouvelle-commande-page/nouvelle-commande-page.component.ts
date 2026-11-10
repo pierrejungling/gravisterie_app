@@ -9,13 +9,15 @@ import { ApiURI, COMMANDE_FICHIERS_UPLOAD } from '@api';
 import { forkJoin, of } from 'rxjs';
 import { catchError, debounceTime, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 import { NouvelleCommandeForm, CoordonneesContactForm } from '../../data/form/nouvelle-commande.form';
-import { Couleur, StatutCommande, ModeContact } from '../../model/commande.interface';
+import { Couleur, StatutCommande, ModeContact, MODES_CONTACT } from '../../model/commande.interface';
 import { AppRoutes } from '@shared';
 import { FraisCommissionPickerComponent } from '../../component/frais-commission-picker/frais-commission-picker.component';
 import { ApercuLienComponent } from '../../component/apercu-lien/apercu-lien.component';
 import { EvenementLienComponent } from '../../../evenement/component/evenement-lien/evenement-lien.component';
 import { EvenementApiService } from '../../../evenement/service/evenement-api.service';
 import { ClientPickerComponent } from '../../../client/component/client-picker/client-picker.component';
+import { ChoixFicheClient, ChoixFicheClientComponent } from '../../../client/component/choix-fiche-client/choix-fiche-client.component';
+import { nettoyerAdresse } from '../../util/adresse.util';
 import { ClientApiService } from '../../../client/service/client-api.service';
 import { CorrespondanceClient, FicheClient, initialesClient, nomClient } from '../../../client/model/client.interface';
 import { adresseUtile } from '../../util/adresse.util';
@@ -33,7 +35,7 @@ import { CodeDecoComponent, EasterComponent } from '../../../../../shared/ui/dec
 @Component({
   selector: 'app-nouvelle-commande-page',
   standalone: true,
-  imports: [CodeDecoComponent, EasterComponent, CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent, ClientPickerComponent, ApercuLienComponent, EvenementLienComponent],
+  imports: [CodeDecoComponent, EasterComponent, CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent, ClientPickerComponent, ChoixFicheClientComponent, ApercuLienComponent, EvenementLienComponent],
   templateUrl: './nouvelle-commande-page.component.html',
   styleUrl: './nouvelle-commande-page.component.scss'
 })
@@ -61,6 +63,10 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
   /** Fiche client existante liée à la commande (null = nouveau client créé avec la commande). */
   clientLie: WritableSignal<FicheClient | null> = signal(null);
+  /** Coordonnées modifiées d'un client qui a déjà sa fiche : question en attente de réponse. */
+  readonly choixFiche = signal<{ nom: string; nbAutres: number; changements: string[] } | null>(null);
+  /** Réponse donnée : mettre la fiche à jour, ou créer une nouvelle fiche pour cette commande. */
+  private decisionFiche: ChoixFicheClient | null = null;
   /** Événement auquel la commande sera rattachée à la création. */
   readonly evenementLie = signal<string | null>(null);
   private readonly evenementApi = inject(EvenementApiService);
@@ -130,11 +136,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   }
 
   // Modes de contact disponibles
-  readonly modesContact = [
-    { value: ModeContact.MAIL, label: 'Mail', emoji: '📧' },
-    { value: ModeContact.TEL, label: 'Téléphone', emoji: '📞' },
-    { value: ModeContact.META, label: 'Meta', emoji: '💬' }
-  ];
+  readonly modesContact = MODES_CONTACT;
 
 
   constructor(private router: Router) {
@@ -237,6 +239,28 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
     this.clientLie.set(client);
     this.suggestionsClient.set([]);
     this.formGroup.patchValue(patch);
+  }
+
+  /** Coordonnées saisies qui diffèrent de la fiche liée (libellés). Un champ laissé vide ne modifie pas la fiche. */
+  private changementsFiche(fiche: FicheClient, saisie: Record<string, string>): string[] {
+    const simple = (v: string | null | undefined) => (v || '').trim().toLowerCase();
+    const serre = (v: string | null | undefined) => simple(v).replace(/[\s,.]/g, '');
+    const champs: Array<[string, string | undefined, string | null, (v: string | null | undefined) => string]> = [
+      ['Nom', saisie['nom'], fiche.nom, simple],
+      ['Prénom', saisie['prenom'], fiche.prénom, simple],
+      ['Société', saisie['societe'], fiche.société, simple],
+      ['Mail', saisie['mail'], fiche.mail, simple],
+      ['Téléphone', saisie['telephone'], formatTelephoneBE(fiche.téléphone) ?? fiche.téléphone, serre],
+      ['TVA', saisie['tva'], fiche.tva, serre],
+      ['Adresse', saisie['adresse'] ? nettoyerAdresse(saisie['adresse']) : undefined, nettoyerAdresse(fiche.adresse), serre],
+    ];
+    return champs.filter(([, saisi, enBase, norme]) => !!saisi && norme(saisi) !== norme(enBase)).map(([label]) => label);
+  }
+
+  repondreChoixFiche(choix: ChoixFicheClient): void {
+    this.decisionFiche = choix;
+    this.choixFiche.set(null);
+    this.onSubmit();
   }
 
   ignorerSuggestion(client: FicheClient): void {
@@ -1299,6 +1323,20 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
       const adresse = this.buildAdresseComplete(formValue.rue, formValue.code_postal, formValue.ville, formValue.pays);
       if (adresse) coordonneesContact.adresse = adresse;
 
+      // Client déjà en base dont on a modifié les coordonnées : on demande quoi en faire avant de créer.
+      const ficheLiee = this.clientLie();
+      const changementsFiche = ficheLiee ? this.changementsFiche(ficheLiee, coordonneesContact) : [];
+      if (ficheLiee && changementsFiche.length > 0 && !this.decisionFiche) {
+        this.choixFiche.set({
+          nom: nomClient(ficheLiee),
+          nbAutres: ficheLiee.stats?.nb_commandes ?? 0,
+          changements: changementsFiche,
+        });
+        return;
+      }
+      const nouvelleFiche = changementsFiche.length > 0 && this.decisionFiche === 'nouvelle';
+      this.decisionFiche = null;
+
       // S'assurer que les types correspondent à ce que le backend attend
       const quantiteNum = formValue.quantité != null
         ? (typeof formValue.quantité === 'number' ? formValue.quantité : parseInt(String(formValue.quantité), 10))
@@ -1343,6 +1381,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
         frais_commission_id: isVente ? (formValue.frais_commission_id || null) : null,
         frais_commission_libelle: isVente ? (formValue.frais_commission_libelle?.trim() || null) : null,
         ...(this.clientLie() && { id_client: this.clientLie()!.id_client }),
+        ...(nouvelleFiche && { nouvelle_fiche_client: true }),
         ...(Object.keys(coordonneesContact).length > 0 && { coordonnees_contact: coordonneesContact }),
         supports: formValue.supports && Array.isArray(formValue.supports) 
           ? formValue.supports

@@ -240,7 +240,7 @@
             (nouveau)="nouveauClient($event)"
             (retire)="retirerClient()">
           </gv-client-picker>
-          <p class="client-picker-hint" *ngIf="clientLie()">Les coordonnées ci-dessous viennent de la fiche. Si tu les modifies, la fiche sera mise à jour.</p>
+          <p class="client-picker-hint" *ngIf="clientLie()">Les coordonnées ci-dessous viennent de la fiche. Si tu les modifies, l'app te demandera s'il faut mettre la fiche à jour ou en créer une nouvelle.</p>
         </div>
         
         <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('nom')">
@@ -833,3 +833,14 @@
     <button type="submit" form="nouvelleCommandeForm" class="gv-btn gv-btn--primary cmd-foot__main" [disabled]="!isFormValid()">Créer</button>
   </footer>
 </div>
+
+<!-- Coordonnées modifiées d'un client qui a déjà sa fiche -->
+@if (choixFiche(); as cf) {
+  <gv-choix-fiche-client
+    [nom]="cf.nom"
+    [nbAutres]="cf.nbAutres"
+    [changements]="cf.changements"
+    (choisi)="repondreChoixFiche($event)"
+    (annule)="choixFiche.set(null)">
+  </gv-choix-fiche-client>
+}

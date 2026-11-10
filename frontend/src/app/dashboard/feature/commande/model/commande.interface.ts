@@ -32,7 +32,7 @@ export interface AjouterCommandePayload {
   payé?: boolean;
   commentaire_paye?: string;
   attente_reponse?: boolean; // false = client attend réponse, true = moi qui attends réponse
-  mode_contact?: string; // 'mail', 'tel', ou 'meta'
+  mode_contact?: string; // 'tel', 'sms', 'whatsapp', 'mail' ou 'meta'
   statut_initial?: string;
 }
 
@@ -61,10 +61,21 @@ export enum StatutCommande {
 }
 
 export enum ModeContact {
-  MAIL = 'mail',
   TEL = 'tel',
+  SMS = 'sms',
+  WHATSAPP = 'whatsapp',
+  MAIL = 'mail',
   META = 'meta'
 }
+
+/** Modes de contact proposés, dans l'ordre d'affichage. */
+export const MODES_CONTACT: { value: ModeContact; label: string; emoji: string }[] = [
+  { value: ModeContact.TEL, label: 'Tél', emoji: '📞' },
+  { value: ModeContact.SMS, label: 'SMS', emoji: '📱' },
+  { value: ModeContact.WHATSAPP, label: 'WhatsApp', emoji: '🟢' },
+  { value: ModeContact.MAIL, label: 'Mail', emoji: '📧' },
+  { value: ModeContact.META, label: 'Meta', emoji: '💬' },
+];
 
 /** Un bloc « realise / objectif » étiquetable (ex. Socle × 50 unités). */
 export interface QuantiteProduitCompteur {
@@ -148,7 +159,7 @@ export interface Commande {
   payé?: boolean;
   commentaire_paye?: string;
   attente_reponse?: boolean; // false = client attend réponse, true = moi qui attends réponse
-  mode_contact?: string; // 'mail', 'tel', ou 'meta'
+  mode_contact?: string; // 'tel', 'sms', 'whatsapp', 'mail' ou 'meta'
   source_web?: boolean;
   site_traitee?: boolean;
   client: Client;

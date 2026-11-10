@@ -130,7 +130,7 @@ export class AjouterCommandePayload {
     @ApiProperty({ required: false })
     @IsOptional()
     @IsString()
-    mode_contact?: string; // 'mail', 'tel', ou 'meta'
+    mode_contact?: string; // 'tel', 'sms', 'whatsapp', 'mail' ou 'meta'
 
     @ApiProperty({ required: false })
     @IsOptional()
@@ -171,6 +171,11 @@ export class AjouterCommandePayload {
     @IsOptional()
     @IsBoolean()
     forcer_nouveau_client?: boolean;
+
+    @ApiProperty({ required: false, description: "Avec id_client : enregistrer les coordonnées sur une copie de la fiche au lieu de modifier la fiche d'origine" })
+    @IsOptional()
+    @IsBoolean()
+    nouvelle_fiche_client?: boolean;
 
     @ApiProperty({ required: false, description: 'Client existant à lier à la commande (fiche client)' })
     @IsOptional()

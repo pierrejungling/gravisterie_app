@@ -79,7 +79,7 @@ export class Commande {
     attente_reponse: boolean; // false = client attend réponse, true = moi qui attends réponse
 
     @Column({type: 'varchar', nullable: true})
-    mode_contact: string | null; // 'mail', 'tel', ou 'meta'
+    mode_contact: string | null; // 'tel', 'sms', 'whatsapp', 'mail' ou 'meta'
 
     /** Commande créée automatiquement depuis le site vitrine (webhook). */
     @Column({type: 'boolean', default: false})

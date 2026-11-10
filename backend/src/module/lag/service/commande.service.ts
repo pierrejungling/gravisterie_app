@@ -25,6 +25,21 @@ export class CommandeService {
         private readonly commandeFichierService: CommandeFichierService,
     ) {}
 
+    /** Nouvelle fiche client, copie complète d'une fiche existante. */
+    private copierFicheClient(source: Client): Client {
+        const copie = new Client();
+        copie.id_client = ulid();
+        copie.nom = source.nom;
+        copie.prénom = source.prénom;
+        copie.société = source.société;
+        copie.mail = source.mail;
+        copie.téléphone = source.téléphone;
+        copie.adresse = source.adresse;
+        copie.tva = source.tva;
+        copie.notes = source.notes;
+        return copie;
+    }
+
     /** Lit la colonne JSON et renvoie un tableau sécurisé ou null si rien à stocker */
     parseQuantiteProduitCompteursJson(raw: string | null): Array<{ id: string; libelle: string; quantite_cible: number; quantite_realisee: number }> | null {
         if (!raw || !raw.trim()) {
@@ -215,6 +230,10 @@ export class CommandeService {
                 client = existingClient;
             }
         } else {
+            if (payload.nouvelle_fiche_client === true && payload.coordonnees_contact) {
+                // Dédoubler : la commande part sur une copie de la fiche, l'ancienne fiche reste telle quelle
+                client = this.copierFicheClient(client);
+            }
             // Mettre à jour les informations du client si elles ont changé
             if (payload.coordonnees_contact?.nom !== undefined) {
                 client.nom = payload.coordonnees_contact.nom?.trim() || null;
@@ -716,7 +735,12 @@ export class CommandeService {
 
         // Mettre à jour les coordonnées du client si fournies
         if (payload.coordonnees_contact && commande.client) {
-            const client = commande.client;
+            let client = commande.client;
+            if (payload.nouvelle_fiche_client === true) {
+                // Dédoubler : la commande passe sur une copie de la fiche, l'ancienne fiche reste telle quelle
+                client = this.copierFicheClient(client);
+                commande.client = client;
+            }
             if (payload.coordonnees_contact.nom !== undefined) client.nom = payload.coordonnees_contact.nom?.trim() || null;
             if (payload.coordonnees_contact.prenom !== undefined) client.prénom = payload.coordonnees_contact.prenom?.trim() || null;
             if (payload.coordonnees_contact.telephone !== undefined) {

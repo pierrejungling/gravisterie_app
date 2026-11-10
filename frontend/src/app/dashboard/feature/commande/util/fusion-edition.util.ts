@@ -70,6 +70,9 @@ export const UNITES_EDITION: UniteEdition[] = [
   { cle: 'tva', label: 'TVA', controles: ['tva'], envoi: CONTACT },
 ];
 
+/** Unités qui touchent la fiche client. */
+export const UNITES_CONTACT: UniteEdition[] = UNITES_EDITION.filter((unite) => unite.envoi === CONTACT);
+
 /** Sur une commande (pas une vente), prix final et quantité se déduisent des lignes de prix. */
 export const UNITES_DEDUITES_DES_LIGNES = ['prix', 'quantite'];
 

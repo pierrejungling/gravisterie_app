@@ -81,6 +81,20 @@
     color: var(--color-text);
   }
 
+  // Label remonté sur la bordure : seul le bas du label (côté champ) porte le fond du champ.
+  // Le haut reste transparent, sinon on voit un rectangle derrière le nom du champ
+  // dès que le champ est posé sur un panneau teinté (bloc Adresse, frais...).
+  .floating-label.fixed-label,
+  .floating-input:focus + .floating-label,
+  .floating-input:not(:placeholder-shown) + .floating-label {
+    background: linear-gradient(to bottom, transparent 42%, var(--color-secondary) 42%);
+  }
+
+  &.disabled .floating-label.fixed-label,
+  &.disabled .floating-input:not(:placeholder-shown) + .floating-label {
+    background: linear-gradient(to bottom, transparent 42%, var(--color-background-light) 42%) !important;
+  }
+
   // Champ date : alignement du label avec le contenu
   // Safari iOS gère mal :placeholder-shown sur date → le label est toujours en position "floated" via la classe .fixed-label
   &.input--date {

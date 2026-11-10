@@ -3,6 +3,7 @@ import { CommonModule, DecimalPipe } from '@angular/common';
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { nettoyerAdresse } from '../../util/adresse.util';
 import { ClientPickerComponent } from '../../../client/component/client-picker/client-picker.component';
+import { ChoixFicheClient, ChoixFicheClientComponent } from '../../../client/component/choix-fiche-client/choix-fiche-client.component';
 import { CorrespondanceClient, FicheClient, initialesClient, nomClient } from '../../../client/model/client.interface';
 import { ClientApiService } from '../../../client/service/client-api.service';
 import { CommandeOngletsService } from '../../service/commande-onglets.service';
@@ -19,6 +20,7 @@ import {
   CommandeFichier,
   StatutCommande,
   ModeContact,
+  MODES_CONTACT,
   Couleur,
   QuantiteProduitCompteur,
   isCommandeSite,
@@ -33,6 +35,7 @@ import { formatTelephoneBE } from '../../util/format-telephone.util';
 import {
   CONTROLES_EN_DIRECT,
   ConflitEdition,
+  UNITES_CONTACT,
   UNITES_DEDUITES_DES_LIGNES,
   UNITES_EDITION,
   UniteEdition,
@@ -71,7 +74,7 @@ function lireOngletDetail(): OngletDetail {
 @Component({
   selector: 'app-detail-commande-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule, HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, FraisCommissionPickerComponent, ClientPickerComponent, ApercuLienComponent, EvenementLienComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule, HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, FraisCommissionPickerComponent, ClientPickerComponent, ChoixFicheClientComponent, ApercuLienComponent, EvenementLienComponent],
   templateUrl: './detail-commande-page.component.html',
   styleUrl: './detail-commande-page.component.scss'
 })
@@ -109,6 +112,11 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   /** Message court sous le bandeau (sortie automatique, échec d'enregistrement). */
   readonly noticeEdition = signal<string | null>(null);
   readonly enregistrementEnCours = signal(false);
+  /** Coordonnées modifiées d'un client qui a déjà sa fiche : question en attente de réponse. */
+  readonly choixFiche = signal<{ nom: string; nbAutres: number; changements: string[] } | null>(null);
+  /** Réponse donnée : mettre la fiche à jour, ou créer une nouvelle fiche pour cette commande. */
+  private decisionFiche: ChoixFicheClient | null = null;
+  private verifFicheEnCours = false;
   /** Photographie du formulaire à l'entrée en modification, ou après la dernière fusion. */
   private baseEdition: Record<string, string> | null = null;
   /** Formulaire construit sur la dernière version reçue (source des valeurs « reçues »). */
@@ -128,7 +136,11 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   readonly menuActionsOuvert: WritableSignal<boolean> = signal(false);
   showDeleteConfirm: WritableSignal<boolean> = signal(false);
   isDuplicating: WritableSignal<boolean> = signal(false);
-  showAdresseMap: WritableSignal<boolean> = signal(false);
+  /** Sur grand écran large (mise en page à 3 colonnes), la carte de l'adresse est ouverte d'office. */
+  private carteOuverteParDefaut(): boolean {
+    return typeof window !== 'undefined' && !!window.matchMedia?.('(min-width: 1600px)').matches;
+  }
+  showAdresseMap: WritableSignal<boolean> = signal(this.carteOuverteParDefaut());
   trajetLoading: WritableSignal<boolean> = signal(false);
   trajetError: WritableSignal<string | null> = signal(null);
   trajetDistanceKm: WritableSignal<number | null> = signal(null);
@@ -230,11 +242,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   readonly ModeContact = ModeContact;
   
   // Modes de contact disponibles
-  readonly modesContact = [
-    { value: ModeContact.MAIL, label: 'Mail', emoji: '📧' },
-    { value: ModeContact.TEL, label: 'Téléphone', emoji: '📞' },
-    { value: ModeContact.META, label: 'Meta', emoji: '💬' }
-  ];
+  readonly modesContact = MODES_CONTACT;
 
   // Options de couleurs disponibles
   couleursDisponibles: Couleur[] = [
@@ -649,7 +657,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
           this.commande.set(response.data);
           this.ongletsCommandes.renseigner(response.data as Commande);
           if (!silent) {
-            this.showAdresseMap.set(false);
+            this.showAdresseMap.set(this.carteOuverteParDefaut());
             this.clearTrajetResult();
           }
           try {
@@ -3342,11 +3350,24 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
 
     // Ne partent que les rubriques réellement modifiées : le reste ne peut plus écraser un changement fait ailleurs.
     const cles = clesAEnvoyer(this.unitesModifiees());
+
+    // Coordonnées modifiées d'un client qui a déjà sa fiche : on demande quoi en faire avant d'enregistrer.
+    const changementsFiche = this.changementsContact();
+    if (changementsFiche.length > 0) {
+      if (!this.decisionFiche) {
+        this.demanderChoixFiche(changementsFiche);
+        return;
+      }
+      cles.add('coordonnees_contact');
+    }
+
     const envoi: any = {};
     Object.keys(payload).forEach((cle) => {
       if (cles.has(cle) && payload[cle] !== undefined) envoi[cle] = payload[cle];
     });
     if (payload.id_client) envoi.id_client = payload.id_client;
+    const nouvelleFiche = changementsFiche.length > 0 && this.decisionFiche === 'nouvelle';
+    if (nouvelleFiche) envoi.nouvelle_fiche_client = true;
     if (marquerSiteTraitee) {
       envoi.site_traitee = true;
       if (isCommandeSite(currentCommande) && !currentCommande.source_web) {
@@ -3428,6 +3449,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       this.initForm();
       this.isEditMode.set(false);
       this.reinitialiserSuiviEdition();
+      // La commande est passée sur une nouvelle fiche : on relit pour avoir le bon lien.
+      if (nouvelleFiche) this.loadCommande(id, true);
     };
 
     if (Object.keys(envoi).length === 0) {
@@ -3471,6 +3494,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.majIntegrees.set([]);
     this.noticeEdition.set(null);
     this.nonEnregistre.set(false);
+    this.choixFiche.set(null);
+    this.decisionFiche = null;
     const id = this.commande()?.id_commande;
     if (id) this.ongletsCommandes.marquerNonEnregistre(id, false);
   }
@@ -3479,6 +3504,68 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     if (!this.formGroup) return;
     this.baseEdition = instantaneUnites(this.formGroup.getRawValue());
     this.derniereActiviteEdition = Date.now();
+  }
+
+  /**
+   * Coordonnées du formulaire qui diffèrent de la fiche client liée (celle de la commande,
+   * ou celle qu'on vient de choisir pendant la modification). Renvoie les libellés concernés.
+   */
+  private changementsContact(): string[] {
+    const fiche = this.clientLieEdition() ?? this.commande()?.client;
+    if (!fiche || !this.formGroup) return [];
+    const brutFiche = {
+      nom: fiche.nom || '',
+      prenom: fiche.prénom || '',
+      societe: fiche.société || '',
+      telephone: fiche.téléphone || '',
+      mail: fiche.mail || '',
+      tva: fiche.tva || '',
+      rue: this.extractAdressePart(fiche.adresse, 0) || '',
+      code_postal: this.extractAdressePart(fiche.adresse, 1) || '',
+      ville: this.extractAdressePart(fiche.adresse, 2) || '',
+      pays: this.extractAdressePart(fiche.adresse, 3) || (this.hasAdresseDetails(fiche.adresse) ? 'Belgique' : ''),
+    };
+    const formulaire = instantaneUnites(this.formGroup.getRawValue());
+    const reference = instantaneUnites(brutFiche);
+    return UNITES_CONTACT.filter((unite) => formulaire[unite.cle] !== reference[unite.cle]).map((unite) => unite.label);
+  }
+
+  /** Ouvre la question « modifier la fiche ou en créer une nouvelle », si la fiche sert à d'autres commandes. */
+  private demanderChoixFiche(changements: string[]): void {
+    const idCommande = this.commande()?.id_commande;
+    const lie = this.clientLieEdition();
+    const fiche = lie ?? this.commande()?.client;
+    if (!fiche?.id_client || this.verifFicheEnCours) return;
+    const nom = nomClient(fiche as FicheClient);
+    if (lie) {
+      // Fiche choisie pendant la modification : elle existe déjà en base avec ses propres commandes.
+      this.choixFiche.set({ nom, nbAutres: lie.stats?.nb_commandes ?? 0, changements });
+      return;
+    }
+    this.verifFicheEnCours = true;
+    this.clientApi.detail(fiche.id_client).subscribe({
+      next: (detail) => {
+        this.verifFicheEnCours = false;
+        const nbAutres = (detail?.commandes ?? []).filter((c) => c.id_commande !== idCommande).length;
+        if (nbAutres === 0) {
+          // La fiche ne sert qu'à cette commande : rien à demander.
+          this.decisionFiche = 'fiche';
+          this.onSave();
+          return;
+        }
+        this.choixFiche.set({ nom, nbAutres, changements });
+      },
+      error: () => {
+        this.verifFicheEnCours = false;
+        this.choixFiche.set({ nom, nbAutres: 0, changements });
+      },
+    });
+  }
+
+  repondreChoixFiche(choix: ChoixFicheClient): void {
+    this.decisionFiche = choix;
+    this.choixFiche.set(null);
+    this.onSave();
   }
 
   /** Rubriques du formulaire qui diffèrent de la base. */

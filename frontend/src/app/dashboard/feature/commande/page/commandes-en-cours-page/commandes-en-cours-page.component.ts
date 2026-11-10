@@ -9,7 +9,7 @@ import { ApiURI } from '@api';
 import {
   Commande,
   StatutCommande,
-  ModeContact,
+  MODES_CONTACT,
   isCommandeSite,
   isCommandeSiteNonTraitee,
   formatProduitCommandeSite,
@@ -746,17 +746,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy {
   }
 
   getModeContactEmoji(modeContact?: string): string {
-    if (!modeContact) return '';
-    switch (modeContact) {
-      case ModeContact.MAIL:
-        return '📧';
-      case ModeContact.TEL:
-        return '📞';
-      case ModeContact.META:
-        return '💬';
-      default:
-        return '';
-    }
+    return MODES_CONTACT.find((mode) => mode.value === modeContact)?.emoji ?? '';
   }
 
   private isLivraisonTerminee(commande: Commande): boolean {

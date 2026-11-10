@@ -132,7 +132,7 @@
       </button>
     </nav>
 
-    <form id="detailCommandeForm" class="cmd-grid" [formGroup]="formGroup" *ngIf="formGroup" (ngSubmit)="isEditMode() && onSave()">
+    <form id="detailCommandeForm" class="cmd-grid" [class.cmd-grid--edition]="isEditMode()" [formGroup]="formGroup" *ngIf="formGroup" (ngSubmit)="isEditMode() && onSave()">
       <div class="cmd-col cmd-col--a">
       
       <!-- Informations de la commande -->
@@ -1870,6 +1870,16 @@
 </div>
 
 <!-- Popup de confirmation de suppression -->
+<!-- Coordonnées modifiées d'un client qui a déjà sa fiche -->
+<gv-choix-fiche-client
+  *ngIf="choixFiche() as cf"
+  [nom]="cf.nom"
+  [nbAutres]="cf.nbAutres"
+  [changements]="cf.changements"
+  (choisi)="repondreChoixFiche($event)"
+  (annule)="choixFiche.set(null)">
+</gv-choix-fiche-client>
+
 <div class="delete-confirm-overlay" *ngIf="showDeleteConfirm()" (click)="closeDeleteConfirm()">
   <div class="delete-confirm-popup" (click)="$event.stopPropagation()">
     <div class="delete-confirm-header">

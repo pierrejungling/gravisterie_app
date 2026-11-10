@@ -120,7 +120,9 @@ export class CommandeController {
         const commande = await this.commandeService.updateCommande(id, payload);
         this.realtime.publish({ resource: 'commande', action: 'updated', id, origin });
         if (payload?.id_client) this.realtime.publish({ resource: 'client', action: 'updated', id: payload.id_client, origin });
-        return commande;
+        // Renvoie la nouvelle empreinte pour que l'app reparte de la bonne version
+        const { revision } = await this.commandeService.getCommandeById(id);
+        return { ...commande, revision };
     }
 
     @Delete(':id')

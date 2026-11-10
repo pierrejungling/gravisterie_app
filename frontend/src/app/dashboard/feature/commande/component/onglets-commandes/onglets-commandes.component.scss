@@ -201,3 +201,11 @@ svg {
     }
   }
 }
+
+/* Modifications non enregistrées sur la commande de l'onglet */
+.tab__modif {
+  margin-right: 0.3rem;
+  color: var(--gv-warn);
+  font-size: 0.6rem;
+  vertical-align: 0.15em;
+}

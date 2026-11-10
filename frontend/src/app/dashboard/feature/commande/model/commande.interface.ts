@@ -130,6 +130,8 @@ export interface CommandeLignePrix {
 
 export interface Commande {
   id_commande: string;
+  /** Empreinte du contenu côté serveur : renvoyée à l'enregistrement pour détecter une version périmée. */
+  revision?: string;
   /** Événement auquel la commande est rattachée. */
   id_evenement?: string | null;
   date_commande: string;

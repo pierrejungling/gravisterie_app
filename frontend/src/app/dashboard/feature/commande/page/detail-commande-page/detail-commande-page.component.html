@@ -63,13 +63,14 @@
           </ng-container>
           <ng-container *ngIf="isEditMode()">
             <button type="button" class="gv-btn gv-btn--ghost gv-btn--sm" (click)="onCancel()">Annuler</button>
-            <button type="submit" form="detailCommandeForm" class="gv-btn gv-btn--primary gv-btn--sm" [disabled]="!formGroup.valid">Enregistrer</button>
+            <button type="submit" form="detailCommandeForm" class="gv-btn gv-btn--primary gv-btn--sm" [disabled]="!formGroup.valid || conflitsEdition().length > 0 || enregistrementEnCours()" [title]="conflitsEdition().length > 0 ? 'Choisis d\'abord une version pour chaque champ en conflit' : ''">{{ enregistrementEnCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
           </ng-container>
         </div>
       </div>
 
       <!-- Résumé : l'essentiel d'un coup d'oeil -->
       <div class="cmd-head__chips">
+        <span *ngIf="isEditMode() && nonEnregistre()" class="gv-chip gv-chip--warn cmd-chip-nonenr" title="Des modifications ne sont pas encore enregistrées"><span class="cmd-chip-nonenr__dot" aria-hidden="true"></span>Non enregistré</span>
         <span *ngIf="isCommandeTerminee()" class="gv-chip gv-chip--ok">Terminée</span>
         <span *ngIf="isCommandeAnnulee()" class="gv-chip gv-chip--warn">Annulée</span>
         <button type="button" *ngIf="!isVente() && !isCommandeTerminee() && !isCommandeAnnulee()" class="gv-chip gv-chip--accent cmd-chip-btn" (click)="choisirOnglet('atelier')">{{ resumeStatut() }}</button>
@@ -87,6 +88,36 @@
           [idCommande]="commande()?.id_commande ?? null"
           [idEvenement]="commande()?.id_evenement ?? null">
         </gv-evenement-lien>
+      </div>
+
+      <!-- Modifications venues d'ailleurs pendant que la commande est en modification -->
+      <div class="cmd-fusion cmd-fusion--info" *ngIf="majIntegrees().length > 0" role="status">
+        <span class="cmd-fusion__texte"><strong>Mise à jour reçue</strong> et intégrée dans le formulaire : {{ majIntegrees().join(', ') }}.</span>
+        <button type="button" class="cmd-fusion__fermer" (click)="fermerMajIntegrees()" aria-label="Fermer">×</button>
+      </div>
+      <div class="cmd-fusion cmd-fusion--info" *ngIf="noticeEdition() as notice" role="status">
+        <span class="cmd-fusion__texte">{{ notice }}</span>
+        <button type="button" class="cmd-fusion__fermer" (click)="noticeEdition.set(null)" aria-label="Fermer">×</button>
+      </div>
+      <div class="cmd-fusion cmd-fusion--conflit" *ngIf="isEditMode() && conflitsEdition().length > 0" role="alert">
+        <p class="cmd-fusion__titre">
+          {{ conflitsEdition().length > 1 ? 'Ces champs ont' : 'Ce champ a' }} été modifié ailleurs pendant que tu le modifiais ici. Choisis la version à garder.
+        </p>
+        <div class="cmd-conflit" *ngFor="let conflit of conflitsEdition()">
+          <span class="cmd-conflit__label">{{ conflit.label }}</span>
+          <div class="cmd-conflit__versions">
+            <div class="cmd-conflit__version">
+              <span class="cmd-conflit__qui">Ta version</span>
+              <pre class="cmd-conflit__valeur">{{ conflit.mienne }}</pre>
+              <button type="button" class="gv-btn gv-btn--sm" (click)="garderMaVersion(conflit)">Garder la mienne</button>
+            </div>
+            <div class="cmd-conflit__version">
+              <span class="cmd-conflit__qui">Version reçue</span>
+              <pre class="cmd-conflit__valeur">{{ conflit.recue }}</pre>
+              <button type="button" class="gv-btn gv-btn--sm" (click)="prendreLaVersionRecue(conflit)">Prendre la reçue</button>
+            </div>
+          </div>
+        </div>
       </div>
 
     </header>
@@ -1816,7 +1847,7 @@
     </ng-container>
     <ng-container *ngIf="isEditMode()">
       <button type="button" class="gv-btn gv-btn--ghost cmd-foot__main" (click)="onCancel()">Annuler</button>
-      <button type="submit" form="detailCommandeForm" class="gv-btn gv-btn--primary cmd-foot__main" [disabled]="!formGroup.valid">Enregistrer</button>
+      <button type="submit" form="detailCommandeForm" class="gv-btn gv-btn--primary cmd-foot__main" [disabled]="!formGroup.valid || conflitsEdition().length > 0 || enregistrementEnCours()">{{ enregistrementEnCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
     </ng-container>
   </footer>
 

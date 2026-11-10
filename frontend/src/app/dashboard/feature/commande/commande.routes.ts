@@ -26,5 +26,7 @@ export const commandeRoutes: Routes = [
         path: AppNode.DETAIL_COMMANDE,
         loadComponent: () => import('./page/detail-commande-page/detail-commande-page.component')
             .then(c => c.DetailCommandePageComponent),
+        // Changements non enregistrés : on demande avant de quitter la commande
+        canDeactivate: [(page: { peutQuitter?: () => boolean }) => page?.peutQuitter?.() ?? true],
     }
 ];

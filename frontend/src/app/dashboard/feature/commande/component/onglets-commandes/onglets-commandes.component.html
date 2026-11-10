@@ -20,7 +20,7 @@
         >
           <span class="tab__dot" [ngClass]="'tab__dot--' + ton(o)"></span>
           <span class="tab__text">
-            <span class="tab__title">{{ o.titre }}</span>
+            <span class="tab__title">@if (onglets.nonEnregistres().has(o.id)) {<span class="tab__modif" title="Modifications non enregistrées">●</span>}{{ o.titre }}</span>
             @if (o.client) {
               <span class="tab__client">{{ o.client }}</span>
             }

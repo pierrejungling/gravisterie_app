@@ -31,6 +31,17 @@ import { ApercuLienComponent } from '../../component/apercu-lien/apercu-lien.com
 import { EvenementLienComponent } from '../../../evenement/component/evenement-lien/evenement-lien.component';
 import { formatTelephoneBE } from '../../util/format-telephone.util';
 import {
+  CONTROLES_EN_DIRECT,
+  ConflitEdition,
+  UNITES_DEDUITES_DES_LIGNES,
+  UNITES_EDITION,
+  UniteEdition,
+  clesAEnvoyer,
+  instantaneUnites,
+  texteUnite,
+  unitesDifferentes,
+} from '../../util/fusion-edition.util';
+import {
   COMMANDE_UPLOAD_EXTENSIONS,
   extractFilesFromClipboard,
   filterAcceptedUploadFiles,
@@ -87,6 +98,28 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private suggestionsEditionSub?: Subscription;
   private suggestionsEditionNettoyage = false;
   majDistanteDisponible: WritableSignal<boolean> = signal(false);
+
+  // ----- Mode modification : fusion avec les changements venus d'ailleurs -----
+  /** Des changements du formulaire ne sont pas encore enregistrés. */
+  readonly nonEnregistre = signal(false);
+  /** Champs modifiés des deux côtés, à trancher avant d'enregistrer. */
+  readonly conflitsEdition = signal<ConflitEdition[]>([]);
+  /** Champs mis à jour tout seuls dans le formulaire (modifiés ailleurs, pas par moi). */
+  readonly majIntegrees = signal<string[]>([]);
+  /** Message court sous le bandeau (sortie automatique, échec d'enregistrement). */
+  readonly noticeEdition = signal<string | null>(null);
+  readonly enregistrementEnCours = signal(false);
+  /** Photographie du formulaire à l'entrée en modification, ou après la dernière fusion. */
+  private baseEdition: Record<string, string> | null = null;
+  /** Formulaire construit sur la dernière version reçue (source des valeurs « reçues »). */
+  private formulaireRecu: FormGroup | null = null;
+  private fusionEnCours = false;
+  private veilleEdition: ReturnType<typeof setInterval> | null = null;
+  private derniereActiviteEdition = Date.now();
+  private derniereVerifRetour = 0;
+  private majIntegreesTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Sans changement ni activité pendant ce délai, le mode modification se referme tout seul. */
+  private static readonly DELAI_SORTIE_AUTO_MS = 3 * 60 * 1000;
   showPrixFields: WritableSignal<boolean> = signal(true);
 
   /** Écran étroit (téléphone, fenêtre en bande) : une zone à la fois, sans scroller. */
@@ -346,12 +379,16 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       this.scrollRestored = false;
       this.isInitialLoad = true;
       this.majDistanteDisponible.set(false);
+      this.isEditMode.set(false);
+      this.reinitialiserSuiviEdition();
       this.loadCommande(id);
     });
 
     this.realtime.on('commande')
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((event) => this.onCommandeDistante(event));
+
+    this.demarrerVeilleEdition();
   }
 
   ngAfterViewChecked(): void {
@@ -427,6 +464,10 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   }
 
   ngOnDestroy(): void {
+    if (this.veilleEdition) clearInterval(this.veilleEdition);
+    if (this.majIntegreesTimer) clearTimeout(this.majIntegreesTimer);
+    const idQuitte = this.commande()?.id_commande;
+    if (idQuitte) this.ongletsCommandes.marquerNonEnregistre(idQuitte, false);
     this.unbindPreviewSwipe();
     window.removeEventListener('beforeunload', this.saveScrollPosition);
     this.routeSubscription?.unsubscribe();
@@ -648,7 +689,11 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
       this.router.navigate([AppRoutes.AUTHENTICATED, 'commandes', this.returnPage]);
       return;
     }
-    if (this.isEditMode() || this.previewFichier()) {
+    if (this.isEditMode()) {
+      this.fusionnerDistante();
+      return;
+    }
+    if (this.previewFichier()) {
       this.majDistanteDisponible.set(true);
       return;
     }
@@ -1773,6 +1818,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   initForm(): void {
     this.initFormBase();
     this.surveillerCorrespondancesEdition();
+    // Le formulaire repart de la commande chargée : c'est la nouvelle base de comparaison.
+    this.reinitialiserSuiviEdition();
+    if (this.isEditMode()) this.prendreBaseEdition();
   }
 
   private initFormBase(): void {
@@ -3163,6 +3211,8 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     if (newEditMode) {
       // Attendre que les textareas (*ngIf) soient réellement layoutés avant de mesurer
       this.scheduleGrowAllTextareas();
+      this.prendreBaseEdition();
+      this.noticeEdition.set(null);
     }
   }
 
@@ -3203,9 +3253,14 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     this.showPrixFields.set(!this.showPrixFields());
   }
 
-  onSave(): void {
-    if (!this.formGroup.valid || !this.commande()) return;
-
+  /** Contenu complet du formulaire, au format attendu par le serveur. */
+  private construirePayloadFormulaire(): {
+    payload: any;
+    formValue: any;
+    compteursSerialises: QuantiteProduitCompteur[];
+    quantiteRealiseeSomme: number;
+    telephoneFormatted: string;
+  } {
     this.clampAllCompteursForm();
     const compteursSerialises = this.serializeCompteursPourApi();
     const quantiteRealiseeSomme = this.deriveQuantiteRealiseeSomme(compteursSerialises);
@@ -3268,101 +3323,359 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
         dimensions: formValue.dimensions,
       },
     };
+    return { payload, formValue, compteursSerialises, quantiteRealiseeSomme, telephoneFormatted };
+  }
+
+  /**
+   * Enregistre uniquement ce qui a été modifié dans le formulaire. Si la commande a changé
+   * entre-temps côté serveur, on fusionne d'abord puis on réessaie une fois.
+   */
+  onSave(reessai = false): void {
+    if (!this.formGroup.valid || !this.commande() || this.enregistrementEnCours()) return;
+    if (this.conflitsEdition().length > 0) return;
+
+    const { payload, formValue, compteursSerialises, quantiteRealiseeSomme, telephoneFormatted } = this.construirePayloadFormulaire();
 
     const id = this.commande()!.id_commande;
     const currentCommande = this.commande()!;
     const marquerSiteTraitee = !this.isVente() && isCommandeSiteNonTraitee(currentCommande);
+
+    // Ne partent que les rubriques réellement modifiées : le reste ne peut plus écraser un changement fait ailleurs.
+    const cles = clesAEnvoyer(this.unitesModifiees());
+    const envoi: any = {};
+    Object.keys(payload).forEach((cle) => {
+      if (cles.has(cle) && payload[cle] !== undefined) envoi[cle] = payload[cle];
+    });
+    if (payload.id_client) envoi.id_client = payload.id_client;
     if (marquerSiteTraitee) {
-      payload.site_traitee = true;
+      envoi.site_traitee = true;
       if (isCommandeSite(currentCommande) && !currentCommande.source_web) {
-        payload.source_web = true;
+        envoi.source_web = true;
       }
     }
-    
-    // Mettre à jour localement immédiatement avec les nouvelles valeurs du formulaire
-    this.commande.set({
-      ...currentCommande,
-      produit: formValue.nom_commande,
-      date_commande: formValue.date_commande || undefined,
-      deadline: formValue.deadline || undefined,
-      description: formValue.description,
-      quantité: formValue.quantité ? parseInt(formValue.quantité, 10) : undefined,
-      quantite_realisee: quantiteRealiseeSomme,
-      quantite_produit_compteurs: compteursSerialises.length > 0 ? compteursSerialises : null,
-      payé: formValue.payé || false,
-      commentaire_paye: formValue.commentaire_paye || undefined,
-      attente_reponse: formValue.attente_reponse ?? false,
-      mode_contact: formValue.mode_contact || undefined,
-      prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : undefined,
-      prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : undefined,
-      lignes_prix: this.isVente() ? currentCommande.lignes_prix : this.mapLignesPrixPayload(formValue.lignes_prix),
-      frais_pourcentage: formValue.frais_pourcentage !== null && formValue.frais_pourcentage !== undefined && formValue.frais_pourcentage !== '' ? parseFloat(String(formValue.frais_pourcentage)) : undefined,
-      frais_commission_id: formValue.frais_commission_id || null,
-      frais_commission_libelle: formValue.frais_commission_libelle?.trim() || undefined,
-      client: {
-        ...currentCommande.client,
-        ...(this.clientLieEdition() ? { id_client: this.clientLieEdition()!.id_client } : {}),
-        nom: formValue.nom,
-        prénom: formValue.prenom,
-        société: formValue.societe,
-        téléphone: telephoneFormatted || undefined,
-        mail: formValue.mail,
-        adresse: this.buildAdresseComplete(formValue.rue, formValue.code_postal, formValue.ville, formValue.pays) || undefined,
-        tva: formValue.tva,
-      },
-      support: formValue.support ? {
-        nom_support: formValue.support,
-        prix_support: formValue.prix_support ? parseFloat(formValue.prix_support) : undefined,
-        url_support: formValue.url_support || undefined,
-      } : undefined,
-      supports: formValue.supports && Array.isArray(formValue.supports) 
-        ? formValue.supports
-            .filter((s: any) => s && (s.nom_support || s.prix_support || s.url_support))
-            .map((s: any) => ({
-              nom_support: s.nom_support || undefined,
-              prix_support: s.prix_support !== null && s.prix_support !== undefined && s.prix_support !== '' ? parseFloat(String(s.prix_support)) : undefined,
-              url_support: s.url_support || undefined,
-              prix_unitaire: s.prix_unitaire !== undefined ? Boolean(s.prix_unitaire) : true,
-              nombre_unites: s.nombre_unites !== null && s.nombre_unites !== undefined && s.nombre_unites !== '' ? parseInt(String(s.nombre_unites), 10) : undefined,
-              prix_support_unitaire: s.prix_support_unitaire !== null && s.prix_support_unitaire !== undefined && s.prix_support_unitaire !== '' ? parseFloat(String(s.prix_support_unitaire)) : undefined,
-              actif: s.actif !== undefined ? Boolean(s.actif) : true,
-              id_ligne_prix: s.id_ligne_prix || undefined,
-            }))
-        : [],
-      personnalisation: {
-        texte: formValue.texte_personnalisation,
-        police: formValue.police_ecriture,
-        couleur: Array.isArray(formValue.couleur) ? formValue.couleur : [],
-      },
-      gravure: {
-        dimensions: formValue.dimensions,
-      },
-      ...(marquerSiteTraitee
-        ? {
-            site_traitee: true,
-            source_web: currentCommande.source_web || isCommandeSite(currentCommande),
+
+    const terminer = (revision?: string) => {
+      // Mettre à jour localement avec les valeurs du formulaire
+      this.commande.set({
+        ...currentCommande,
+        produit: formValue.nom_commande,
+        date_commande: formValue.date_commande || undefined,
+        deadline: formValue.deadline || undefined,
+        description: formValue.description,
+        quantité: formValue.quantité ? parseInt(formValue.quantité, 10) : undefined,
+        quantite_realisee: quantiteRealiseeSomme,
+        quantite_produit_compteurs: compteursSerialises.length > 0 ? compteursSerialises : null,
+        payé: formValue.payé || false,
+        commentaire_paye: formValue.commentaire_paye || undefined,
+        attente_reponse: formValue.attente_reponse ?? false,
+        mode_contact: formValue.mode_contact || undefined,
+        prix_final: formValue.prix_final !== null && formValue.prix_final !== undefined && formValue.prix_final !== '' ? parseFloat(String(formValue.prix_final)) : undefined,
+        prix_unitaire_final: formValue.prix_unitaire_final !== null && formValue.prix_unitaire_final !== undefined && formValue.prix_unitaire_final !== '' ? parseFloat(String(formValue.prix_unitaire_final)) : undefined,
+        lignes_prix: this.isVente() ? currentCommande.lignes_prix : this.mapLignesPrixPayload(formValue.lignes_prix),
+        frais_pourcentage: formValue.frais_pourcentage !== null && formValue.frais_pourcentage !== undefined && formValue.frais_pourcentage !== '' ? parseFloat(String(formValue.frais_pourcentage)) : undefined,
+        frais_commission_id: formValue.frais_commission_id || null,
+        frais_commission_libelle: formValue.frais_commission_libelle?.trim() || undefined,
+        client: {
+          ...currentCommande.client,
+          ...(this.clientLieEdition() ? { id_client: this.clientLieEdition()!.id_client } : {}),
+          nom: formValue.nom,
+          prénom: formValue.prenom,
+          société: formValue.societe,
+          téléphone: telephoneFormatted || undefined,
+          mail: formValue.mail,
+          adresse: this.buildAdresseComplete(formValue.rue, formValue.code_postal, formValue.ville, formValue.pays) || undefined,
+          tva: formValue.tva,
+        },
+        support: formValue.support ? {
+          nom_support: formValue.support,
+          prix_support: formValue.prix_support ? parseFloat(formValue.prix_support) : undefined,
+          url_support: formValue.url_support || undefined,
+        } : undefined,
+        supports: formValue.supports && Array.isArray(formValue.supports) 
+          ? formValue.supports
+              .filter((s: any) => s && (s.nom_support || s.prix_support || s.url_support))
+              .map((s: any) => ({
+                nom_support: s.nom_support || undefined,
+                prix_support: s.prix_support !== null && s.prix_support !== undefined && s.prix_support !== '' ? parseFloat(String(s.prix_support)) : undefined,
+                url_support: s.url_support || undefined,
+                prix_unitaire: s.prix_unitaire !== undefined ? Boolean(s.prix_unitaire) : true,
+                nombre_unites: s.nombre_unites !== null && s.nombre_unites !== undefined && s.nombre_unites !== '' ? parseInt(String(s.nombre_unites), 10) : undefined,
+                prix_support_unitaire: s.prix_support_unitaire !== null && s.prix_support_unitaire !== undefined && s.prix_support_unitaire !== '' ? parseFloat(String(s.prix_support_unitaire)) : undefined,
+                actif: s.actif !== undefined ? Boolean(s.actif) : true,
+                id_ligne_prix: s.id_ligne_prix || undefined,
+              }))
+          : [],
+        personnalisation: {
+          texte: formValue.texte_personnalisation,
+          police: formValue.police_ecriture,
+          couleur: Array.isArray(formValue.couleur) ? formValue.couleur : [],
+        },
+        gravure: {
+          dimensions: formValue.dimensions,
+        },
+        ...(marquerSiteTraitee
+          ? {
+              site_traitee: true,
+              source_web: currentCommande.source_web || isCommandeSite(currentCommande),
+            }
+          : {}),
+        ...(revision ? { revision } : {}),
+      });
+
+      this.clientLieEdition.set(null);
+      this.suggestionsEditionIgnorees.clear();
+      // Réinitialiser le formulaire avec les nouvelles valeurs
+      this.initForm();
+      this.isEditMode.set(false);
+      this.reinitialiserSuiviEdition();
+    };
+
+    if (Object.keys(envoi).length === 0) {
+      terminer(currentCommande.revision);
+      return;
+    }
+    if (currentCommande.revision) envoi.revision_base = currentCommande.revision;
+
+    this.enregistrementEnCours.set(true);
+    this.noticeEdition.set(null);
+    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${id}`, envoi).subscribe({
+      next: (response: any) => {
+        this.enregistrementEnCours.set(false);
+        if (response && response.result === false) {
+          if (response.code === 'COMMANDE_VERSION_PERIMEE' && !reessai) {
+            // La commande a changé ailleurs depuis le chargement : on fusionne, puis on réessaie si rien ne se contredit.
+            this.fusionnerDistante(() => {
+              if (this.conflitsEdition().length === 0) this.onSave(true);
+            });
+            return;
           }
-        : {}),
-    });
-    
-    this.clientLieEdition.set(null);
-    this.suggestionsEditionIgnorees.clear();
-    // Réinitialiser le formulaire avec les nouvelles valeurs
-    this.initForm();
-    this.isEditMode.set(false);
-    
-    this.apiService.put(`${ApiURI.UPDATE_COMMANDE}/${id}`, payload).subscribe({
-      next: (response) => {
-        // Mise à jour réussie, les données locales sont déjà à jour
+          this.noticeEdition.set("L'enregistrement a échoué. Tes modifications sont toujours là, réessaie.");
+          return;
+        }
+        terminer(response?.data?.revision);
       },
       error: (error) => {
         console.error('Erreur lors de la mise à jour:', error);
-        // En cas d'erreur, restaurer l'état précédent
-        this.commande.set(currentCommande);
-        this.initForm();
-        this.isEditMode.set(true); // Remettre en mode édition pour permettre de réessayer
+        this.enregistrementEnCours.set(false);
+        this.noticeEdition.set("L'enregistrement a échoué. Tes modifications sont toujours là, réessaie.");
       }
     });
+  }
+
+  // ===== Suivi du mode modification : base, fusion, conflits, sortie automatique =====
+
+  private reinitialiserSuiviEdition(): void {
+    this.baseEdition = null;
+    this.formulaireRecu = null;
+    this.conflitsEdition.set([]);
+    this.majIntegrees.set([]);
+    this.noticeEdition.set(null);
+    this.nonEnregistre.set(false);
+    const id = this.commande()?.id_commande;
+    if (id) this.ongletsCommandes.marquerNonEnregistre(id, false);
+  }
+
+  private prendreBaseEdition(): void {
+    if (!this.formGroup) return;
+    this.baseEdition = instantaneUnites(this.formGroup.getRawValue());
+    this.derniereActiviteEdition = Date.now();
+  }
+
+  /** Rubriques du formulaire qui diffèrent de la base. */
+  private unitesModifiees(): UniteEdition[] {
+    if (!this.formGroup) return [];
+    if (!this.baseEdition) return UNITES_EDITION;
+    return unitesDifferentes(instantaneUnites(this.formGroup.getRawValue()), this.baseEdition);
+  }
+
+  /** Toutes les 2 s : tient à jour la pastille « Non enregistré » et referme une modification oubliée. */
+  private demarrerVeilleEdition(): void {
+    this.ngZone.runOutsideAngular(() => {
+      this.veilleEdition = setInterval(() => this.veillerEdition(), 2000);
+    });
+  }
+
+  private veillerEdition(): void {
+    const id = this.commande()?.id_commande;
+    if (!id || !this.formGroup) return;
+    if (!this.isEditMode()) {
+      if (this.nonEnregistre()) this.ngZone.run(() => this.reinitialiserSuiviEdition());
+      return;
+    }
+    if (!this.baseEdition) this.prendreBaseEdition();
+    const modifie = this.unitesModifiees().length > 0;
+    if (modifie !== this.nonEnregistre()) {
+      this.ngZone.run(() => {
+        this.nonEnregistre.set(modifie);
+        this.ongletsCommandes.marquerNonEnregistre(id, modifie);
+      });
+    }
+    const inactif = Date.now() - this.derniereActiviteEdition > DetailCommandePageComponent.DELAI_SORTIE_AUTO_MS;
+    if (!modifie && inactif && this.conflitsEdition().length === 0 && !this.enregistrementEnCours()) {
+      this.ngZone.run(() => {
+        this.toggleEditMode();
+        this.noticeEdition.set('Mode modification refermé : rien n\'avait été changé.');
+      });
+    }
+  }
+
+  @HostListener('document:input')
+  @HostListener('document:pointerdown')
+  noterActiviteEdition(): void {
+    this.derniereActiviteEdition = Date.now();
+  }
+
+  /** Retour sur l'onglet ou la fenêtre : on revérifie la commande (le flux temps réel a pu dormir). */
+  @HostListener('document:visibilitychange')
+  @HostListener('window:focus')
+  onRetourSurLaPage(): void {
+    if (document.visibilityState !== 'visible') return;
+    const id = this.commande()?.id_commande;
+    if (!id || this.isLoading() || Date.now() - this.derniereVerifRetour < 10000) return;
+    this.derniereVerifRetour = Date.now();
+    this.onCommandeDistante({ action: 'updated', id });
+  }
+
+  /** Fermeture ou rechargement de la page avec des changements non enregistrés : le navigateur demande confirmation. */
+  @HostListener('window:beforeunload', ['$event'])
+  avertirAvantDeQuitter(event: BeforeUnloadEvent): void {
+    if (this.isEditMode() && this.unitesModifiees().length > 0) {
+      event.preventDefault();
+    }
+  }
+
+  /** Changement de page dans l'app (garde de route). */
+  peutQuitter(): boolean {
+    if (!this.isEditMode() || !this.formGroup || !this.commande() || this.unitesModifiees().length === 0) return true;
+    return window.confirm('Des modifications ne sont pas enregistrées sur cette commande. Quitter sans enregistrer ?');
+  }
+
+  /**
+   * La commande a changé ailleurs pendant que je la modifie : on recharge la version du serveur et on fusionne.
+   * Ce que je n'ai pas touché prend la version reçue ; ce que j'ai touché est gardé ;
+   * ce qui a changé des deux côtés devient un conflit à trancher.
+   */
+  private fusionnerDistante(apres?: () => void): void {
+    const id = this.commande()?.id_commande;
+    if (!id || this.fusionEnCours) return;
+    this.fusionEnCours = true;
+    this.apiService.get(`${ApiURI.GET_COMMANDE_BY_ID}/${id}`).subscribe({
+      next: (response) => {
+        this.fusionEnCours = false;
+        if (!response.result || !response.data) return;
+        if (!this.isEditMode() || this.commande()?.id_commande !== id) {
+          this.loadCommande(id, true);
+          return;
+        }
+        this.appliquerFusion(response.data as Commande);
+        apres?.();
+      },
+      error: () => {
+        this.fusionEnCours = false;
+      },
+    });
+  }
+
+  private appliquerFusion(distante: Commande): void {
+    const mienne = this.formGroup;
+    const brutMien = mienne.getRawValue();
+    const mien = instantaneUnites(brutMien);
+    const base = this.baseEdition ?? mien;
+
+    // Formulaire temporaire construit sur la version reçue, pour comparer à l'identique.
+    this.commande.set(distante);
+    this.ongletsCommandes.renseigner(distante);
+    this.initFormBase();
+    const recue = this.formGroup;
+    const brutRecu = recue.getRawValue();
+    const recu = instantaneUnites(brutRecu);
+    this.formGroup = mienne;
+
+    const deduites = this.isVente() ? [] : UNITES_DEDUITES_DES_LIGNES;
+    const integrees: string[] = [];
+    const conflits: ConflitEdition[] = [];
+    for (const unite of UNITES_EDITION) {
+      if (deduites.includes(unite.cle)) continue;
+      const dejaEnConflit = this.conflitsEdition().find((c) => c.cle === unite.cle);
+      if (mien[unite.cle] === recu[unite.cle]) continue; // même valeur des deux côtés
+      if (recu[unite.cle] === base[unite.cle]) {
+        // Rien de neuf côté serveur ; un conflit encore ouvert le reste.
+        if (dejaEnConflit) conflits.push({ ...dejaEnConflit, recue: texteUnite(unite, brutRecu) });
+        continue;
+      }
+      if (mien[unite.cle] === base[unite.cle] && !dejaEnConflit) {
+        this.prendreVersionRecue(unite, recue);
+        integrees.push(unite.label);
+      } else {
+        conflits.push({
+          cle: unite.cle,
+          label: unite.label,
+          mienne: texteUnite(unite, brutMien),
+          recue: texteUnite(unite, brutRecu),
+        });
+      }
+    }
+    CONTROLES_EN_DIRECT.forEach((nom) => {
+      mienne.get(nom)?.setValue(recue.get(nom)?.value, { emitEvent: false });
+    });
+
+    this.baseEdition = recu;
+    this.formulaireRecu = recue;
+    this.conflitsEdition.set(conflits);
+    this.recalculerApresFusion();
+
+    if (integrees.length > 0) {
+      this.majIntegrees.set(integrees);
+      if (this.majIntegreesTimer) clearTimeout(this.majIntegreesTimer);
+      this.majIntegreesTimer = setTimeout(() => this.majIntegrees.set([]), 15000);
+    }
+    this.derniereActiviteEdition = Date.now();
+  }
+
+  /** Copie dans mon formulaire la version reçue d'une rubrique. */
+  private prendreVersionRecue(unite: UniteEdition, recue: FormGroup): void {
+    unite.controles.forEach((nom) => {
+      const source = recue.get(nom);
+      if (!source) return;
+      if (unite.liste) {
+        this.formGroup.setControl(nom, source, { emitEvent: false });
+      } else {
+        this.formGroup.get(nom)?.setValue(source.value, { emitEvent: false });
+      }
+    });
+  }
+
+  private recalculerApresFusion(): void {
+    this.rattacherFraisSansLigne();
+    if (this.isVente()) {
+      if (this.formGroup.get('prix_final')?.value) this.recalculatePrixUnitaireFromFinal();
+    } else {
+      this.syncTotauxLignesPrix();
+    }
+    this.recalculateSupportsAndBenefice();
+    this.updateVenteFraisComputedFields();
+    this.refreshQuantiteProduitCompteursStructureControls();
+    this.scheduleGrowAllTextareas();
+    this.bindAdresseTrajetWatcher();
+  }
+
+  /** Conflit : je garde ce que j'ai tapé (ce sera enregistré par-dessus la version reçue). */
+  garderMaVersion(conflit: ConflitEdition): void {
+    this.conflitsEdition.update((liste) => liste.filter((c) => c.cle !== conflit.cle));
+  }
+
+  /** Conflit : je prends la version reçue à la place de la mienne. */
+  prendreLaVersionRecue(conflit: ConflitEdition): void {
+    const unite = UNITES_EDITION.find((u) => u.cle === conflit.cle);
+    if (unite && this.formulaireRecu) {
+      this.prendreVersionRecue(unite, this.formulaireRecu);
+      this.recalculerApresFusion();
+    }
+    this.conflitsEdition.update((liste) => liste.filter((c) => c.cle !== conflit.cle));
+  }
+
+  fermerMajIntegrees(): void {
+    this.majIntegrees.set([]);
   }
 
   onCancel(): void {

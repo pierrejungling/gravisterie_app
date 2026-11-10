@@ -30,6 +30,8 @@ export class CommandeOngletsService {
   private readonly realtime = inject(RealtimeService);
 
   readonly onglets = signal<OngletCommande[]>(this.lire());
+  /** Commandes en cours de modification avec des changements non enregistrés. */
+  readonly nonEnregistres = signal<ReadonlySet<string>>(new Set());
   /** URL courante (sans paramètres). */
   readonly url = signal<string>('');
 
@@ -79,6 +81,15 @@ export class CommandeOngletsService {
       return this.limiter(suite);
     });
     this.ecrire();
+  }
+
+  /** Le détail d'une commande signale des changements non enregistrés (pastille sur l'onglet). */
+  marquerNonEnregistre(id: string, nonEnregistre: boolean): void {
+    if (this.nonEnregistres().has(id) === nonEnregistre) return;
+    const suite = new Set(this.nonEnregistres());
+    if (nonEnregistre) suite.add(id);
+    else suite.delete(id);
+    this.nonEnregistres.set(suite);
   }
 
   fermer(id: string): void {

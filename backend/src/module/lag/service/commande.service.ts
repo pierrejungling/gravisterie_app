@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Commande, Client, Gravure, Personnalisation, Support, CommandeSupport, CommandeLignePrix } from '../model/entity';
@@ -8,6 +8,7 @@ import { ulid } from 'ulid';
 import { CommandeFichierService } from './commande-fichier.service';
 import { formatTelephoneBE } from '../util/format-telephone.util';
 import { scoreFlexibleSearch } from '../util/search.util';
+import { empreinteCommande } from '../util/empreinte.util';
 
 @Injectable()
 export class CommandeService {
@@ -499,7 +500,7 @@ export class CommandeService {
         })) : [];
 
         // Retourner un objet avec les propriétés explicitement listées pour éviter les conflits de type
-        return {
+        const dto = {
             id_commande: commande.id_commande,
             date_commande: commande.date_commande,
             deadline: commande.deadline,
@@ -543,6 +544,8 @@ export class CommandeService {
                 dimensions: support ? support.dimensions : null
             } : null
         } as any;
+        // Empreinte du contenu : l'app la renvoie à l'enregistrement pour détecter une version périmée
+        return { ...dto, revision: empreinteCommande(dto) };
     }
 
     async dupliquerCommande(idCommande: string): Promise<any> {
@@ -647,6 +650,19 @@ export class CommandeService {
     }
 
     async updateCommande(idCommande: string, payload: any): Promise<any> {
+        // Filet de sécurité : si l'app précise la version sur laquelle elle s'est basée et que la
+        // commande a changé depuis, on refuse au lieu d'écraser (l'app fusionne puis réessaie).
+        if (payload?.revision_base) {
+            const actuelle = await this.getCommandeById(idCommande);
+            if (actuelle.revision !== payload.revision_base) {
+                throw new ConflictException({
+                    code: 'COMMANDE_VERSION_PERIMEE',
+                    data: { revision: actuelle.revision },
+                    result: false,
+                });
+            }
+        }
+
         const commande = await this.commandeRepository.findOne({
             where: { id_commande: idCommande },
             relations: ['client', 'supports']

@@ -1,0 +1,20 @@
+export declare enum ApiCodeResponse {
+    TEST = "api.result.test",
+    NO_TOKEN_FOUNDED = "api.security.no_token_founded",
+    USER_NOT_FOUND = "api.security.user_not_found",
+    TOKEN_EXPIRED = "api.security.token_expired",
+    TOKEN_GEN_ERROR = "api.security.token_gen_error",
+    PAYLOAD_IS_NOT_VALID = "api.validation.payload_is_not_valid",
+    PAYLOAD_PARAM_IS_MISSING = "api.validation.payload_param_is_missing",
+    USERNAME_IS_NOT_EMPTY = "api.error.username_is_missing",
+    PASSWORD_IS_NOT_EMPTY = "api.error.password_is_missing",
+    MAIL_IS_NOT_EMPTY = "api.error.mail_is_missing",
+    MAIL_IS_EMAIL = "api.error.mail_is_not_email",
+    USERNAME_IS_LENGTH = "api.error.username_length",
+    PASSWORD_IS_LENGTH = "api.error.password_length",
+    COMMON_SUCCESS = "api.common.success",
+    ACCOUNT_SIGNIN_SUCCESS = "api.signin_success",
+    ACCOUNT_ADMIN_SIGNIN_SUCCESS = "api.admin_signin_success",
+    ACCOUNT_REFRESH_SUCCESS = "api.refresh_success",
+    ACCOUNT_ME_SUCCESS = "api.me_success"
+}

@@ -5,3 +5,5 @@ export * from './webhook.controller';
 export * from './client.controller';
 export * from './apercu_lien.controller';
 export * from './evenement.controller';
+
+export * from './reseaux.controller';

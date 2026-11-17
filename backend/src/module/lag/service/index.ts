@@ -6,3 +6,5 @@ export * from './frais_commission.service';
 export * from './client.service';
 export * from './apercu_lien.service';
 export * from './evenement.service';
+
+export * from './reseaux.service';

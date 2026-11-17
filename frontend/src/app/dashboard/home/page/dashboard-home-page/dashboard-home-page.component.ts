@@ -56,6 +56,7 @@ export class DashboardHomePageComponent implements OnInit {
   readonly nbClients = signal<number | null>(null);
   readonly nbBonsActifs = signal<number | null>(null);
   readonly charge = signal(false);
+  readonly abonnes = signal<{ facebook: number | null; instagram: number | null } | null>(null);
 
   readonly maintenant = new Date();
   readonly dateLabel = this.maintenant.toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -193,6 +194,7 @@ export class DashboardHomePageComponent implements OnInit {
     this.chargerEvenements();
     this.chargerClients();
     this.chargerBons();
+    this.chargerAbonnes();
 
     this.realtime.on('commande').pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.chargerCommandes());
     this.realtime.on('evenement').pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.chargerEvenements());
@@ -223,6 +225,16 @@ export class DashboardHomePageComponent implements OnInit {
     this.api.get(ApiURI.LISTE_CLIENTS).subscribe({
       next: (r: ApiResponse) => {
         if (r.result && Array.isArray(r.data)) this.nbClients.set(r.data.length);
+      },
+      error: () => undefined,
+    });
+  }
+
+  private chargerAbonnes(): void {
+    this.api.get(ApiURI.ABONNES_RESEAUX).subscribe({
+      next: (r: ApiResponse) => {
+        const c = r.result ? r.data?.comptes?.[0] : null;
+        if (c) this.abonnes.set({ facebook: c.facebook ?? null, instagram: c.instagram?.abonnes ?? null });
       },
       error: () => undefined,
     });

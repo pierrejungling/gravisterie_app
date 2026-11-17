@@ -6,6 +6,13 @@
     <div>
       <div class="gv-eyebrow">{{ dateLabel }} · semaine {{ semaine }}</div>
       <h1>{{ salutation }}@if (prenom()) {, <span class="home-head__nom">{{ prenom() }}</span>}</h1>
+      @if (abonnes(); as a) {
+        <div class="gv-eyebrow" title="Abonnés de La Gravisterie">
+          @if (a.facebook !== null) {Facebook {{ a.facebook.toLocaleString('fr-BE') }}}
+          @if (a.facebook !== null && a.instagram !== null) { · }
+          @if (a.instagram !== null) {Instagram {{ a.instagram.toLocaleString('fr-BE') }}}
+        </div>
+      }
     </div>
     <div class="home-head__actions">
       <button type="button" class="gv-btn gv-btn--primary" (click)="nouvelleCommande()">

@@ -1,0 +1,34 @@
+import { StatutCommande } from "./enum";
+import { Client } from "./client.entity";
+import { CommandeSupport } from "./commande_support.entity";
+import { CommandeLignePrix } from "./commande_ligne_prix.entity";
+export declare class Commande {
+    id_commande: string;
+    date_commande: Date;
+    deadline: Date | null;
+    produit: string | null;
+    description: string | null;
+    fichiers_joints: string | null;
+    CGV_acceptée: boolean;
+    newsletter_acceptée: boolean;
+    statut_commande: StatutCommande;
+    statuts_actifs: StatutCommande[] | null;
+    prix_final: number | null;
+    prix_unitaire_final: number | null;
+    frais_pourcentage: number | null;
+    frais_commission_id: string | null;
+    frais_commission_libelle: string | null;
+    quantité: number | null;
+    quantite_realisee: number | null;
+    quantite_produit_compteurs: string | null;
+    supports: CommandeSupport[];
+    lignes_prix: CommandeLignePrix[];
+    payé: boolean;
+    commentaire_paye: string | null;
+    attente_reponse: boolean;
+    mode_contact: string | null;
+    source_web: boolean;
+    site_traitee: boolean;
+    id_evenement: string | null;
+    client: Client;
+}

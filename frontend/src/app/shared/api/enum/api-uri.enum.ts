@@ -19,6 +19,7 @@ export enum ApiURI {
   RECHERCHE_CLIENTS = 'client/recherche',
   CORRESPONDANCES_CLIENTS = 'client/correspondances',
   LISTE_EVENEMENTS = 'evenement/liste',
+  ABONNES_RESEAUX = 'reseaux/abonnes',
   EVENEMENT = 'evenement',
   APERCU_LIEN = 'apercu-lien',
   APERCU_LIEN_IMAGE = 'apercu-lien/image',

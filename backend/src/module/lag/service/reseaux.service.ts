@@ -23,7 +23,7 @@ const GRAPH = 'https://graph.facebook.com/v21.0';
 @Injectable()
 export class ReseauxService {
     private readonly logger = new Logger(ReseauxService.name);
-    private cache: { data: AbonnesResultat; expire: number } | null = null;
+    private cache: { data: AbonnesResultat; at: number } | null = null;
 
     private lireConfig(): MetaPageConfig[] {
         const brut = process.env.META_PAGES;
@@ -37,12 +37,12 @@ export class ReseauxService {
         }
     }
 
-    async getAbonnes(): Promise<AbonnesResultat> {
-        if (this.cache && this.cache.expire > Date.now()) return this.cache.data;
+    async getAbonnes(ttlMs: number = TTL_MS): Promise<AbonnesResultat> {
+        if (this.cache && Date.now() - this.cache.at < ttlMs) return this.cache.data;
         const pages = this.lireConfig();
         const comptes = await Promise.all(pages.map((p) => this.lirePage(p)));
         const data: AbonnesResultat = { comptes, mis_a_jour: new Date().toISOString() };
-        this.cache = { data, expire: Date.now() + TTL_MS };
+        this.cache = { data, at: Date.now() };
         return data;
     }
 

@@ -171,18 +171,58 @@ export function demarrerFondTopo(): void {
   let temps = 3.7;
   let boucle = 0;
 
+  // Sécurité anti-rame : si le dessin coûte trop cher ou si le rythme tombe sous ~16 i/s
+  // (médiane, trous > 0,4 s ignorés), on fige l'image puis on reprend seul, avec un délai qui double.
+  let figee = false;
+  let delaiReprise = 30000;
+  let debutMesure = 0;
+  let derniereImage = 0;
+  let mesures: Array<[number, number]> = [];
+
+  const mediane = (v: number[]) => v.slice().sort((a, b) => a - b)[v.length >> 1];
+
+  const figer = () => {
+    figee = true;
+    mesures = [];
+    cancelAnimationFrame(boucle);
+    dessiner(temps);
+    setTimeout(() => {
+      figee = false;
+      derniereImage = 0;
+      mesures = [];
+      delaiReprise = Math.min(delaiReprise * 2, 3600000);
+      relancer();
+    }, delaiReprise);
+  };
+
   const image = (maintenant: number) => {
     boucle = requestAnimationFrame(image);
     const ecart = maintenant - derniere;
     if (ecart < IMAGE_MS) return;
     derniere = maintenant;
     temps += Math.min(ecart, 100) * VITESSE;
+    const intervalle = derniereImage ? maintenant - derniereImage : 0;
+    derniereImage = maintenant;
+    const debut = performance.now();
     dessiner(temps);
+    const cout = performance.now() - debut;
+    if (intervalle && intervalle <= 400) {
+      if (!mesures.length) debutMesure = maintenant;
+      mesures.push([cout, intervalle]);
+    }
+    if (mesures.length >= 45 || (mesures.length >= 5 && maintenant - debutMesure > 2500)) {
+      const c = mediane(mesures.map((m) => m[0]));
+      const e = mediane(mesures.map((m) => m[1]));
+      mesures = [];
+      if (c > 30 || e > Math.max(62.5, 2 * IMAGE_MS)) figer();
+    }
   };
 
   const relancer = () => {
     cancelAnimationFrame(boucle);
-    if (document.hidden) return;
+    mesures = [];
+    derniereImage = 0;
+    if (document.hidden || figee) return;
     if (reduit.matches) {
       dessiner(temps);
     } else {

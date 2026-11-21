@@ -11,7 +11,7 @@
 
 const CELLULE = 14; // taille d'une case du relief, en px écran
 const ECHELLE = 0.0021; // zoom du relief (plus petit = formes plus larges)
-const VITESSE = 0.000035; // vitesse de déformation
+const VITESSE = 0.0000175; // vitesse de déformation (2 fois plus lent, aligné sur le fond d'écran à cycle de 80 s)
 const NIVEAUX = 26; // nombre de courbes de niveau
 const IMAGE_MS = 33;
 

@@ -20,6 +20,7 @@
       </button>
       <a class="gv-btn" routerLink="/dashboard/evenements">Événement</a>
       <a class="gv-btn" routerLink="/dashboard/bons">Bon cadeau</a>
+      <a class="gv-btn" routerLink="/dashboard/site">Site web</a>
     </div>
   </header>
 
@@ -173,6 +174,63 @@
     </div>
   </section>
 
+  <!-- Site web : activité et catalogue -->
+  <section class="gv-panel panel site-panel">
+    <div class="panel__head">
+      <h2><span class="num">05</span>Site web</h2>
+      <a routerLink="/dashboard/site">Gérer le catalogue →</a>
+    </div>
+    <div class="site-grid">
+      <div class="site-stats">
+        <div class="site-stat">
+          <span class="site-stat__label">Commandes du site</span>
+          <span class="site-stat__val">{{ metriquesSite().ceMois }}</span>
+          <span class="site-stat__sous">ce mois · {{ metriquesSite().moisDernier }} le mois dernier · {{ metriquesSite().douzeMois }} sur 12 mois</span>
+        </div>
+        <div class="site-stat">
+          <span class="site-stat__label">CA du site {{ maintenant.getFullYear() }}</span>
+          <span class="site-stat__val">{{ euros(metriquesSite().caSite) }}</span>
+          <span class="site-stat__sous">{{ metriquesSite().partCa }} % du CA · panier moyen {{ euros(metriquesSite().panierMoyen) }}</span>
+        </div>
+        <button type="button" class="site-stat site-stat--btn" [class.site-stat--warn]="nbSiteNew() > 0" (click)="allerEnCours()">
+          <span class="site-stat__label">À traiter</span>
+          <span class="site-stat__val">{{ nbSiteNew() }}</span>
+          <span class="site-stat__sous">demandes du site non traitées</span>
+        </button>
+        <a class="site-stat site-stat--btn" routerLink="/dashboard/site">
+          <span class="site-stat__label">Catalogue</span>
+          <span class="site-stat__val">@if (siteResume(); as s) { {{ s.produits + s.projets }} } @else { - }</span>
+          <span class="site-stat__sous">@if (siteResume(); as s) { {{ s.produits }} produits · {{ s.projets }} projets@if (s.masques) { · {{ s.masques }} masqués}@if (s.sansPhoto) { · {{ s.sansPhoto }} sans photo} }</span>
+        </a>
+      </div>
+
+      <div class="site-bars">
+        <div class="site-bars__titre">Commandes du site, 6 derniers mois</div>
+        <div class="site-bars__zone">
+          @for (m of metriquesSite().barres; track m.label) {
+            <div class="site-bar" [title]="m.nb + ' commande(s)'">
+              <span class="site-bar__nb">{{ m.nb }}</span>
+              <span class="site-bar__fut"><i [style.height.%]="m.hauteur"></i></span>
+              <span class="site-bar__mois">{{ m.label }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="site-recentes">
+        <div class="site-bars__titre">Dernières demandes du site</div>
+        @for (c of metriquesSite().recentes; track c.id_commande) {
+          <a [routerLink]="['/dashboard', 'commandes', 'detail', c.id_commande]">
+            <span class="site-recentes__titre">{{ c.produit || 'Demande du site' }}</span>
+            <span class="site-recentes__date">{{ c.date_commande | date: 'dd/MM' }}</span>
+          </a>
+        } @empty {
+          <p class="vide">Aucune demande du site pour l'instant.</p>
+        }
+      </div>
+    </div>
+  </section>
+
   <!-- Accès aux modules -->
   <nav class="mods" aria-label="Modules">
     <button type="button" class="mod" (click)="nouvelleCommande()">
@@ -198,6 +256,11 @@
     <a class="mod" routerLink="/dashboard/bons">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="2" /><path d="M12 8v13M3 12h18M12 8c-2-4-6-4-6-1.5S10 8 12 8zm0 0c2-4 6-4 6-1.5S14 8 12 8z" /></svg>
       <b>Bons cadeaux</b><span>{{ nbBonsActifs() ?? '-' }} actifs</span>
+    </a>
+    <a class="mod" routerLink="/dashboard/site">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.5 2.6 2.5 14.4 0 17M12 3.5c-2.5 2.6-2.5 14.4 0 17" /></svg>
+      <b>Site web</b>
+      <span>@if (siteResume(); as s) { {{ s.produits }} produits · {{ s.projets }} projets@if (s.sansPhoto) { · {{ s.sansPhoto }} sans photo} } @else { - }</span>
     </a>
   </nav>
 

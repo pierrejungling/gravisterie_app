@@ -8,3 +8,5 @@ export * from './apercu_lien.service';
 export * from './evenement.service';
 
 export * from './reseaux.service';
+export * from './site_r2.service';
+export * from './site.service';

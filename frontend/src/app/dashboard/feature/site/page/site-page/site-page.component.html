@@ -1,0 +1,103 @@
+<app-header></app-header>
+
+<div class="gv-page sp">
+  <header class="gv-page-head">
+    <div>
+      <div class="gv-eyebrow">gravisterie.be · {{ nbProduits() }} produits · {{ nbProjets() }} projets@if (nbModeles()) { · {{ nbModeles() }} modèles de collections }</div>
+      <h1>Site web</h1>
+    </div>
+    <div class="gv-page-head__actions">
+      <div class="gv-tabs" role="tablist">
+        <button type="button" [class.is-active]="vue() === 'produit'" (click)="changerVue('produit')">Produits</button>
+        <button type="button" [class.is-active]="vue() === 'projet'" (click)="changerVue('projet')">Projets</button>
+      </div>
+      <button type="button" class="gv-btn" (click)="publier()" title="Régénérer les données du site (automatique après chaque modification)">Republier</button>
+      <button type="button" class="gv-btn gv-btn--primary" (click)="ouvrirCreation()">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>{{ vue() === 'produit' ? 'Nouveau produit' : 'Nouveau projet' }}
+      </button>
+    </div>
+  </header>
+
+  @if (publication()) { <div class="sp-info">{{ publication() }}</div> }
+  @if (erreur()) { <div class="gv-error">{{ erreur() }}</div> }
+
+  <div class="sp-filtres">
+    <input class="gv-input" type="search" placeholder="Rechercher un nom…" [ngModel]="recherche()" (ngModelChange)="recherche.set($event)" />
+    <div class="sp-cats">
+      <button type="button" class="gv-chip" [class.is-active]="categorie() === 'toutes'" (click)="categorie.set('toutes')">Toutes {{ compte('toutes') }}</button>
+      @for (c of categoriesVue(); track c) {
+        <button type="button" class="gv-chip" [class.is-active]="categorie() === c" (click)="categorie.set(c)">{{ libelle(c) }} {{ compte(c) }}</button>
+      }
+    </div>
+  </div>
+
+  @if (selection().size) {
+    <div class="sp-lot gv-panel">
+      <strong>{{ selection().size }} sélectionné(s)</strong>
+      <input class="gv-input" list="sp-cat-list" placeholder="Catégorie" [ngModel]="lotCategorie()" (ngModelChange)="lotCategorie.set($event)" />
+      <datalist id="sp-cat-list">@for (c of categoriesVue(); track c) { <option [value]="c">{{ libelle(c) }}</option> }</datalist>
+      <button type="button" class="gv-btn gv-btn--sm" (click)="deplacerLot()">Déplacer vers</button>
+      <button type="button" class="gv-btn gv-btn--sm" (click)="ajouterCategorieAuLot()">Ajouter à</button>
+      <button type="button" class="gv-btn gv-btn--sm" (click)="masquerLot(false)">Masquer</button>
+      <button type="button" class="gv-btn gv-btn--sm" (click)="masquerLot(true)">Afficher</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="gv-empty">Chargement…</div>
+  } @else if (visibles().length === 0) {
+    <div class="gv-empty">Aucune fiche ici.</div>
+  } @else {
+    <div class="sp-tete">
+      <label><input type="checkbox" [checked]="selection().size === visibles().length" (change)="toutSelectionner()" /> Tout sélectionner</label>
+      @if (nbModeles() && vue() === 'produit') {
+        <label><input type="checkbox" [checked]="afficherModeles()" (change)="afficherModeles.set(!afficherModeles())" /> Afficher les modèles des collections</label>
+      }
+      <span class="sp-aide">
+        Sur le site : 12 fiches par page@if (pagesSite().gravitag) { (9 en page 1, le bloc Gravitag prend 3 places)} · {{ pagesSite().nb }} page{{ pagesSite().nb > 1 ? 's' : '' }} avec ce filtre · glisse une carte sur une autre pour changer l'ordre
+      </span>
+    </div>
+    <div class="sp-grille">
+      @for (a of affichage(); track a.i.id) {
+        @let i = a.i;
+        @if (a.debut) {
+          <div class="sp-page-sep" [attr.id]="'page-' + a.page">
+            <span>Page {{ a.page }} sur le site</span>
+            @if (a.page === 1 && pagesSite().gravitag) { <small>le bloc Gravitag s'affiche en tête, puis 9 produits</small> }
+          </div>
+        }
+        <article
+          class="sp-carte gv-panel"
+          [class.is-masque]="!i.visible"
+          [class.is-sel]="selection().has(i.id)"
+          [class.sp-carte--modele]="!!i.parent_id"
+          [class.is-glisse]="glisse() === i.id"
+          [class.is-cible]="cible() === i.id"
+          draggable="true"
+          (dragstart)="debutGlisser(i, $event)"
+          (dragover)="survolGlisser(i, $event)"
+          (drop)="deposer(i, $event)"
+          (dragend)="finGlisser()">
+          @if (a.page) { <span class="sp-pagepill" [title]="a.note ? 'Page ' + a.page + ' (' + a.note + ')' : 'Affichée en page ' + a.page + ' sur le site'">P{{ a.page }}@if (a.note) { · fin }</span> }
+          <input class="sp-check" type="checkbox" [checked]="selection().has(i.id)" (change)="basculer(i)" aria-label="Sélectionner" />
+          <button type="button" class="sp-corps" (click)="ouvrir(i)">
+            <span class="sp-vignette">
+              @if (vignette(i)) { <img [src]="vignette(i)" [alt]="i.nom" loading="lazy" /> } @else { <span class="sp-vide">Pas de photo</span> }
+            </span>
+            <span class="sp-nom">{{ i.nom }}</span>
+            <span class="sp-meta">
+              @if (i.donnees['price']) { {{ i.donnees['price'] }} · }
+              {{ i.images.length }} photo{{ i.images.length > 1 ? 's' : '' }}
+              @if (i.nbEnfants) { · collection de {{ i.nbEnfants }} modèles }
+              @if (!i.visible) { · masqué }
+            </span>
+            <span class="sp-tags">
+              @if (i.parent_id) { <span class="sp-tag sp-tag--modele">Modèle · {{ collectionDe(i) }}</span> }
+              @else { @for (c of i.categories; track c) { <span class="sp-tag">{{ libelle(c) }}</span> } }
+            </span>
+          </button>
+        </article>
+      }
+    </div>
+  }
+</div>

@@ -11,3 +11,4 @@ export * from './frais_commission.entity';
 export * from './enum';
 export * from './apercu_lien.entity';
 export * from './evenement.entity';
+export * from './site_item.entity';

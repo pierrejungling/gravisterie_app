@@ -4,7 +4,7 @@ import { Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HeaderComponent, CodeDecoComponent, EasterComponent } from '@shared';
 import { ApiService, ApiURI, ApiResponse, RealtimeService } from '@api';
-import { Commande, StatutCommande, livraisonFaite, isCommandeSiteNonTraitee } from '../../../feature/commande/model/commande.interface';
+import { Commande, StatutCommande, livraisonFaite, isCommandeSite, isCommandeSiteNonTraitee } from '../../../feature/commande/model/commande.interface';
 import { Bon } from '../../../feature/bon/model/bon.interface';
 import { BonService } from '../../../feature/bon/service/bon.service';
 import { Evenement, aVenir, joursAvant as joursAvantDate, typeEvenement } from '../../../feature/evenement/model/evenement.interface';
@@ -55,6 +55,7 @@ export class DashboardHomePageComponent implements OnInit {
   readonly evenements = signal<Evenement[]>([]);
   readonly nbClients = signal<number | null>(null);
   readonly nbBonsActifs = signal<number | null>(null);
+  readonly siteResume = signal<{ produits: number; projets: number; masques: number; sansPhoto: number } | null>(null);
   readonly charge = signal(false);
   readonly abonnes = signal<{ facebook: number | null; instagram: number | null } | null>(null);
 
@@ -79,6 +80,38 @@ export class DashboardHomePageComponent implements OnInit {
   readonly nbSiteNew = computed(
     () => this.commandes().filter((c) => c.statut_commande === StatutCommande.EN_ATTENTE_INFORMATION && isCommandeSiteNonTraitee(c)).length,
   );
+
+  /** Commandes venues du site vitrine (hors annulées). */
+  private readonly commandesSite = computed(() => this.actives().filter((c) => isCommandeSite(c) && !!c.date_commande));
+
+  /** Métriques du site : activité des 12 derniers mois, de l'année, et les 6 derniers mois en barres. */
+  readonly metriquesSite = computed(() => {
+    const liste = this.commandesSite();
+    const now = this.maintenant;
+    const cleMois = (d: Date) => d.getFullYear() * 12 + d.getMonth();
+    const courant = cleMois(now);
+    const nbMois = (decalage: number) => liste.filter((c) => cleMois(new Date(c.date_commande)) === courant - decalage).length;
+    const annee = liste.filter((c) => new Date(c.date_commande).getFullYear() === now.getFullYear());
+    const caSite = annee.reduce((s, c) => s + montant(c.prix_final), 0);
+    const avecPrix = annee.filter((c) => montant(c.prix_final) > 0);
+    const moisBarres = Array.from({ length: 6 }, (_, i) => {
+      const dec = 5 - i;
+      const d = new Date(now.getFullYear(), now.getMonth() - dec, 1);
+      return { label: d.toLocaleDateString('fr-BE', { month: 'short' }).replace('.', ''), nb: nbMois(dec) };
+    });
+    const max = Math.max(1, ...moisBarres.map((m) => m.nb));
+    const caTotal = this.caAnnee();
+    return {
+      douzeMois: liste.filter((c) => cleMois(new Date(c.date_commande)) > courant - 12).length,
+      ceMois: nbMois(0),
+      moisDernier: nbMois(1),
+      caSite,
+      partCa: caTotal > 0 ? Math.round((caSite / caTotal) * 100) : 0,
+      panierMoyen: avecPrix.length ? caSite / avecPrix.length : 0,
+      barres: moisBarres.map((m) => ({ ...m, hauteur: Math.round((m.nb / max) * 100) })),
+      recentes: [...liste].sort((a, b) => t(b.date_commande) - t(a.date_commande)).slice(0, 4),
+    };
+  });
 
   readonly aujourdhui = computed(() => {
     const enCours = this.enCours();
@@ -195,6 +228,7 @@ export class DashboardHomePageComponent implements OnInit {
     this.chargerClients();
     this.chargerBons();
     this.chargerAbonnes();
+    this.chargerSite();
 
     this.realtime.on('commande').pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.chargerCommandes());
     this.realtime.on('evenement').pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.chargerEvenements());
@@ -216,6 +250,15 @@ export class DashboardHomePageComponent implements OnInit {
     this.api.get(ApiURI.LISTE_EVENEMENTS).subscribe({
       next: (r: ApiResponse) => {
         if (r.result && Array.isArray(r.data)) this.evenements.set(r.data as Evenement[]);
+      },
+      error: () => undefined,
+    });
+  }
+
+  private chargerSite(): void {
+    this.api.get('site/resume').subscribe({
+      next: (r: ApiResponse) => {
+        if (r.result && r.data) this.siteResume.set(r.data as { produits: number; projets: number; masques: number; sansPhoto: number });
       },
       error: () => undefined,
     });

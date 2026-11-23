@@ -1,0 +1,294 @@
+<app-header></app-header>
+
+<div class="sd-wrapper">
+  @if (loading()) {
+    <div class="gv-empty">Chargement…</div>
+  } @else if (erreur() && !item() && !nouveau()) {
+    <div class="gv-error">{{ erreur() }}</div>
+    <a class="gv-btn" routerLink="/dashboard/site">← Site web</a>
+  } @else {
+    <div class="sd-container">
+      <!-- En-tête : titre, résumé et actions (reste visible en haut) -->
+      <header class="sd-head">
+        <div class="sd-head__row">
+          <div class="sd-head__titre">
+            <div class="sd-head__eyebrow">
+              <a routerLink="/dashboard/site">Site web</a><span class="sep">·</span>
+              @if (item()?.parent; as p) {
+                <a [routerLink]="['/dashboard', 'site', p.id]">{{ p.nom }}</a><span class="sep">·</span><span>Modèle</span>
+              } @else {
+                <span>{{ estCollection() ? 'Collection' : fiche().type === 'produit' ? 'Produit' : 'Projet' }}</span>
+              }
+              @if (item(); as i) { <span class="sep">·</span><span class="sd-slug">{{ i.slug }}</span> }
+            </div>
+            @if (!isEditMode() || nouveau()) {
+              <h1>{{ fiche().nom || (nouveau() ? 'Nouvelle fiche' : '') }}</h1>
+            } @else {
+              <input class="gv-input sd-h1-input" aria-label="Nom" [ngModel]="fiche().nom" (ngModelChange)="maj('nom', $event)" />
+            }
+          </div>
+          <div class="sd-head__actions">
+            @if (!isEditMode()) {
+              <a class="gv-btn gv-btn--ghost gv-btn--sm" [href]="lienSite()" target="_blank" rel="noopener">Voir sur le site ↗</a>
+              <button type="button" class="gv-btn gv-btn--danger gv-btn--sm" (click)="supprimer()">Supprimer</button>
+              <button type="button" class="gv-btn gv-btn--primary gv-btn--sm" (click)="modifier()">Modifier</button>
+            } @else {
+              @if (!nouveau()) { <button type="button" class="gv-btn gv-btn--ghost gv-btn--sm" (click)="annuler()">Annuler</button> }
+              <button type="button" class="gv-btn gv-btn--primary gv-btn--sm" [disabled]="enCours() || conflits().length > 0" [title]="conflits().length > 0 ? 'Choisis d\'abord une version pour chaque champ en conflit' : ''" (click)="enregistrer()">
+                {{ enCours() ? 'Enregistrement…' : nouveau() ? 'Créer' : 'Enregistrer' }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Résumé : l'essentiel d'un coup d'oeil -->
+        <div class="sd-head__chips">
+          @if (isEditMode() && nonEnregistre()) { <span class="gv-chip gv-chip--warn sd-nonenr"><span class="sd-nonenr__dot" aria-hidden="true"></span>Non enregistré</span> }
+          @if (message()) { <span class="gv-chip gv-chip--ok">{{ message() }}</span> }
+          @if (!fiche().visible) { <span class="gv-chip gv-chip--warn">Masqué sur le site</span> }
+          @if (!item()?.parent) { @for (c of fiche().categories; track c) { <span class="gv-chip">{{ libelle(c) }}</span> } }
+          @if (item(); as i) { <span class="gv-chip">{{ i.images.length }} photo{{ i.images.length > 1 ? 's' : '' }}</span> }
+          @if (item()?.enfants?.length; as n) { <span class="gv-chip">{{ n }} modèles</span> }
+          @if (fiche().prix) { <span class="gv-chip gv-chip--accent">{{ fiche().prix }}</span> }
+        </div>
+
+        @if (erreur()) { <div class="gv-error sd-err">{{ erreur() }}</div> }
+
+        @if (majIntegrees().length > 0) {
+          <div class="sd-fusion sd-fusion--info" role="status">
+            <span><strong>Mise à jour reçue</strong> et intégrée dans le formulaire : {{ majIntegrees().join(', ') }}.</span>
+            <button type="button" class="sd-fusion__fermer" (click)="majIntegrees.set([])" aria-label="Fermer">×</button>
+          </div>
+        }
+        @if (notice(); as n) {
+          <div class="sd-fusion sd-fusion--info" role="status">
+            <span>{{ n }}</span>
+            <button type="button" class="sd-fusion__fermer" (click)="notice.set(null)" aria-label="Fermer">×</button>
+          </div>
+        }
+        @if (isEditMode() && conflits().length > 0) {
+          <div class="sd-fusion sd-fusion--conflit" role="alert">
+            <p class="sd-fusion__titre">
+              {{ conflits().length > 1 ? 'Ces champs ont' : 'Ce champ a' }} été modifié ailleurs pendant que tu le modifiais ici. Choisis la version à garder.
+            </p>
+            @for (c of conflits(); track c.cle) {
+              <div class="sd-conflit">
+                <span class="sd-conflit__label">{{ c.label }}</span>
+                <div class="sd-conflit__versions">
+                  <div class="sd-conflit__version">
+                    <span class="sd-conflit__qui">Ta version</span>
+                    <pre class="sd-conflit__valeur">{{ c.mienne }}</pre>
+                    <button type="button" class="gv-btn gv-btn--sm" (click)="garderMaVersion(c)">Garder la mienne</button>
+                  </div>
+                  <div class="sd-conflit__version">
+                    <span class="sd-conflit__qui">Version reçue</span>
+                    <pre class="sd-conflit__valeur">{{ c.recue }}</pre>
+                    <button type="button" class="gv-btn gv-btn--sm" (click)="prendreLaVersionRecue(c)">Prendre la reçue</button>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </header>
+
+      <!-- Onglets (écran étroit) -->
+      <nav class="sd-onglets" aria-label="Sections de la fiche">
+        <button type="button" [class.is-active]="onglet() === 'infos'" (click)="onglet.set('infos')">Infos</button>
+        <button type="button" [class.is-active]="onglet() === 'photos'" (click)="onglet.set('photos')">Photos</button>
+        <button type="button" [class.is-active]="onglet() === 'site'" (click)="onglet.set('site')">Site</button>
+      </nav>
+
+      <div class="sd-grid">
+        <!-- Colonne A : texte -->
+        <div class="sd-col sd-col--a">
+          <section class="sd-zone sd-panel" [class.sd-off]="onglet() !== 'infos'">
+            <h2>Informations</h2>
+            @if (isEditMode()) {
+              <div class="sd-champs">
+                @if (nouveau()) {
+                  <div class="gv-field sd-span">
+                    <label for="d-nom">Nom</label>
+                    <input id="d-nom" class="gv-input" [ngModel]="fiche().nom" (ngModelChange)="maj('nom', $event)" />
+                  </div>
+                  <div class="gv-field sd-span">
+                    <label for="d-type">Type</label>
+                    <select id="d-type" class="gv-select" [ngModel]="fiche().type" (ngModelChange)="maj('type', $event)">
+                      <option value="produit">Produit (boutique)</option>
+                      <option value="projet">Projet (réalisation)</option>
+                    </select>
+                  </div>
+                }
+                <div class="gv-field">
+                  <label for="d-prix">Prix affiché</label>
+                  <input id="d-prix" class="gv-input" placeholder="Ex. À partir de 20 €" [ngModel]="fiche().prix" (ngModelChange)="maj('prix', $event)" />
+                </div>
+                <div class="gv-field">
+                  <label for="d-mat">Matériau</label>
+                  <input id="d-mat" class="gv-input" [ngModel]="fiche().materiau" (ngModelChange)="maj('materiau', $event)" />
+                </div>
+                <div class="gv-field">
+                  <label for="d-dim">Dimensions</label>
+                  <input id="d-dim" class="gv-input" [ngModel]="fiche().dimensions" (ngModelChange)="maj('dimensions', $event)" />
+                </div>
+                @if (fiche().type === 'projet') {
+                  <div class="gv-field">
+                    <label for="d-client">Client</label>
+                    <input id="d-client" class="gv-input" [ngModel]="fiche().client" (ngModelChange)="maj('client', $event)" />
+                  </div>
+                }
+                <div class="gv-field sd-span">
+                  <label for="d-slug">
+                    Identifiant (id) dans l'adresse du site
+                    @if (item()) { : le changer casse les liens existants, à éviter } @else { : laisse vide pour le créer depuis le nom }
+                  </label>
+                  <input id="d-slug" class="gv-input" placeholder="Ex. cadre-paysage" [ngModel]="fiche().slug" (ngModelChange)="maj('slug', $event)" />
+                </div>
+              </div>
+            } @else {
+              <dl class="sd-lecture">
+                <div><dt>Prix affiché</dt><dd>{{ texte('prix') }}</dd></div>
+                <div><dt>Matériau</dt><dd>{{ texte('materiau') }}</dd></div>
+                <div><dt>Dimensions</dt><dd>{{ texte('dimensions') }}</dd></div>
+                @if (fiche().type === 'projet') { <div><dt>Client</dt><dd>{{ texte('client') }}</dd></div> }
+              </dl>
+            }
+          </section>
+
+          <section class="sd-zone sd-panel" [class.sd-off]="onglet() !== 'infos'">
+            <h2>Description</h2>
+            @if (isEditMode()) {
+              <div class="gv-field">
+                <textarea class="gv-textarea" rows="7" [ngModel]="fiche().description" (ngModelChange)="maj('description', $event)" aria-label="Description"></textarea>
+              </div>
+            } @else {
+              <p class="sd-texte">{{ texte('description') }}</p>
+            }
+          </section>
+
+          @if (estCollection() || (item()?.enfants?.length ?? 0) > 0) {
+            <section class="sd-zone sd-panel" [class.sd-off]="onglet() !== 'infos'">
+              <h2>Modèles de la collection <small>{{ item()?.enfants?.length ?? 0 }} · glisse pour réordonner</small></h2>
+              <div class="sd-modeles">
+                @for (e of item()?.enfants ?? []; track e.id) {
+                  <a
+                    class="sd-modele"
+                    [class.is-glisse]="modeleGlisse() === e.id"
+                    [class.is-cible]="modeleCible() === e.id"
+                    [routerLink]="['/dashboard', 'site', e.id]"
+                    draggable="true"
+                    (dragstart)="debutGlisserModele(e, $event)"
+                    (dragover)="survolModele(e, $event)"
+                    (drop)="deposerModele(e, $event)"
+                    (dragend)="finGlisserModele()">
+                    <span class="sd-modele__img">@if (vignette(e.imagesUrl[0])) { <img [src]="vignette(e.imagesUrl[0])" [alt]="e.nom" loading="lazy" /> }</span>
+                    <span class="sd-modele__nom">{{ e.nom }}</span>
+                    <span class="sd-modele__meta">{{ e.donnees['price'] || '' }} · {{ e.images.length }} photo{{ e.images.length > 1 ? 's' : '' }}</span>
+                  </a>
+                }
+                <button type="button" class="sd-modele sd-modele--ajout" (click)="ajouterModele()">+ Ajouter un modèle</button>
+              </div>
+            </section>
+          }
+        </div>
+
+        <!-- Colonne B : caractéristiques et photos -->
+        <div class="sd-col sd-col--b">
+          <section class="sd-zone sd-panel" [class.sd-off]="onglet() !== 'infos'">
+            <h2>Caractéristiques</h2>
+            @if (isEditMode()) {
+              <div class="gv-field">
+                <label for="d-feat">Une par ligne</label>
+                <textarea id="d-feat" class="gv-textarea" rows="6" [ngModel]="fiche().caracteristiques" (ngModelChange)="maj('caracteristiques', $event)"></textarea>
+              </div>
+              <div class="gv-field">
+                <label for="d-kw">Mots-clés de recherche (séparés par des virgules)</label>
+                <textarea id="d-kw" class="gv-textarea" rows="3" [ngModel]="fiche().motsCles" (ngModelChange)="maj('motsCles', $event)"></textarea>
+              </div>
+            } @else {
+              <p class="sd-texte">{{ texte('caracteristiques') }}</p>
+              <dl class="sd-lecture"><div><dt>Mots-clés de recherche</dt><dd>{{ texte('motsCles') }}</dd></div></dl>
+            }
+          </section>
+
+          <section class="sd-zone sd-panel" [class.sd-off]="onglet() !== 'photos'">
+            <h2>Photos @if (item(); as i) { <small>{{ i.images.length }} · la première est la principale</small> }</h2>
+            @if (item(); as i) {
+              <div class="sd-photos">
+                @for (u of i.imagesUrl; track u; let n = $index) {
+                  <div class="sd-photo" [class.is-principale]="n === 0">
+                    <img [src]="miniature(u)" alt="" loading="lazy" />
+                    @if (isEditMode()) {
+                      <div class="sd-photo__actions">
+                        <button type="button" (click)="deplacerPhoto(n, -1)" [disabled]="n === 0" aria-label="Avancer">←</button>
+                        <button type="button" (click)="photoPrincipale(n)" [disabled]="n === 0" aria-label="Photo principale">★</button>
+                        <button type="button" (click)="deplacerPhoto(n, 1)" [disabled]="n === i.images.length - 1" aria-label="Reculer">→</button>
+                        <button type="button" (click)="retirerPhoto(n)" aria-label="Retirer">×</button>
+                      </div>
+                    }
+                  </div>
+                }
+                @if (isEditMode()) {
+                  <label class="sd-ajout">
+                    + Ajouter des photos
+                    <input type="file" accept="image/*" multiple hidden (change)="ajouterPhotos($event)" />
+                  </label>
+                }
+              </div>
+              @if (isEditMode()) {
+                <p class="sd-note">Les photos sont enregistrées tout de suite, converties en WebP et recadrées en carré sur le site.</p>
+              }
+            } @else {
+              <p class="sd-note">Crée d'abord la fiche, tu pourras ensuite ajouter les photos.</p>
+            }
+          </section>
+        </div>
+
+        <!-- Colonne C : publication -->
+        <div class="sd-col sd-col--c">
+          @if (!item()?.parent) {
+            <section class="sd-zone sd-panel" [class.sd-off]="onglet() !== 'site'">
+              <h2>Catégories</h2>
+              @if (isEditMode()) {
+                <div class="sd-cats">
+                  @for (c of categoriesProposees(); track c.valeur) {
+                    <button type="button" class="gv-chip" [class.is-active]="fiche().categories.includes(c.valeur)" (click)="basculerCategorie(c.valeur)">{{ c.label }}</button>
+                  }
+                  @for (c of categoriesAutres(); track c) {
+                    <button type="button" class="gv-chip is-active" (click)="retirerCategorie(c)" title="Retirer">{{ libelle(c) }} ×</button>
+                  }
+                </div>
+                <div class="gv-field sd-autre">
+                  <input class="gv-input" placeholder="Autre catégorie…" [ngModel]="nouvelleCategorie()" (ngModelChange)="nouvelleCategorie.set($event)" (keydown.enter)="ajouterCategorie(nouvelleCategorie())" />
+                </div>
+              } @else {
+                <div class="sd-cats">
+                  @for (c of fiche().categories; track c) { <span class="gv-chip is-active">{{ libelle(c) }}</span> } @empty { <span class="sd-note">Aucune catégorie</span> }
+                </div>
+              }
+            </section>
+          }
+
+          <section class="sd-zone sd-panel" [class.sd-off]="onglet() !== 'site'">
+            <h2>Affichage</h2>
+            <label class="sd-case"><input type="checkbox" [disabled]="!isEditMode()" [ngModel]="fiche().visible" (ngModelChange)="maj('visible', $event)" /> Visible sur le site</label>
+            @if (fiche().type === 'produit' && !item()?.parent) {
+              <label class="sd-case"><input type="checkbox" [disabled]="!isEditMode()" [ngModel]="fiche().enStock" (ngModelChange)="maj('enStock', $event)" /> En stock</label>
+              <label class="sd-case"><input type="checkbox" [disabled]="!isEditMode()" [ngModel]="fiche().personnalisable" (ngModelChange)="maj('personnalisable', $event)" /> Personnalisable</label>
+            }
+            @if (item(); as i) {
+              <div class="sd-info">Modifié le {{ i.date_maj | date: 'dd/MM/yyyy HH:mm' }}</div>
+              <div class="sd-info">Adresse : <code>{{ i.slug }}</code></div>
+            }
+          </section>
+
+          <section class="sd-zone sd-panel" [class.sd-off]="onglet() !== 'site'">
+            <h2>Champs avancés</h2>
+            <p class="sd-note">Détails de prix, variantes, exemples… (JSON). À modifier avec précaution.</p>
+            <textarea class="gv-textarea sd-json" rows="8" spellcheck="false" [readOnly]="!isEditMode()" [ngModel]="fiche().avance" (ngModelChange)="maj('avance', $event)" aria-label="Champs avancés"></textarea>
+          </section>
+        </div>
+      </div>
+    </div>
+  }
+</div>

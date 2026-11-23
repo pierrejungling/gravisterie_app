@@ -7,3 +7,4 @@ export * from './apercu_lien.controller';
 export * from './evenement.controller';
 
 export * from './reseaux.controller';
+export * from './site.controller';

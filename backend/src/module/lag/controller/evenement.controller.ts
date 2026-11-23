@@ -56,6 +56,15 @@ export class EvenementController {
         return true;
     }
 
+    @Post(':id/vente-prestation')
+    @ApiOperation({ summary: 'Créer la vente qui porte la prestation de l\'événement' })
+    async creerVentePrestation(@Param('id') id: string, @Headers('x-client-id') origin?: string) {
+        const vente = await this.evenementService.creerVentePrestation(id);
+        this.realtime.publish({ resource: 'evenement', action: 'updated', id, origin });
+        this.realtime.publish({ resource: 'commande', action: 'created', id: vente.id_commande, origin });
+        return vente;
+    }
+
     @Post(':id/commandes')
     @ApiOperation({ summary: 'Rattacher une commande à un événement' })
     async lier(@Param('id') id: string, @Body() payload: LierCommandeEvenementPayload, @Headers('x-client-id') origin?: string) {

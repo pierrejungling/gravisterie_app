@@ -10,7 +10,7 @@ import { CommandeOngletsService } from '../../service/commande-onglets.service';
 import { of as ofObs } from 'rxjs';
 import { catchError as catchErrorOp, debounceTime as debounceTimeOp, distinctUntilChanged as distinctOp, map as mapOp, switchMap as switchMapOp } from 'rxjs/operators';
 import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
-import { HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, Payload } from '@shared';
+import { HeaderComponent, FloatingLabelInputComponent, SafeResourceUrlPipe, SafeUrlPipe, Payload, TrajetAtelierService, ATELIER_ADRESSE } from '@shared';
 import { ApiService, RealtimeService } from '@api';
 import { ApiURI, COMMANDE_FICHIERS_LIST, COMMANDE_FICHIERS_UPLOAD, COMMANDE_FICHIER_DOWNLOAD, COMMANDE_DUPLIQUER } from '@api';
 import { forkJoin, merge, Subscription, debounceTime } from 'rxjs';
@@ -137,8 +137,9 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   showDeleteConfirm: WritableSignal<boolean> = signal(false);
   isDuplicating: WritableSignal<boolean> = signal(false);
   /** Sur grand écran large (mise en page à 3 colonnes), la carte de l'adresse est ouverte d'office. */
+  /** La carte de l'adresse est affichée d'office (le bouton permet toujours de la masquer). */
   private carteOuverteParDefaut(): boolean {
-    return typeof window !== 'undefined' && !!window.matchMedia?.('(min-width: 1600px)').matches;
+    return true;
   }
   showAdresseMap: WritableSignal<boolean> = signal(this.carteOuverteParDefaut());
   trajetLoading: WritableSignal<boolean> = signal(false);
@@ -260,6 +261,7 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private readonly apiService: ApiService = inject(ApiService);
   private readonly realtime = inject(RealtimeService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly trajetAtelier = inject(TrajetAtelierService);
   private readonly router: Router = inject(Router);
   private readonly route: ActivatedRoute = inject(ActivatedRoute);
   private readonly hostEl: ElementRef<HTMLElement> = inject(ElementRef<HTMLElement>);
@@ -270,9 +272,6 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
   private trajetRequestId = 0;
   private pdfJsWorkerConfigured = false;
 
-  /** Domicile / atelier — point de départ des trajets. */
-  private static readonly ATELIER_ADRESSE = 'Rue des Wêdes 11, 4900 Spa, Belgique';
-  private static atelierCoordsCache: { lat: number; lon: number } | null = null;
 
   formGroup!: FormGroup;
 
@@ -2124,54 +2123,19 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     }
   }
 
-  private async getAtelierCoords(): Promise<{ lat: number; lon: number } | null> {
-    if (DetailCommandePageComponent.atelierCoordsCache) {
-      return DetailCommandePageComponent.atelierCoordsCache;
-    }
-    const coords = await this.geocodeAdresse(DetailCommandePageComponent.ATELIER_ADRESSE);
-    if (coords) {
-      DetailCommandePageComponent.atelierCoordsCache = coords;
-    }
-    return coords;
+  private getAtelierCoords(): Promise<{ lat: number; lon: number } | null> {
+    return this.trajetAtelier.geocoder(ATELIER_ADRESSE);
   }
 
-  private async geocodeAdresse(adresse: string): Promise<{ lat: number; lon: number } | null> {
-    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(adresse)}&limit=1&lang=fr`;
-    const response = await fetch(url);
-    if (!response.ok) return null;
-
-    const data = await response.json() as {
-      features?: Array<{ geometry?: { coordinates?: number[] } }>;
-    };
-    const coords = data.features?.[0]?.geometry?.coordinates;
-    if (!coords || coords.length < 2) return null;
-
-    const [lon, lat] = coords;
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-    return { lat, lon };
+  private geocodeAdresse(adresse: string): Promise<{ lat: number; lon: number } | null> {
+    return this.trajetAtelier.geocoder(adresse);
   }
 
-  private async fetchDrivingRoute(
+  private fetchDrivingRoute(
     from: { lat: number; lon: number },
     to: { lat: number; lon: number },
   ): Promise<{ distanceM: number; durationSec: number } | null> {
-    const url =
-      `https://router.project-osrm.org/route/v1/driving/` +
-      `${from.lon},${from.lat};${to.lon},${to.lat}?overview=false`;
-    const response = await fetch(url);
-    if (!response.ok) return null;
-
-    const data = await response.json() as {
-      code?: string;
-      routes?: Array<{ distance?: number; duration?: number }>;
-    };
-    if (data.code !== 'Ok' || !data.routes?.[0]) return null;
-
-    const route = data.routes[0];
-    const distanceM = Number(route.distance);
-    const durationSec = Number(route.duration);
-    if (!Number.isFinite(distanceM) || !Number.isFinite(durationSec)) return null;
-    return { distanceM, durationSec };
+    return this.trajetAtelier.itineraire(from, to);
   }
 
   // Créer le FormArray pour les supports
@@ -3780,6 +3744,14 @@ export class DetailCommandePageComponent implements OnInit, OnDestroy, AfterView
     // Fallback : si aucune commande n'est chargée, on se contente de réinitialiser le formulaire.
     this.initForm();
     this.isEditMode.set(false);
+  }
+
+  /** Badge Payé / Non payé de la barre du haut : bascule et enregistre directement. */
+  basculerPayeEntete(): void {
+    const ctrl = this.formGroup?.get('payé');
+    if (!ctrl || !this.commande()) return;
+    ctrl.setValue(!ctrl.value);
+    this.onPayeChange();
   }
 
   onPayeChange(): void {

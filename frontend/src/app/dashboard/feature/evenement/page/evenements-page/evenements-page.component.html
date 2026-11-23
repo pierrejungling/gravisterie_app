@@ -79,7 +79,7 @@
               @if (compteur(e); as c) { <span class="gv-chip gv-chip--accent">{{ c }}</span> }
               @if (e.stats.nb_commandes) { <span class="gv-chip">{{ e.stats.nb_commandes }} cmd</span> }
               @if (e.stats.prestation > 0 && (e.statut === 'confirme' || e.statut === 'termine')) {
-                <span class="gv-chip" [class.gv-chip--ok]="e.paye" [class.gv-chip--warn]="!e.paye">{{ e.paye ? 'Payé' : 'À encaisser' }}</span>
+                <span class="gv-chip" [class.gv-chip--ok]="e.stats.prestation_payee" [class.gv-chip--warn]="!e.stats.prestation_payee">{{ e.stats.prestation_payee ? 'Payé' : 'À encaisser' }}</span>
               }
             </div>
           </div>

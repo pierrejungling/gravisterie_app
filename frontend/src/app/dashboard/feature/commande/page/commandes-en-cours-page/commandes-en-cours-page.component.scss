@@ -180,7 +180,8 @@
 /* ---------- Tableau ---------- */
 .kb-board {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.35fr);
+  /* Cinq étapes, Livraison, Clôture (un peu plus larges pour les pastilles) */
+  grid-template-columns: repeat(5, minmax(0, 1fr)) minmax(0, 1.15fr) minmax(0, 1.25fr);
   gap: 10px;
   align-items: start;
 }
@@ -609,7 +610,7 @@
     top: calc(var(--gv-shell-top) + var(--gv-tabs-h, 0px));
     z-index: 5;
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 4px;
     margin: 0 -0.25rem 0.6rem;
     padding: 0.35rem 0.25rem;
@@ -802,4 +803,43 @@
   width: 26px;
   height: 37px;
   margin: 0.2rem auto 0.6rem;
+}
+
+/* ---------- Colonne Livraison ---------- */
+.kb-card__lieu {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.1rem 0 0;
+  font-size: 0.74rem;
+  color: var(--gv-ink);
+
+  svg {
+    width: 13px;
+    height: 13px;
+    flex: none;
+    fill: none;
+    stroke: var(--kb-c);
+    stroke-width: 1.8;
+  }
+}
+
+.kb-km {
+  font-family: var(--font-mono);
+  color: var(--gv-muted);
+}
+
+.kb-nav--livree {
+  width: auto;
+  padding: 0 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+@media (max-width: 1099px) {
+  .kb-nav--livree {
+    width: auto;
+    font-size: 0.8rem;
+  }
 }

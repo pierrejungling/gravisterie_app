@@ -75,7 +75,7 @@ export class EvenementsPageComponent implements OnInit {
     const annee = new Date().getFullYear();
     const list = this.evenements();
     const ceteAnnee = list.filter((e) => e.date_debut && new Date(e.date_debut).getFullYear() === annee && e.statut !== 'refuse' && e.statut !== 'annule');
-    const aEncaisser = list.filter((e) => (e.statut === 'confirme' || e.statut === 'termine') && !e.paye && e.stats.prestation > 0);
+    const aEncaisser = list.filter((e) => (e.statut === 'confirme' || e.statut === 'termine') && !e.stats.prestation_payee && e.stats.prestation > 0);
     return {
       aVenir: this.aVenirList().length,
       prochain: this.aVenirList().find((e) => e.statut === 'confirme') ?? this.aVenirList()[0] ?? null,

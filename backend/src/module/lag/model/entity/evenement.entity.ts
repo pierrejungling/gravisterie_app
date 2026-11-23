@@ -10,6 +10,27 @@ export interface ElementMateriel {
     fait: boolean;
 }
 
+/** Coupures comptées dans le décompte de caisse (clé = valeur en euros). */
+export const COUPURES_CAISSE = ['100', '50', '20', '10', '5', '2', '1', '0.5', '0.2', '0.1'] as const;
+export type CoupureCaisse = (typeof COUPURES_CAISSE)[number];
+
+/**
+ * Compte caisse d'un événement (cash avant / après, autres moyens de paiement, frais).
+ * Seules les saisies sont stockées ; les totaux sont recalculés à l'affichage.
+ */
+export interface CaisseEvenement {
+    /** Cash en caisse avant l'événement (fond de caisse emporté). */
+    cash_avant: number | null;
+    /** Nombre de billets / pièces par coupure après l'événement. */
+    coupures: Partial<Record<CoupureCaisse, number>>;
+    ca_facture: number | null;
+    ca_sumup: number | null;
+    ca_qr: number | null;
+    /** Montant déposé à la banque (vide = tout le CA cash). */
+    depot_banque: number | null;
+    frais: number | null;
+}
+
 /**
  * Événement : gravure en direct en magasin, nocturne, salon, marché...
  * Les commandes passées pendant ou pour l'événement y sont rattachées (commande.id_evenement).
@@ -88,6 +109,17 @@ export class Evenement {
 
     @Column({ type: 'text', nullable: true })
     notes: string | null;
+
+    /**
+     * Vente (commande) qui porte la prestation de l'événement. Quand elle existe, le CA de la
+     * prestation vient de cette vente et le forfait calculé n'est plus ajouté (évite le doublon).
+     */
+    @Column({ type: 'varchar', length: 26, nullable: true })
+    id_commande_prestation: string | null;
+
+    /** Compte caisse de l'événement (null tant qu'il n'est pas ouvert). */
+    @Column({ type: 'jsonb', nullable: true })
+    caisse: CaisseEvenement | null;
 
     @Column({ type: 'timestamptz', default: () => 'now()' })
     date_creation: Date;

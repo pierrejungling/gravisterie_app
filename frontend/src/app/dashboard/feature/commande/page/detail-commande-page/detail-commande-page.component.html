@@ -81,7 +81,10 @@
           <span class="cmd-chip-progress" [style.--p]="(rc.fait / rc.total) * 100"></span>{{ rc.fait }} / {{ rc.total }}
         </button>
         <button type="button" *ngIf="resumePrix() !== null" class="gv-chip cmd-chip-btn mono" (click)="choisirOnglet('prix')">{{ resumePrixLabel() }}</button>
-        <span class="gv-chip" [class.gv-chip--ok]="get('payé').value" [class.gv-chip--warn]="!get('payé').value && resumePrix()">{{ get('payé').value ? 'Payé' : 'Non payé' }}</span>
+        <button type="button" class="gv-chip cmd-chip-btn cmd-chip-paye" [class.gv-chip--ok]="get('payé').value" [class.gv-chip--warn]="!get('payé').value && resumePrix()"
+          [attr.aria-pressed]="!!get('payé').value"
+          [title]="get('payé').value ? 'Payé : cliquer pour repasser en non payé' : 'Non payé : cliquer pour marquer payé'"
+          (click)="basculerPayeEntete()"><span class="cmd-chip-paye__dot" aria-hidden="true"></span>{{ get('payé').value ? 'Payé' : 'Non payé' }}</button>
         <gv-evenement-lien
           class="evenement-lien"
           *ngIf="!isEditMode()"
@@ -1756,6 +1759,7 @@
       <div
         class="preview-overlay"
         *ngIf="previewImageUrl() || previewPdfUrl() || previewDocxBlob() || previewAiUrl() || previewAiMessage() || preview3dVisible()"
+        [class.preview-overlay--nav]="showPreviewNav()"
         (click)="onPreviewOverlayClick()"
         (touchstart)="onPreviewSwipeStart($event)"
         (touchend)="onPreviewSwipeEnd($event)"
@@ -1788,6 +1792,7 @@
           (click)="previewNavigate(1); $event.stopPropagation()"
           title="Pièce jointe suivante"
           aria-label="Pièce jointe suivante">›</button>
+        <div *ngIf="showPreviewNav()" class="preview-count" aria-live="polite">{{ previewIndex() + 1 }} / {{ previewableFichiers().length }}</div>
         <div
           *ngIf="showPreviewNav()"
           class="preview-swipe-zone preview-swipe-zone--prev"
@@ -1855,6 +1860,7 @@
   <div class="cmd-sheet" *ngIf="menuActionsOuvert() && !isEditMode()">
     <div class="cmd-sheet__backdrop" (click)="toggleMenuActions()"></div>
     <div class="cmd-sheet__panel" role="menu">
+      <button type="button" role="menuitem" (click)="basculerPayeEntete(); toggleMenuActions()">{{ get('payé').value ? 'Repasser en non payé' : 'Marquer payé' }}</button>
       <button type="button" role="menuitem" (click)="copyCommandeFiche(); toggleMenuActions()">Copier la fiche en texte</button>
       <button type="button" role="menuitem" *ngIf="canDuplicateCommande()" (click)="duplicateCommande(); toggleMenuActions()">Dupliquer la {{ isVente() ? 'vente' : 'commande' }}</button>
       <button type="button" role="menuitem" *ngIf="!isVente()" (click)="togglePrixFields(); toggleMenuActions()">{{ showPrixFields() ? 'Masquer les frais' : 'Afficher les frais' }}</button>
@@ -1881,7 +1887,7 @@
 </gv-choix-fiche-client>
 
 <div class="delete-confirm-overlay" *ngIf="showDeleteConfirm()" (click)="closeDeleteConfirm()">
-  <div class="delete-confirm-popup" (click)="$event.stopPropagation()">
+  <div class="delete-confirm-popup gv-panel" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
     <div class="delete-confirm-header">
       <h3>Confirmer la suppression</h3>
     </div>
@@ -1890,15 +1896,15 @@
       <p class="delete-warning">Cette action est irréversible et supprimera définitivement la commande de la base de données.</p>
     </div>
     <div class="delete-confirm-actions">
-      <button type="button" class="btn-cancel-delete" (click)="closeDeleteConfirm()">Annuler</button>
-      <button type="button" class="btn-confirm-delete" (click)="confirmDelete()">Supprimer</button>
+      <button type="button" class="gv-btn gv-btn--ghost" (click)="closeDeleteConfirm()">Annuler</button>
+      <button type="button" class="gv-btn gv-btn--danger" (click)="confirmDelete()">Supprimer</button>
     </div>
   </div>
 </div>
 
 <!-- Popup de confirmation duplication -->
 <div class="delete-confirm-overlay duplicate-confirm" *ngIf="showDuplicateConfirm()" (click)="closeDuplicateConfirm()">
-  <div class="delete-confirm-popup" (click)="$event.stopPropagation()">
+  <div class="delete-confirm-popup gv-panel" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
     <div class="delete-confirm-header">
       <h3>Confirmer la duplication</h3>
     </div>
@@ -1909,15 +1915,15 @@
       </p>
     </div>
     <div class="delete-confirm-actions">
-      <button type="button" class="btn-cancel-delete" (click)="closeDuplicateConfirm()">Non</button>
-      <button type="button" class="btn-confirm-delete" (click)="confirmDuplicate()">Oui</button>
+      <button type="button" class="gv-btn gv-btn--ghost" (click)="closeDuplicateConfirm()">Non</button>
+      <button type="button" class="gv-btn gv-btn--primary" (click)="confirmDuplicate()">Oui</button>
     </div>
   </div>
 </div>
 
 <!-- Popup duplication réussie -->
 <div class="delete-confirm-overlay duplicate-confirm" *ngIf="showDuplicateSuccess()" (click)="closeDuplicateSuccess()">
-  <div class="delete-confirm-popup" (click)="$event.stopPropagation()">
+  <div class="delete-confirm-popup gv-panel" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
     <div class="delete-confirm-header">
       <h3>{{ isVente() ? 'Vente' : 'Commande' }} bien dupliquée</h3>
     </div>
@@ -1925,8 +1931,8 @@
       <p>La {{ isVente() ? 'vente' : 'commande' }} a été dupliquée avec succès.</p>
     </div>
     <div class="delete-confirm-actions">
-      <button type="button" class="btn-cancel-delete" (click)="closeDuplicateSuccess()">Rester sur la {{ isVente() ? 'vente' : 'commande' }}</button>
-      <button type="button" class="btn-confirm-delete" (click)="viewDuplicatedCommande()">Voir la {{ isVente() ? 'vente' : 'commande' }} dupliquée</button>
+      <button type="button" class="gv-btn gv-btn--ghost" (click)="closeDuplicateSuccess()">Rester sur la {{ isVente() ? 'vente' : 'commande' }}</button>
+      <button type="button" class="gv-btn gv-btn--primary" (click)="viewDuplicatedCommande()">Voir la {{ isVente() ? 'vente' : 'commande' }} dupliquée</button>
     </div>
   </div>
 </div>

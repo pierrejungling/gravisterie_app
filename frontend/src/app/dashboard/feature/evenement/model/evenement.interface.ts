@@ -10,10 +10,66 @@ export interface ElementMateriel {
   fait: boolean;
 }
 
+/** Coupures du décompte de caisse, dans l'ordre de l'Excel. */
+export const COUPURES_CAISSE: { cle: CoupureCaisse; valeur: number; label: string; piece: boolean }[] = [
+  { cle: '100', valeur: 100, label: '100 €', piece: false },
+  { cle: '50', valeur: 50, label: '50 €', piece: false },
+  { cle: '20', valeur: 20, label: '20 €', piece: false },
+  { cle: '10', valeur: 10, label: '10 €', piece: false },
+  { cle: '5', valeur: 5, label: '5 €', piece: false },
+  { cle: '2', valeur: 2, label: '2 €', piece: true },
+  { cle: '1', valeur: 1, label: '1 €', piece: true },
+  { cle: '0.5', valeur: 0.5, label: '0,50 €', piece: true },
+  { cle: '0.2', valeur: 0.2, label: '0,20 €', piece: true },
+  { cle: '0.1', valeur: 0.1, label: '0,10 €', piece: true },
+];
+export type CoupureCaisse = '100' | '50' | '20' | '10' | '5' | '2' | '1' | '0.5' | '0.2' | '0.1';
+
+/** Compte caisse d'un événement (saisies uniquement, les totaux sont calculés). */
+export interface CaisseEvenement {
+  cash_avant: number | null;
+  coupures: Partial<Record<CoupureCaisse, number>>;
+  ca_facture: number | null;
+  ca_sumup: number | null;
+  ca_qr: number | null;
+  /** Vide = rien déposé (comme dans l'Excel). */
+  depot_banque: number | null;
+  frais: number | null;
+}
+
+export interface TotauxCaisse {
+  total_cash: number;
+  ca_cash: number;
+  total_ca: number;
+  depot: number;
+  cash_en_caisse: number;
+  ca_moins_frais: number;
+}
+
+export function caisseVide(): CaisseEvenement {
+  return { cash_avant: null, coupures: {}, ca_facture: null, ca_sumup: null, ca_qr: null, depot_banque: null, frais: null };
+}
+
+/** Totaux du compte caisse, calqués sur l'Excel des événements. */
+export function totauxCaisse(c: CaisseEvenement): TotauxCaisse {
+  const r = (n: number) => Math.round(n * 100) / 100;
+  const v = (n: number | string | null | undefined) => nombre(n) ?? 0;
+  const total_cash = r(COUPURES_CAISSE.reduce((s, k) => s + v(c.coupures?.[k.cle]) * k.valeur, 0));
+  const ca_cash = r(total_cash - v(c.cash_avant));
+  const total_ca = r(ca_cash + v(c.ca_facture) + v(c.ca_sumup) + v(c.ca_qr));
+  const depot = r(nombre(c.depot_banque) ?? 0);
+  return { total_cash, ca_cash, total_ca, depot, cash_en_caisse: r(total_cash - depot), ca_moins_frais: r(total_ca - v(c.frais)) };
+}
+
 export interface StatsEvenement {
   nb_commandes: number;
+  /** CA des commandes liées, hors vente de prestation. */
   ca_commandes: number;
+  /** La vente de prestation si elle existe, sinon le calcul. */
   prestation: number;
+  prestation_calculee: number;
+  prestation_via_vente: boolean;
+  prestation_payee: boolean;
   total: number;
 }
 
@@ -48,6 +104,9 @@ export interface Evenement {
   paye: boolean;
   materiel: ElementMateriel[];
   notes: string | null;
+  caisse: CaisseEvenement | null;
+  /** Vente liée qui porte la prestation (évite de compter le forfait deux fois). */
+  id_commande_prestation: string | null;
   date_creation: string;
   stats: StatsEvenement;
   client: ClientEvenement | null;

@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsBoolean, IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
-import type { ElementMateriel, FormuleEvenement, StatutEvenement, TypeEvenement } from '../entity/evenement.entity';
+import { IsArray, IsBoolean, IsIn, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, MaxLength } from 'class-validator';
+import type { CaisseEvenement, ElementMateriel, FormuleEvenement, StatutEvenement, TypeEvenement } from '../entity/evenement.entity';
 
 export const TYPES_EVENEMENT: TypeEvenement[] = ['gravure_direct', 'nocturne', 'salon', 'marche', 'atelier', 'autre'];
 export const STATUTS_EVENEMENT: StatutEvenement[] = ['prospect', 'propose', 'confirme', 'termine', 'annule', 'refuse'];
@@ -30,6 +30,8 @@ export class EvenementPayload {
     @ApiProperty({ required: false }) @IsOptional() @IsBoolean() paye?: boolean;
     @ApiProperty({ required: false }) @IsOptional() @IsArray() materiel?: ElementMateriel[];
     @ApiProperty({ required: false, nullable: true }) @IsOptional() @IsString() notes?: string | null;
+    @ApiProperty({ required: false, nullable: true, description: 'Vente liée qui porte la prestation (null = aucune)' }) @IsOptional() @IsString() id_commande_prestation?: string | null;
+    @ApiProperty({ required: false, nullable: true, description: 'Compte caisse (null = supprimer le compte)' }) @IsOptional() @IsObject() caisse?: CaisseEvenement | null;
 }
 
 export class LierCommandeEvenementPayload {

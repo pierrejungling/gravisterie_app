@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { ulid } from 'ulid';
 import { Client, Commande, Evenement } from '../model/entity';
+import { CommandeService } from './commande.service';
+import { COUPURES_CAISSE, CaisseEvenement } from '../model/entity/evenement.entity';
 import { StatutCommande } from '../model/entity/enum';
 import { EvenementPayload } from '../model/payload/evenement.payload';
 
@@ -21,9 +23,16 @@ export interface CommandeEvenement {
 
 export interface StatsEvenement {
     nb_commandes: number;
+    /** CA des commandes liées, hors vente de prestation. */
     ca_commandes: number;
-    /** Montant de la prestation HTVA (forfait + gravures si formule à la gravure). */
+    /** Montant de la prestation : la vente de prestation si elle existe, sinon le calcul (forfait + gravures). */
     prestation: number;
+    /** Montant calculé à partir de la formule (forfait + gravures), pour comparaison. */
+    prestation_calculee: number;
+    /** true quand la prestation est portée par une vente liée (plus de doublon). */
+    prestation_via_vente: boolean;
+    /** Paiement de la prestation : celui de la vente si elle existe, sinon la case de l'événement. */
+    prestation_payee: boolean;
     total: number;
 }
 
@@ -42,6 +51,7 @@ export class EvenementService {
         @InjectRepository(Evenement) private readonly repo: Repository<Evenement>,
         @InjectRepository(Commande) private readonly commandeRepo: Repository<Commande>,
         @InjectRepository(Client) private readonly clientRepo: Repository<Client>,
+        private readonly commandeService: CommandeService,
     ) {}
 
     async liste(): Promise<EvenementAvecStats[]> {
@@ -49,7 +59,7 @@ export class EvenementService {
             this.repo.find(),
             this.commandeRepo
                 .createQueryBuilder('c')
-                .select(['c.id_commande', 'c.id_evenement', 'c.prix_final', 'c.statut_commande'])
+                .select(['c.id_commande', 'c.id_evenement', 'c.prix_final', 'c.statut_commande', 'c.payé'])
                 .where('c.id_evenement IS NOT NULL')
                 .getMany(),
         ]);
@@ -117,6 +127,44 @@ export class EvenementService {
 
     async delierCommande(id: string, idCommande: string): Promise<void> {
         await this.commandeRepo.update({ id_commande: idCommande, id_evenement: id }, { id_evenement: null });
+        await this.repo.update({ id_evenement: id, id_commande_prestation: idCommande }, { id_commande_prestation: null });
+    }
+
+    /**
+     * Crée la vente qui porte la prestation (montant calculé, client organisateur), la rattache
+     * à l'événement et la marque comme vente de prestation.
+     */
+    async creerVentePrestation(id: string): Promise<Commande> {
+        const e = await this.trouver(id);
+        if (e.id_commande_prestation) {
+            const existe = await this.commandeRepo.findOne({ where: { id_commande: e.id_commande_prestation } });
+            if (existe) throw new BadRequestException('La vente de la prestation existe déjà');
+        }
+        const montant = this.prestationCalculee(e);
+        if (montant <= 0) throw new BadRequestException("Indique d'abord le prix de la prestation (formule et forfait)");
+        const contact = !e.id_client
+            ? {
+                  nom: (e.contact_nom || e.lieu || e.nom || '').trim() || undefined,
+                  mail: e.contact_mail?.trim() || undefined,
+                  telephone: e.contact_telephone?.trim() || undefined,
+              }
+            : undefined;
+        const vente = await this.commandeService.ajouterCommande({
+            nom_commande: `Vente | Prestation ${e.nom}`.slice(0, 250),
+            id_client: e.id_client || undefined,
+            coordonnees_contact: contact,
+            date_commande: (e.date_debut ?? new Date()).toISOString(),
+            quantité: 1,
+            prix_final: montant,
+            prix_unitaire_final: montant,
+            payé: e.paye,
+            statut_initial: StatutCommande.TERMINE,
+            attente_reponse: true,
+            description_projet: `Prestation de l'événement « ${e.nom} »`,
+        } as any);
+        await this.commandeRepo.update({ id_commande: vente.id_commande }, { id_evenement: id });
+        await this.repo.update({ id_evenement: id }, { id_commande_prestation: vente.id_commande });
+        return vente;
     }
 
     /** Nom de l'événement d'une commande (affiché dans le détail commande). */
@@ -161,16 +209,54 @@ export class EvenementService {
                 .slice(0, 100)
                 .map((m) => ({ texte: m.texte.trim().slice(0, 200), fait: !!m.fait }));
         }
+        if (p.caisse !== undefined) e.caisse = this.caisse(p.caisse);
+        if (p.id_commande_prestation !== undefined) e.id_commande_prestation = (p.id_commande_prestation || '').trim() || null;
     }
 
-    private stats(e: Evenement, commandes: Pick<Commande, 'prix_final' | 'statut_commande'>[]): StatsEvenement {
-        const valides = commandes.filter((c) => c.statut_commande !== StatutCommande.ANNULEE);
-        const ca = valides.reduce((s, c) => s + (Number(c.prix_final) || 0), 0);
+    /** Nettoie le compte caisse reçu : montants numériques, nombres de coupures entiers et positifs. */
+    private caisse(c: CaisseEvenement | null): CaisseEvenement | null {
+        if (!c || typeof c !== 'object') return null;
+        const montant = (v: unknown) => (v === null || v === undefined || (v as any) === '' || !isFinite(Number(v)) ? null : Math.round(Number(v) * 100) / 100);
+        const coupures: CaisseEvenement['coupures'] = {};
+        COUPURES_CAISSE.forEach((k) => {
+            const n = Math.floor(Number(c.coupures?.[k]));
+            if (isFinite(n) && n > 0) coupures[k] = Math.min(n, 100000);
+        });
+        return {
+            cash_avant: montant(c.cash_avant),
+            coupures,
+            ca_facture: montant(c.ca_facture),
+            ca_sumup: montant(c.ca_sumup),
+            ca_qr: montant(c.ca_qr),
+            depot_banque: montant(c.depot_banque),
+            frais: montant(c.frais),
+        };
+    }
+
+    private prestationCalculee(e: Evenement): number {
         let prestation = Number(e.prix_forfait) || 0;
         if (e.formule === 'a_la_gravure') prestation += (Number(e.prix_gravure) || 0) * (e.nb_gravures || 0);
         if (e.statut === 'annule' || e.statut === 'refuse') prestation = 0;
+        return Math.round(prestation * 100) / 100;
+    }
+
+    private stats(e: Evenement, commandes: Pick<Commande, 'id_commande' | 'prix_final' | 'statut_commande' | 'payé'>[]): StatsEvenement {
+        const valides = commandes.filter((c) => c.statut_commande !== StatutCommande.ANNULEE);
+        const vente = e.id_commande_prestation ? valides.find((c) => c.id_commande === e.id_commande_prestation) : undefined;
+        const autres = vente ? valides.filter((c) => c !== vente) : valides;
+        const ca = autres.reduce((s, c) => s + (Number(c.prix_final) || 0), 0);
+        const calculee = this.prestationCalculee(e);
+        const prestation = vente ? Number(vente.prix_final) || 0 : calculee;
         const arrondi = (n: number) => Math.round(n * 100) / 100;
-        return { nb_commandes: commandes.length, ca_commandes: arrondi(ca), prestation: arrondi(prestation), total: arrondi(ca + prestation) };
+        return {
+            nb_commandes: commandes.length,
+            ca_commandes: arrondi(ca),
+            prestation: arrondi(prestation),
+            prestation_calculee: calculee,
+            prestation_via_vente: !!vente,
+            prestation_payee: vente ? !!vente.payé : e.paye,
+            total: arrondi(ca + prestation),
+        };
     }
 
     private async clients(ids: (string | null)[]): Promise<Map<string, ClientEvenement>> {

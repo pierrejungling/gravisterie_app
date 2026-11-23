@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { HeaderComponent, FloatingLabelInputComponent, getFormValidationErrors, FormError } from '@shared';
+import { HeaderComponent, FloatingLabelInputComponent, getFormValidationErrors, FormError, SafeResourceUrlPipe, TrajetAtelierComponent } from '@shared';
 import { ApiService } from '@api';
 import { ApiURI, COMMANDE_FICHIERS_UPLOAD } from '@api';
 import { forkJoin, of } from 'rxjs';
@@ -35,7 +35,7 @@ import { CodeDecoComponent, EasterComponent } from '../../../../../shared/ui/dec
 @Component({
   selector: 'app-nouvelle-commande-page',
   standalone: true,
-  imports: [CodeDecoComponent, EasterComponent, CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent, ClientPickerComponent, ChoixFicheClientComponent, ApercuLienComponent, EvenementLienComponent],
+  imports: [CodeDecoComponent, EasterComponent, CommonModule, ReactiveFormsModule, HeaderComponent, FloatingLabelInputComponent, FraisCommissionPickerComponent, ClientPickerComponent, ChoixFicheClientComponent, ApercuLienComponent, EvenementLienComponent, SafeResourceUrlPipe, TrajetAtelierComponent],
   templateUrl: './nouvelle-commande-page.component.html',
   styleUrl: './nouvelle-commande-page.component.scss'
 })
@@ -141,6 +141,7 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
 
   constructor(private router: Router) {
     this.initFormGroup();
+    this.suivreAdressePourCarte();
   }
 
   ngOnInit(): void {
@@ -386,6 +387,32 @@ export class NouvelleCommandePageComponent implements OnInit, OnDestroy, AfterVi
   getGeneralError(): string | null {
     const err = this.errors().find((e) => e.control === 'commande');
     return err ? err.error : null;
+  }
+
+  /** Adresse saisie, pour la carte et le trajet (affichés dès qu'il y a une ville ou un code postal). */
+  readonly adresseCarte = signal<string | null>(null);
+  /** Carte affichée par défaut ; le bouton permet de la masquer. */
+  readonly carteMasquee = signal(false);
+
+  private suivreAdressePourCarte(): void {
+    this.formGroup.valueChanges
+      .pipe(
+        map((v: any) => ((v?.ville || '').trim() || (v?.code_postal || '').trim()
+          ? this.buildAdresseComplete(v.rue, v.code_postal, v.ville, v.pays)
+          : null)),
+        debounceTime(700),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((adresse) => this.adresseCarte.set(adresse));
+  }
+
+  adresseMapEmbedUrl(adresse: string): string {
+    return `https://maps.google.com/maps?q=${encodeURIComponent(adresse)}&z=15&output=embed`;
+  }
+
+  adresseMapsExterneUrl(adresse: string): string {
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(adresse)}`;
   }
 
   private initFormGroup(): void {

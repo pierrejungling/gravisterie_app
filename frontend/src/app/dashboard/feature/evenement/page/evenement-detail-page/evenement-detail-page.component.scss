@@ -259,7 +259,8 @@
 
 @media (max-width: 980px) {
   .layout {
-    grid-template-columns: 1fr;
+    /* minmax(0, …) : la carte ne doit pas élargir la colonne au-delà de l'écran */
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -289,6 +290,7 @@
 }
 
 .map {
+  width: 100%;
   margin-top: 1rem;
   border: 1px solid var(--gv-line);
   border-radius: var(--border-radius);
@@ -886,9 +888,10 @@
     .card--formule { order: 1; }
     .card--materiel { order: 2; }
     .card--commandes { order: 3; }
-    .card--infos { order: 4; }
-    .card--notes { order: 5; }
-    .danger { order: 6; }
+    .card--caisse { order: 4; }
+    .card--infos { order: 5; }
+    .card--notes { order: 6; }
+    .danger { order: 7; }
 
     .kpis {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -945,5 +948,231 @@
   .evd .kpis .gv-kpi__label {
     font-size: 0.52rem;
     letter-spacing: 0.08em;
+  }
+}
+
+/* ===== Compte caisse ===== */
+.caisse-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+
+  &__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+
+    .span-2 {
+      grid-column: span 2;
+    }
+  }
+
+  .edit__actions {
+    align-items: center;
+    margin-top: 0.4rem;
+  }
+}
+
+.caisse-del {
+  margin-right: auto;
+  color: var(--color-error);
+}
+
+.coupures {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+
+  li {
+    display: grid;
+    grid-template-columns: 4.5rem auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.22rem 0;
+  }
+
+  &__sep {
+    display: block !important;
+    height: 1px;
+    margin: 0.25rem 0;
+    padding: 0 !important;
+    background: var(--gv-line);
+  }
+
+  &__label {
+    font-size: 0.9rem;
+
+    &.is-piece {
+      color: var(--gv-muted);
+    }
+  }
+
+  &__ctrl {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+
+    button {
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--gv-line-strong);
+      border-radius: var(--border-radius);
+      background: var(--gv-panel);
+      color: inherit;
+      font-size: 1.05rem;
+      cursor: pointer;
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+
+      &:not(:disabled):hover {
+        border-color: var(--gv-accent);
+        color: var(--gv-accent);
+      }
+    }
+
+    .gv-input {
+      width: 4.2rem;
+      text-align: center;
+      padding-left: 0.3rem;
+      padding-right: 0.3rem;
+      -moz-appearance: textfield;
+
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+    }
+  }
+
+  &__total {
+    text-align: right;
+    font-size: 0.85rem;
+    color: var(--gv-muted);
+  }
+}
+
+.decompte {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+
+  &__item {
+    padding: 0.15rem 0.5rem;
+    border: 1px solid var(--gv-line);
+    border-radius: 999px;
+    font-size: 0.78rem;
+
+    &.is-piece {
+      color: var(--gv-muted);
+    }
+  }
+}
+
+.recap {
+  margin: 0.4rem 0 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px dashed var(--gv-line-strong);
+  border-radius: var(--border-radius);
+  font-size: 0.86rem;
+
+  > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.26rem 0;
+  }
+
+  dt {
+    color: var(--gv-muted);
+  }
+
+  dd {
+    margin: 0;
+    white-space: nowrap;
+  }
+
+  &__fort dd {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  &__total {
+    margin-top: 0.2rem;
+    padding-top: 0.45rem !important;
+    border-top: 1px solid var(--gv-line);
+
+    dt {
+      font-family: var(--font-title);
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--color-text);
+    }
+
+    dd {
+      color: var(--gv-accent);
+      font-weight: 600;
+    }
+  }
+
+  .neg {
+    color: var(--color-error) !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .caisse-edit__grid {
+    grid-template-columns: 1fr;
+
+    .span-2 {
+      grid-column: auto;
+    }
+  }
+
+  .coupures li {
+    grid-template-columns: 3.8rem auto minmax(0, 1fr);
+    gap: 0.45rem;
+  }
+}
+
+/* ===== Vente de la prestation ===== */
+.vente-presta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.9rem;
+  margin-top: 0.9rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px dashed var(--gv-line-strong);
+  border-radius: var(--border-radius);
+  font-size: 0.82rem;
+
+  &.is-liee {
+    border-style: solid;
+    border-color: color-mix(in srgb, var(--gv-ok) 55%, transparent);
+  }
+
+  &__txt {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
+    flex: 1 1 14rem;
+  }
+
+  &__act {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
   }
 }

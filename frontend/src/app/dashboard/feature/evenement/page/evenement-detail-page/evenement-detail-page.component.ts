@@ -3,13 +3,15 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HeaderComponent, SafeResourceUrlPipe } from '@shared';
+import { HeaderComponent, SafeResourceUrlPipe, TrajetAtelierComponent } from '@shared';
 import { ApiService, ApiURI, RealtimeService } from '@api';
 import { Commande, StatutCommande, getCommandeSiteDisplayTitle } from '../../../commande/model/commande.interface';
 import { ClientPickerComponent } from '../../../client/component/client-picker/client-picker.component';
 import { FicheClient, adresseUtile } from '../../../client/model/client.interface';
 import { EvenementApiService } from '../../service/evenement-api.service';
 import {
+  COUPURES_CAISSE,
+  CaisseEvenement,
   CommandeEvenement,
   ElementMateriel,
   EvenementDetail,
@@ -23,6 +25,7 @@ import {
   TYPES_EVENEMENT,
   TypeEvenement,
   aVenir,
+  caisseVide,
   calculFormules,
   dateCourte,
   dateLongue,
@@ -34,6 +37,7 @@ import {
   nomClientEvenement,
   statutEvenement,
   toneStatut,
+  totauxCaisse,
   typeEvenement,
   versChampDate,
 } from '../../model/evenement.interface';
@@ -72,12 +76,12 @@ interface FormEvenement {
   forfait_carburant: number | null;
 }
 
-import { CodeDecoComponent, EasterComponent } from '../../../../../shared/ui/deco';
+import { EasterComponent } from '../../../../../shared/ui/deco';
 
 @Component({
   selector: 'app-evenement-detail-page',
   standalone: true,
-  imports: [CodeDecoComponent, EasterComponent, CommonModule, FormsModule, RouterModule, HeaderComponent, SafeResourceUrlPipe, ClientPickerComponent],
+  imports: [EasterComponent, CommonModule, FormsModule, RouterModule, HeaderComponent, SafeResourceUrlPipe, ClientPickerComponent, TrajetAtelierComponent],
   templateUrl: './evenement-detail-page.component.html',
   styleUrl: './evenement-detail-page.component.scss',
 })
@@ -132,6 +136,20 @@ export class EvenementDetailPageComponent implements OnInit {
 
   readonly suppressionConfirm = signal(false);
 
+  // Compte caisse
+  readonly coupures = COUPURES_CAISSE;
+  readonly caisseEdition = signal(false);
+  readonly caisseForm = signal<CaisseEvenement>(caisseVide());
+  readonly caisseSuppression = signal(false);
+  /** Événement précédent dont on a repris le « cash en caisse » comme cash avant. */
+  readonly caisseReprise = signal<string | null>(null);
+  /** Totaux affichés : le brouillon en édition, sinon ce qui est enregistré. */
+  readonly caisseTotaux = computed(() => {
+    if (this.caisseEdition()) return totauxCaisse(this.caisseForm());
+    const c = this.evenement()?.caisse;
+    return c ? totauxCaisse(c) : null;
+  });
+
   readonly id = computed(() => this.evenement()?.id_evenement ?? '');
   readonly calcul = computed(() => {
     const e = this.evenement();
@@ -173,7 +191,7 @@ export class EvenementDetailPageComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((ev) => {
         const id = this.id();
-        if (!id || this.edition() || this.sauvegarde()) return;
+        if (!id || this.edition() || this.sauvegarde() || this.caisseEdition()) return;
         if (ev.resource === 'evenement' && ev.id && ev.id !== id) return;
         if (ev.resource === 'evenement' && ev.action === 'deleted') {
           this.router.navigate(['/dashboard', 'evenements']);
@@ -447,6 +465,101 @@ export class EvenementDetailPageComponent implements OnInit {
 
   libelleStatut(c: CommandeEvenement): string {
     return STATUT_LABELS[c.statut_commande as StatutCommande] ?? c.statut_commande;
+  }
+
+  // ---------- Compte caisse ----------
+  ouvrirCaisse(): void {
+    const c = this.evenement()?.caisse;
+    this.caisseForm.set(c ? { ...caisseVide(), ...c, coupures: { ...(c.coupures || {}) } } : caisseVide());
+    this.caisseSuppression.set(false);
+    this.caisseReprise.set(null);
+    this.caisseEdition.set(true);
+    if (!c) this.reprendreCashPrecedent();
+  }
+
+  /** Comme dans l'Excel : le cash avant = le « cash en caisse » du dernier événement compté. */
+  private reprendreCashPrecedent(): void {
+    const e = this.evenement();
+    if (!e) return;
+    const ref = new Date(e.date_debut || e.date_creation).getTime();
+    this.api.liste().subscribe((list) => {
+      const precedent = (list ?? [])
+        .filter((x) => x.id_evenement !== e.id_evenement && x.caisse && x.date_debut && new Date(x.date_debut).getTime() < ref)
+        .sort((a, b) => new Date(b.date_debut!).getTime() - new Date(a.date_debut!).getTime())[0];
+      if (!precedent?.caisse || !this.caisseEdition() || this.caisseForm().cash_avant !== null) return;
+      this.caisseForm.update((f) => ({ ...f, cash_avant: totauxCaisse(precedent.caisse!).cash_en_caisse }));
+      this.caisseReprise.set(precedent.nom);
+    });
+  }
+
+  annulerCaisse(): void {
+    this.caisseEdition.set(false);
+  }
+
+  setCaisse(champ: Exclude<keyof CaisseEvenement, 'coupures'>, valeur: unknown): void {
+    const n = valeur === null || valeur === '' || !isFinite(Number(valeur)) ? null : Number(valeur);
+    this.caisseForm.update((c) => ({ ...c, [champ]: n }));
+  }
+
+  setCoupure(cle: string, valeur: unknown): void {
+    const n = Math.max(0, Math.floor(Number(valeur) || 0));
+    this.caisseForm.update((c) => ({ ...c, coupures: { ...c.coupures, [cle]: n } }));
+  }
+
+  ajusterCoupure(cle: string, delta: number): void {
+    this.setCoupure(cle, this.nbCoupure(cle) + delta);
+  }
+
+  nbCoupure(cle: string, caisse: CaisseEvenement | null = this.caisseForm()): number {
+    return Number((caisse?.coupures as Record<string, number> | undefined)?.[cle]) || 0;
+  }
+
+  enregistrerCaisse(): void {
+    this.enregistrer({ caisse: this.caisseForm() }, 'caisse', () => this.caisseEdition.set(false));
+  }
+
+  supprimerCaisse(): void {
+    if (!this.caisseSuppression()) {
+      this.caisseSuppression.set(true);
+      return;
+    }
+    this.enregistrer({ caisse: null }, 'caisse', () => {
+      this.caisseSuppression.set(false);
+      this.caisseEdition.set(false);
+    });
+  }
+
+  // ---------- Vente de la prestation ----------
+  creerVentePrestation(): void {
+    const id = this.id();
+    if (!id) return;
+    this.action.set('vente-prestation');
+    this.api.creerVentePrestation(id).subscribe((v) => {
+      this.action.set(null);
+      if (!v) {
+        this.erreur.set("La vente de la prestation n'a pas pu être créée.");
+        return;
+      }
+      this.erreur.set(null);
+      this.charger(id, false);
+    });
+  }
+
+  /** Marque une commande liée comme vente de la prestation (ou retire le lien avec null). */
+  definirPrestation(idCommande: string | null, event?: Event): void {
+    event?.stopPropagation();
+    this.enregistrer({ id_commande_prestation: idCommande }, 'prestation');
+  }
+
+  ouvrirVentePrestation(): void {
+    const idc = this.evenement()?.id_commande_prestation;
+    if (idc) this.router.navigate(['/dashboard', 'commandes', 'detail', idc]);
+  }
+
+  /** Paiement : suivi sur la vente quand elle existe, sinon la case de l'événement. */
+  clicPaiement(): void {
+    if (this.evenement()?.stats.prestation_via_vente) this.ouvrirVentePrestation();
+    else this.basculerPaye();
   }
 
   // ---------- Suppression ----------

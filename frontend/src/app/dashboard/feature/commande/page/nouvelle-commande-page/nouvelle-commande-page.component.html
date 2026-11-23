@@ -14,7 +14,7 @@
   <div class="nouvelle-commande-container">
     <!-- Popup de succès -->
     <div class="success-popup-overlay" *ngIf="showSuccessPopup()" (click)="showSuccessPopup.set(false)">
-      <div class="success-popup" (click)="$event.stopPropagation()">
+      <div class="success-popup gv-panel" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
         <div class="success-popup-header">
           <div class="success-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -27,10 +27,10 @@
           <p>Votre {{ isVente() ? 'vente' : 'commande' }} a été créée avec succès !</p>
         </div>
         <div class="success-popup-actions">
-          <button type="button" class="btn-success-outline" (click)="onCreateNewCommande()">
+          <button type="button" class="gv-btn gv-btn--ghost" (click)="onCreateNewCommande()">
             Créer une nouvelle {{ isVente() ? 'vente' : 'commande' }}
           </button>
-          <button type="button" class="btn-success-filled" (click)="onViewCommandes()">
+          <button type="button" class="gv-btn gv-btn--primary" (click)="onViewCommandes()">
             Voir la {{ isVente() ? 'vente' : 'commande' }}
           </button>
         </div>
@@ -342,6 +342,19 @@
             </app-floating-label-input>
             <p class="field-error" *ngIf="getFieldErrorMessage('pays')">{{ getFieldErrorMessage('pays') }}</p>
           </div>
+
+          @if (adresseCarte(); as adr) {
+            @if (!carteMasquee()) {
+              <div class="nc-carte">
+                <iframe class="nc-carte__frame" [src]="adresseMapEmbedUrl(adr) | safeResourceUrl" title="Carte de l'adresse du client" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+              </div>
+            }
+            <div class="nc-carte__pied">
+              <gv-trajet-atelier [adresse]="adr"></gv-trajet-atelier>
+              <button type="button" class="nc-carte__lien nc-carte__toggle" [attr.aria-expanded]="!carteMasquee()" (click)="carteMasquee.set(!carteMasquee())">{{ carteMasquee() ? 'Afficher la carte' : 'Masquer la carte' }}</button>
+              <a class="nc-carte__lien" [href]="adresseMapsExterneUrl(adr)" target="_blank" rel="noopener noreferrer">Ouvrir dans Maps ↗</a>
+            </div>
+          }
         </div>
 
         <div class="input-wrapper" [class.field-wrapper--error]="hasFieldError('societe')">

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HeaderComponent, SafeResourceUrlPipe } from '@shared';
+import { HeaderComponent, SafeResourceUrlPipe, TrajetAtelierComponent } from '@shared';
 import { RealtimeService } from '@api';
 import { StatutCommande } from '../../../commande/model/commande.interface';
 import { ClientApiService } from '../../service/client-api.service';
@@ -20,12 +20,12 @@ import {
   toneStatut,
 } from '../../model/client.interface';
 
-import { CodeDecoComponent, EasterComponent } from '../../../../../shared/ui/deco';
+import { EasterComponent } from '../../../../../shared/ui/deco';
 
 @Component({
   selector: 'app-client-detail-page',
   standalone: true,
-  imports: [CodeDecoComponent, EasterComponent, CommonModule, FormsModule, RouterModule, HeaderComponent, SafeResourceUrlPipe],
+  imports: [EasterComponent, CommonModule, FormsModule, RouterModule, HeaderComponent, SafeResourceUrlPipe, TrajetAtelierComponent],
   templateUrl: './client-detail-page.component.html',
   styleUrl: './client-detail-page.component.scss',
 })

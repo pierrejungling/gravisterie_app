@@ -63,7 +63,7 @@
     <nav class="kb-tabs" aria-label="Étapes">
       @for (col of colonnesVue(); track col.cle) {
         <button type="button" class="kb-tab" [class.is-actif]="onglet() === col.cle" [style.--kb-c]="col.couleur" (click)="choisirOnglet(col.cle)">
-          <span class="kb-tab__label">{{ col.cle === 'modele' ? 'Modèle' : col.label }}</span>
+          <span class="kb-tab__label">{{ col.cle === 'modele' ? 'Modèle' : col.cle === 'livraison' ? 'Livrer' : col.label }}</span>
           <span class="kb-tab__nb">{{ col.cartes.length }}</span>
         </button>
       }
@@ -87,7 +87,7 @@
                 @if (col.cartes.length !== col.total) { {{ col.cartes.length }} / }{{ col.total }}
               </span>
             </div>
-            @if (col.final && col.total > 0) {
+            @if (col.cle === 'cloture' && col.total > 0) {
               <div class="kb-col__sous">
                 @for (f of compteFinaux(); track f.statut) {
                   <button type="button" class="kb-sous" [class.is-on]="filtreFinal() === f.statut" [disabled]="f.nb === 0 && filtreFinal() !== f.statut" (click)="basculerFiltreFinal(f.statut)">
@@ -119,6 +119,12 @@
                     {{ carte.client }}@if (carte.societe) {<em>{{ carte.client ? ' · ' : '' }}{{ carte.societe }}</em>}
                   </p>
                 }
+                @if (col.cle === 'livraison' && (carte.ville || kmLivraison()[carte.id])) {
+                  <p class="kb-card__lieu">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z" /><circle cx="12" cy="10" r="2.2" /></svg>
+                    {{ carte.ville }}@if (kmLivraison()[carte.id]) {<span class="kb-km">{{ carte.ville ? ' · ' : '' }}{{ kmLivraison()[carte.id] }}</span>}
+                  </p>
+                }
                 <div class="kb-card__meta">
                   @if (carte.echeance) {
                     <span class="kb-ech" [class.kb-ech--warn]="carte.ton === 'warn'" [class.kb-ech--danger]="carte.ton === 'danger'">{{ carte.echeance }}</span>
@@ -133,9 +139,11 @@
                 @if (col.final) {
                   <div class="kb-fin">
                     @for (f of carte.finaux; track f.statut) {
+                      @if (col.cle !== 'livraison' || f.statut !== 'a_livrer') {
                       <button type="button" class="kb-pill" [class.is-fait]="f.fait" [attr.aria-pressed]="f.fait" [title]="f.fait ? f.label + ' : fait (cliquer pour annuler)' : f.label + ' : à faire'" (click)="$event.stopPropagation(); basculerFinal(carte.c, f.statut)">
                         <span aria-hidden="true">{{ f.fait ? '✓' : '○' }}</span>{{ f.label }}
                       </button>
+                      }
                     }
                   </div>
                 }
@@ -150,6 +158,8 @@
                     }
                     @if (!col.final) {
                       <button type="button" class="kb-nav kb-nav--ok" title="Étape suivante" aria-label="Étape suivante" (click)="avancer(carte)">✓</button>
+                    } @else if (col.cle === 'livraison') {
+                      <button type="button" class="kb-nav kb-nav--ok kb-nav--livree" title="Marquer comme livrée (passe en Clôture)" (click)="avancer(carte)">✓ Livrée</button>
                     }
                   </span>
                 </div>

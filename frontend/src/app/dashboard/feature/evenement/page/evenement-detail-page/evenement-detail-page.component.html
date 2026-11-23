@@ -46,21 +46,21 @@
     <section class="gv-kpis kpis">
       <div class="gv-kpi">
         <div class="gv-kpi__label">01 · Prestation</div>
-        <div class="gv-kpi__value">{{ e.stats.prestation > 0 ? euros(e.stats.prestation) : '-' }} <small>HTVA</small></div>
+        <div class="gv-kpi__value">{{ e.stats.prestation > 0 ? euros(e.stats.prestation) : '-' }} <small>{{ e.stats.prestation_via_vente ? 'via la vente' : 'HTVA' }}</small></div>
       </div>
       <div class="gv-kpi">
-        <div class="gv-kpi__label">02 · Commandes liées</div>
+        <div class="gv-kpi__label">02 · Commandes liées{{ e.stats.prestation_via_vente ? ' (hors prestation)' : '' }}</div>
         <div class="gv-kpi__value">{{ e.stats.nb_commandes }} <small>{{ euros(e.stats.ca_commandes) }}</small></div>
       </div>
       <div class="gv-kpi gv-kpi--accent">
         <div class="gv-kpi__label">03 · Total</div>
         <div class="gv-kpi__value">{{ euros(e.stats.total) }}</div>
       </div>
-      <button type="button" class="gv-kpi kpi-btn" [class.gv-kpi--warn]="!e.paye && e.stats.prestation > 0" [disabled]="action() === 'paye'" (click)="basculerPaye()">
+      <button type="button" class="gv-kpi kpi-btn" [class.gv-kpi--warn]="!e.stats.prestation_payee && e.stats.prestation > 0" [disabled]="action() === 'paye'" (click)="clicPaiement()">
         <div class="gv-kpi__label">04 · Paiement prestation</div>
         <div class="gv-kpi__value paiement">
-          <span class="dot" [class.is-on]="e.paye"></span>{{ e.paye ? 'Payé' : 'À encaisser' }}
-          <small>toucher pour changer</small>
+          <span class="dot" [class.is-on]="e.stats.prestation_payee"></span>{{ e.stats.prestation_payee ? 'Payé' : 'À encaisser' }}
+          <small>{{ e.stats.prestation_via_vente ? 'suivi sur la vente' : 'toucher pour changer' }}</small>
         </div>
       </button>
     </section>
@@ -122,6 +122,7 @@
               <div class="map">
                 <iframe class="map__frame" [src]="mapEmbedUrl(e.adresse) | safeResourceUrl" title="Carte du lieu" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
               </div>
+              <gv-trajet-atelier [adresse]="e.adresse"></gv-trajet-atelier>
             }
           } @else {
             <form class="edit" (ngSubmit)="enregistrerEdition()">
@@ -200,6 +201,32 @@
             </div>
             @if (e.formule === 'a_la_gravure' && nombre(e.prix_gravure)) {
               <span class="compteur__total mono">= {{ euros((e.nb_gravures || 0) * (nombre(e.prix_gravure) || 0)) }}</span>
+            }
+          </div>
+
+          <div class="vente-presta" [class.is-liee]="e.stats.prestation_via_vente">
+            @if (e.stats.prestation_via_vente) {
+              <div class="vente-presta__txt">
+                <strong>Prestation facturée par une vente</strong>
+                <span class="muted">
+                  {{ euros(e.stats.prestation, true) }} · {{ e.stats.prestation_payee ? 'payée' : 'à encaisser' }}
+                  @if (e.stats.prestation_calculee > 0 && e.stats.prestation_calculee !== e.stats.prestation) { · calcul : {{ euros(e.stats.prestation_calculee, true) }} }
+                </span>
+              </div>
+              <div class="vente-presta__act">
+                <button type="button" class="copy" (click)="ouvrirVentePrestation()">Ouvrir la vente</button>
+                <button type="button" class="copy" [disabled]="action() === 'prestation'" (click)="definirPrestation(null)">Délier</button>
+              </div>
+            } @else {
+              <div class="vente-presta__txt">
+                <strong>Pas encore de vente pour la prestation</strong>
+                <span class="muted">Crée-la ici (le montant ne sera compté qu'une fois), ou marque une vente déjà liée avec « = prestation ».</span>
+              </div>
+              <div class="vente-presta__act">
+                <button type="button" class="gv-btn gv-btn--sm" [disabled]="action() === 'vente-prestation' || e.stats.prestation_calculee <= 0" (click)="creerVentePrestation()">
+                  {{ action() === 'vente-prestation' ? 'Création…' : 'Créer la vente' + (e.stats.prestation_calculee > 0 ? ' (' + euros(e.stats.prestation_calculee) + ')' : '') }}
+                </button>
+              </div>
             }
           </div>
 
@@ -317,6 +344,7 @@
                       </span>
                       <span class="cmd__meta">{{ cmd.client || 'Client inconnu' }} · {{ dateCourte(cmd.date_commande) }}</span>
                       <span class="cmd__chips">
+                        @if (cmd.id_commande === e.id_commande_prestation) { <span class="gv-chip gv-chip--accent">Prestation</span> }
                         <span class="gv-chip" [ngClass]="'gv-chip--' + toneStatut(cmd.statut_commande)">{{ libelleStatut(cmd) }}</span>
                         @if (cmd.prix_final && cmd.statut_commande !== 'annulee') {
                           <span class="gv-chip" [class.gv-chip--ok]="cmd['payé']" [class.gv-chip--warn]="!cmd['payé']">{{ cmd['payé'] ? 'Payé' : 'À payer' }}</span>
@@ -325,6 +353,9 @@
                     </span>
                     <span class="cmd__price">
                       <span class="mono">{{ cmd.prix_final !== null ? euros(cmd.prix_final, true) : '-' }}</span>
+                      @if (!e.stats.prestation_via_vente && cmd.statut_commande !== 'annulee') {
+                        <button type="button" class="copy" title="Cette vente est le paiement de la prestation : le forfait ne sera plus compté en plus" [disabled]="action() === 'prestation'" (click)="definirPrestation(cmd.id_commande, $event)">= prestation</button>
+                      }
                       <button type="button" class="copy" [disabled]="action() === 'delier-' + cmd.id_commande" (click)="detacher(cmd, $event)">Détacher</button>
                     </span>
                   </a>
@@ -332,6 +363,95 @@
               }
             </ol>
           }
+        </section>
+
+        <section class="gv-panel card card--caisse">
+          <div class="card__head">
+            <h2 class="gv-section-title"><span class="gv-num">06</span>Caisse</h2>
+            @if (e.caisse && !caisseEdition()) {
+              <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="ouvrirCaisse()">Modifier</button>
+            }
+          </div>
+
+          @if (!e.caisse && !caisseEdition()) {
+            <p class="aide">Compte de l'événement : cash avant, décompte de la caisse après, SumUp, QR, facture et frais.</p>
+            <button type="button" class="copy copy--left" (click)="ouvrirCaisse()">+ Ouvrir le compte caisse</button>
+          } @else if (caisseEdition()) {
+            <form class="caisse-edit" (ngSubmit)="enregistrerCaisse()">
+              <div class="gv-field">
+                <label for="c-avant">Cash en caisse avant l'événement (€)</label>
+                <input id="c-avant" class="gv-input" type="number" step="0.01" inputmode="decimal" name="avant" [ngModel]="caisseForm().cash_avant" (ngModelChange)="setCaisse('cash_avant', $event); caisseReprise.set(null)" />
+                @if (caisseReprise()) { <span class="aide">Repris du cash en caisse après « {{ caisseReprise() }} ».</span> }
+              </div>
+
+              <div class="edit__sep">Décompte après l'événement</div>
+              <ul class="coupures">
+                @for (k of coupures; track k.cle) {
+                  @if (k.cle === '2') { <li class="coupures__sep" aria-hidden="true"></li> }
+                  <li>
+                    <span class="coupures__label mono" [class.is-piece]="k.piece">{{ k.label }}</span>
+                    <span class="coupures__ctrl">
+                      <button type="button" (click)="ajusterCoupure(k.cle, -1)" [disabled]="!nbCoupure(k.cle)" [attr.aria-label]="'Retirer un ' + k.label">−</button>
+                      <input class="gv-input mono" type="number" min="0" step="1" inputmode="numeric" [name]="'c-' + k.cle" [attr.aria-label]="'Nombre de ' + k.label" [ngModel]="nbCoupure(k.cle) || null" (ngModelChange)="setCoupure(k.cle, $event)" placeholder="0" />
+                      <button type="button" (click)="ajusterCoupure(k.cle, 1)" [attr.aria-label]="'Ajouter un ' + k.label">+</button>
+                    </span>
+                    <span class="coupures__total mono">{{ nbCoupure(k.cle) ? euros(nbCoupure(k.cle) * k.valeur, true) : '' }}</span>
+                  </li>
+                }
+              </ul>
+
+              <div class="edit__sep">Autres encaissements et frais</div>
+              <div class="caisse-edit__grid">
+                <div class="gv-field"><label for="c-fac">CA sur facture (€)</label><input id="c-fac" class="gv-input" type="number" step="0.01" inputmode="decimal" name="fac" [ngModel]="caisseForm().ca_facture" (ngModelChange)="setCaisse('ca_facture', $event)" /></div>
+                <div class="gv-field"><label for="c-sumup">SumUp / CBC (€)</label><input id="c-sumup" class="gv-input" type="number" step="0.01" inputmode="decimal" name="sumup" [ngModel]="caisseForm().ca_sumup" (ngModelChange)="setCaisse('ca_sumup', $event)" /></div>
+                <div class="gv-field"><label for="c-qr">QR (€)</label><input id="c-qr" class="gv-input" type="number" step="0.01" inputmode="decimal" name="qr" [ngModel]="caisseForm().ca_qr" (ngModelChange)="setCaisse('ca_qr', $event)" /></div>
+                <div class="gv-field"><label for="c-frais">Frais (€)</label><input id="c-frais" class="gv-input" type="number" step="0.01" inputmode="decimal" name="frais" [ngModel]="caisseForm().frais" (ngModelChange)="setCaisse('frais', $event)" /></div>
+                <div class="gv-field span-2">
+                  <label for="c-depot">À déposer à la banque (€)</label>
+                  <input id="c-depot" class="gv-input" type="number" step="0.01" inputmode="decimal" name="depot" [ngModel]="caisseForm().depot_banque" (ngModelChange)="setCaisse('depot_banque', $event)" [placeholder]="'0 (CA cash : ' + euros(caisseTotaux()?.ca_cash ?? 0, true) + ')'" />
+                </div>
+              </div>
+
+              @if (caisseTotaux(); as t) {
+                <ng-container *ngTemplateOutlet="recapCaisse; context: { $implicit: t, c: caisseForm() }"></ng-container>
+              }
+
+              <div class="edit__actions">
+                @if (e.caisse) {
+                  <button type="button" class="copy copy--left caisse-del" (click)="supprimerCaisse()">{{ caisseSuppression() ? 'Confirmer la suppression' : 'Supprimer le compte' }}</button>
+                }
+                <button type="button" class="gv-btn gv-btn--sm gv-btn--ghost" (click)="annulerCaisse()">Annuler</button>
+                <button type="submit" class="gv-btn gv-btn--sm gv-btn--primary" [disabled]="action() === 'caisse'">{{ action() === 'caisse' ? 'Enregistrement…' : 'Enregistrer' }}</button>
+              </div>
+            </form>
+          } @else if (e.caisse && caisseTotaux()) {
+            @let t = caisseTotaux()!;
+            <div class="decompte">
+              @for (k of coupures; track k.cle) {
+                @if (nbCoupure(k.cle, e.caisse)) {
+                  <span class="decompte__item mono" [class.is-piece]="k.piece">{{ nbCoupure(k.cle, e.caisse) }} × {{ k.label }}</span>
+                }
+              }
+              @if (t.total_cash === 0) { <span class="muted">Décompte pas encore fait.</span> }
+            </div>
+            <ng-container *ngTemplateOutlet="recapCaisse; context: { $implicit: t, c: e.caisse }"></ng-container>
+          }
+
+          <ng-template #recapCaisse let-t let-c="c">
+            <dl class="recap">
+              <div><dt>Cash avant</dt><dd class="mono">{{ euros(nombre(c.cash_avant) ?? 0, true) }}</dd></div>
+              <div><dt>Total cash (décompte)</dt><dd class="mono">{{ euros(t.total_cash, true) }}</dd></div>
+              <div class="recap__fort"><dt>Fonds de caisse · CA cash</dt><dd class="mono" [class.neg]="t.ca_cash < 0">{{ euros(t.ca_cash, true) }}</dd></div>
+              <div><dt>CA sur facture</dt><dd class="mono">{{ euros(nombre(c.ca_facture) ?? 0, true) }}</dd></div>
+              <div><dt>SumUp (CBC)</dt><dd class="mono">{{ euros(nombre(c.ca_sumup) ?? 0, true) }}</dd></div>
+              <div><dt>QR</dt><dd class="mono">{{ euros(nombre(c.ca_qr) ?? 0, true) }}</dd></div>
+              <div class="recap__total"><dt>Total CA événement</dt><dd class="mono">{{ euros(t.total_ca, true) }}</dd></div>
+              <div><dt>À déposer à la banque</dt><dd class="mono">{{ euros(t.depot, true) }}</dd></div>
+              <div><dt>Cash en caisse</dt><dd class="mono">{{ euros(t.cash_en_caisse, true) }}</dd></div>
+              <div><dt>Frais</dt><dd class="mono">{{ euros(nombre(c.frais) ?? 0, true) }}</dd></div>
+              <div class="recap__total"><dt>CA moins frais</dt><dd class="mono" [class.neg]="t.ca_moins_frais < 0">{{ euros(t.ca_moins_frais, true) }}</dd></div>
+            </dl>
+          </ng-template>
         </section>
 
         <section class="danger">

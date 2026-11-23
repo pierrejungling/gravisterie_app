@@ -31,6 +31,11 @@ export class EvenementApiService {
     return this.api.delete(EVENEMENT_BY_ID(id)).pipe(map((r) => !!r.result));
   }
 
+  /** Crée la vente de la prestation, liée à l'événement. Renvoie la commande créée. */
+  creerVentePrestation(id: string): Observable<{ id_commande: string } | null> {
+    return this.api.post(`${EVENEMENT_BY_ID(id)}/vente-prestation`, {} as any).pipe(map((r) => (r.result && r.data ? (r.data as { id_commande: string }) : null)));
+  }
+
   lierCommande(id: string, idCommande: string): Observable<boolean> {
     return this.api.post(`${EVENEMENT_BY_ID(id)}/commandes`, { id_commande: idCommande } as any).pipe(map((r) => !!r.result));
   }

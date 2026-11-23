@@ -815,23 +815,60 @@
 }
 
 /* Modal prévisualisation image en grand */
+/* ===== Aperçu plein écran (image, PDF, DOCX, AI, 3D) =====
+   La zone utile est réservée par le padding de l'overlay : en haut pour Fermer / Enregistrer,
+   sur les côtés pour les flèches (grand écran) ou en bas pour la barre ‹ 2 / 5 › (écran étroit). */
 .preview-overlay {
+  --pv-top: 4rem;
+  --pv-side: 1rem;
+  --pv-bottom: 1rem;
   position: fixed;
   inset: 0;
-  z-index: 1000;
-  background: rgba(0, 0, 0, 0.85);
+  z-index: 1500; /* au-dessus du rail (1001), de la barre du bas et du bouton + (1100-1200) */
+  box-sizing: border-box;
+  height: 100vh;
+  height: 100dvh;
+  background: rgba(0, 0, 0, 0.88);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  padding:
+    calc(var(--pv-top) + env(safe-area-inset-top, 0px))
+    calc(var(--pv-side) + env(safe-area-inset-right, 0px))
+    calc(var(--pv-bottom) + env(safe-area-inset-bottom, 0px))
+    calc(var(--pv-side) + env(safe-area-inset-left, 0px));
   cursor: pointer;
   touch-action: none;
+
+  &--nav {
+    --pv-side: 5rem;
+    --pv-bottom: 3.25rem;
+  }
+
+  @media (max-width: 768px) {
+    --pv-top: 3.75rem;
+    --pv-side: 0.5rem;
+
+    &--nav {
+      --pv-side: 0.5rem;
+      --pv-bottom: 4.5rem;
+    }
+  }
+
+  /* Téléphone à l'horizontale : on rend la hauteur à l'image */
+  @media (max-height: 500px) and (min-width: 769px) {
+    --pv-top: 3.4rem;
+
+    &--nav {
+      --pv-bottom: 2.6rem;
+    }
+  }
 }
 
 .preview-close {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  top: calc(0.75rem + env(safe-area-inset-top, 0px));
+  right: calc(0.75rem + env(safe-area-inset-right, 0px));
   width: 2.5rem;
   height: 2.5rem;
   border: none;
@@ -845,7 +882,7 @@
   align-items: center;
   justify-content: center;
   transition: background 0.2s;
-  z-index: 1001;
+  z-index: 3;
 
   &:hover {
     background: rgba(255, 255, 255, 0.35);
@@ -854,9 +891,9 @@
 
 .preview-save {
   position: absolute;
-  top: 1rem;
-  left: 1rem;
-  z-index: 1001;
+  top: calc(0.75rem + env(safe-area-inset-top, 0px));
+  left: calc(0.75rem + env(safe-area-inset-left, 0px));
+  z-index: 3;
   border: none;
   border-radius: 6px;
   padding: 0.55rem 0.9rem;
@@ -875,8 +912,8 @@
 .preview-nav {
   position: absolute;
   top: 50%;
-  z-index: 1002;
-  width: 3rem;
+  z-index: 4;
+  width: 3.25rem;
   height: 4.5rem;
   transform: translateY(-50%);
   border: none;
@@ -891,11 +928,11 @@
   justify-content: center;
 
   &--prev {
-    left: 0.75rem;
+    left: calc(0.85rem + env(safe-area-inset-left, 0px));
   }
 
   &--next {
-    right: 0.75rem;
+    right: calc(0.85rem + env(safe-area-inset-right, 0px));
   }
 
   &:hover:not(:disabled) {
@@ -907,8 +944,43 @@
     cursor: default;
   }
 
+  /* Écran étroit : flèches en bas, de part et d'autre du compteur, toujours visibles */
   @media (max-width: 768px) {
-    display: none;
+    top: auto;
+    bottom: calc(0.7rem + env(safe-area-inset-bottom, 0px));
+    transform: none;
+    width: 3.25rem;
+    height: 2.9rem;
+    font-size: 2rem;
+
+    &--prev {
+      left: calc(50% - 6.25rem);
+    }
+
+    &--next {
+      right: calc(50% - 6.25rem);
+    }
+  }
+}
+
+.preview-count {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: calc(0.8rem + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  min-width: 4.5rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  text-align: center;
+  pointer-events: none;
+
+  @media (max-width: 768px) {
+    bottom: calc(1.4rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -919,8 +991,8 @@
     display: block;
     position: absolute;
     top: 4.5rem;
-    bottom: 1.5rem;
-    z-index: 1002;
+    bottom: 4.5rem;
+    z-index: 2;
     width: 22vw;
   }
 
@@ -935,9 +1007,10 @@
 
 .preview-content {
   position: relative;
-  max-width: 70vw;
-  max-height: 70vh;
-  min-width: 200px;
+  box-sizing: border-box;
+  max-width: 100%;
+  max-height: 100%;
+  min-width: min(200px, 100%);
   min-height: 120px;
   cursor: default;
   background: #1a1a1a;
@@ -947,27 +1020,17 @@
   align-items: center;
   justify-content: center;
 
-  &--pdf {
-    max-width: 90vw;
-    max-height: 90vh;
-    width: 90vw;
-    height: 90vh;
-    min-height: 60vh;
-  }
-
-  &--docx {
-    max-width: 90vw;
-    max-height: 90vh;
-    width: 90vw;
-    height: 90vh;
-    min-height: 60vh;
+  /* Les documents prennent toute la zone utile */
+  &--pdf,
+  &--docx,
+  &--ai,
+  &--3d,
+  &--image {
+    width: 100%;
+    height: 100%;
   }
 
   &--image {
-    max-width: 96vw;
-    max-height: 82vh;
-    width: 96vw;
-    height: 82vh;
     overflow: hidden;
     touch-action: none;
     background: transparent;
@@ -1007,7 +1070,6 @@
 .preview-docx {
   width: 100%;
   height: 100%;
-  min-height: 70vh;
   overflow: auto;
   background: var(--color-secondary);
   padding: 1.5rem;
@@ -1027,7 +1089,6 @@
 .preview-pdf {
   width: 100%;
   height: 100%;
-  min-height: 80vh;
   border: none;
   border-radius: 4px;
   background: var(--color-secondary);
@@ -1038,7 +1099,6 @@
 .preview-ai-wrap {
   width: 100%;
   height: 100%;
-  min-height: 80vh;
   display: flex;
   flex-direction: column;
   background: var(--color-secondary);
@@ -1047,7 +1107,6 @@
 .preview-ai {
   width: 100%;
   height: 100%;
-  min-height: 70vh;
   border: none;
   background: var(--color-secondary);
   flex: 1;
@@ -1073,11 +1132,8 @@
 }
 
 .preview-3d {
-  width: 90vw;
-  height: 90vh;
-  min-height: 60vh;
-  max-width: 90vw;
-  max-height: 90vh;
+  width: 100%;
+  height: 100%;
 }
 
 
@@ -5347,5 +5403,119 @@
   &:has(input:checked) {
     border-color: var(--gv-accent);
     background: color-mix(in srgb, var(--gv-accent) 8%, var(--color-secondary));
+  }
+}
+
+/* =====================================================================
+ * Confirmations (suppression, duplication) : nouvelle DA
+ * (panneau gv-panel, titre en capitales, boutons gv-btn)
+ * ===================================================================== */
+.delete-confirm-overlay,
+.delete-confirm-overlay.duplicate-confirm {
+  z-index: 2000;
+  padding: 1rem;
+  background: rgba(13, 12, 11, 0.45);
+  backdrop-filter: blur(3px);
+}
+
+.delete-confirm-popup.gv-panel {
+  width: min(440px, 100%);
+  max-width: none;
+  padding: 1.3rem 1.4rem;
+  border-radius: var(--border-radius);
+  background: var(--gv-paper);
+  border: 1px solid var(--gv-line-strong);
+  box-shadow: none;
+  overflow: visible;
+
+  .delete-confirm-header {
+    padding: 0;
+    border: 0;
+    background: none;
+
+    h3 {
+      margin: 0 0 0.7rem;
+      font-family: var(--font-title);
+      font-size: 1.1rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--gv-ink);
+    }
+  }
+
+  .delete-confirm-body {
+    padding: 0;
+    background: none;
+
+    p {
+      margin: 0 0 0.4rem;
+      color: var(--gv-ink);
+      font-size: 0.92rem;
+    }
+
+    .delete-warning {
+      margin-top: 0.5rem;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: var(--gv-muted);
+      font-size: 0.82rem;
+    }
+  }
+
+  .delete-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.1rem;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+}
+
+/* Dépôt de fichiers sur la fenêtre : nouvelle DA (accent au lieu du bleu, panneau papier) */
+.fichiers-window-drop-overlay {
+  z-index: 2000;
+  background: rgba(13, 12, 11, 0.45);
+  backdrop-filter: blur(3px);
+
+  &__panel {
+    border: 1px dashed var(--gv-accent);
+    border-radius: var(--border-radius);
+    background: var(--gv-paper);
+    box-shadow: none;
+  }
+
+  &__title {
+    font-family: var(--font-title);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gv-ink);
+  }
+
+  &__hint {
+    color: var(--gv-muted);
+  }
+}
+
+/* Badge Payé / Non payé cliquable dans la barre du haut */
+.cmd-chip-paye {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+
+  &__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    border: 1.5px solid currentColor;
+  }
+
+  &.gv-chip--ok .cmd-chip-paye__dot {
+    background: currentColor;
   }
 }

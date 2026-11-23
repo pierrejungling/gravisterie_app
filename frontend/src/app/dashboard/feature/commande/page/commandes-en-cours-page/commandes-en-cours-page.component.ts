@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy, HostListener, inject, signal, computed, WritableSignal, ViewChild, ElementRef, ChangeDetectorRef, NgZone, DestroyRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, inject, signal, computed, effect, untracked, WritableSignal, ViewChild, ElementRef, ChangeDetectorRef, NgZone, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { concatMap, from, last } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HeaderComponent, CodeDecoComponent, EasterComponent } from '@shared';
+import { HeaderComponent, CodeDecoComponent, EasterComponent, TrajetAtelierService, formatDistance } from '@shared';
+import { nettoyerAdresse } from '../../util/adresse.util';
 import { ApiService, RealtimeService } from '@api';
 import { ApiURI } from '@api';
 import {
@@ -42,6 +43,8 @@ interface CarteVue {
   /** Statut d'où part la carte lors d'un glisser-déposer. */
   source: StatutCommande;
   finaux: FinalVue[];
+  /** Colonne Livraison : ville du client (ex. « Liège »). */
+  ville: string;
 }
 
 interface ColonneVue {
@@ -178,14 +181,20 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy {
     [StatutCommande.ANNULEE]: 'Annulée',
   };
 
-  /** Les six colonnes du tableau : cinq étapes, puis la clôture qui regroupe les quatre actions finales. */
+  /**
+   * Les sept colonnes du tableau : cinq étapes, la livraison, puis la clôture.
+   * Livraison et clôture se partagent les quatre actions finales (statuts_actifs) :
+   * une carte est en Livraison tant que la livraison reste à faire, puis passe en Clôture
+   * (web, facture, avis).
+   */
   private readonly colonnesDef: Array<{ cle: string; statut: StatutCommande; label: string; couleur: string; final: boolean }> = [
     { cle: 'attente', statut: StatutCommande.EN_ATTENTE_INFORMATION, label: 'Attente', couleur: 'var(--gv-muted)', final: false },
     { cle: 'modele', statut: StatutCommande.A_MODELLISER_PREPARER, label: 'Modélisation', couleur: 'var(--gv-warn)', final: false },
     { cle: 'graver', statut: StatutCommande.A_GRAVER, label: 'Gravure', couleur: 'var(--gv-accent)', final: false },
     { cle: 'finition', statut: StatutCommande.A_FINIR_LAVER_ASSEMBLER_PEINDRE, label: 'Finition', couleur: '#7a5c99', final: false },
     { cle: 'photo', statut: StatutCommande.A_PRENDRE_EN_PHOTO, label: 'Photo', couleur: 'var(--gv-ok)', final: false },
-    { cle: 'cloture', statut: StatutCommande.A_LIVRER, label: 'Clôture', couleur: '#3b6e8f', final: true },
+    { cle: 'livraison', statut: StatutCommande.A_LIVRER, label: 'Livraison', couleur: '#3b6e8f', final: true },
+    { cle: 'cloture', statut: StatutCommande.A_METTRE_EN_LIGNE, label: 'Clôture', couleur: '#8a8f94', final: true },
   ];
 
   /** Commandes encore ouvertes (ni terminées ni annulées). */
@@ -200,10 +209,10 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy {
   readonly nbSiteNew = computed(() => this.enCours().filter((c) => this.estSiteNew(c)).length);
   readonly filtreActif = computed(() => !!this.filtre().trim() || this.filtreAttend() || this.filtreUrgent());
 
-  /** Nombre de commandes par action de clôture restante. */
+  /** Nombre de commandes par action de clôture restante (web, facture, avis ; la livraison a sa colonne). */
   readonly compteFinaux = computed(() => {
-    const ouvertes = this.enCours();
-    return this.statutsFinaux.map((statut) => ({
+    const ouvertes = this.enCours().filter((c) => (c.statuts_actifs?.length ?? 0) > 0 && !c.statuts_actifs?.includes(StatutCommande.A_LIVRER));
+    return this.statutsFinaux.filter((s) => s !== StatutCommande.A_LIVRER).map((statut) => ({
       statut,
       label: this.statutLabels[statut],
       nb: ouvertes.filter((c) => c.statuts_actifs?.includes(statut)).length,
@@ -219,8 +228,10 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy {
     const final = this.filtreFinal();
 
     return this.colonnesDef.map((def) => {
-      const brutes = def.final
-        ? ouvertes.filter((c) => (c.statuts_actifs?.length ?? 0) > 0)
+      const brutes = def.cle === 'livraison'
+        ? ouvertes.filter((c) => !!c.statuts_actifs?.includes(StatutCommande.A_LIVRER))
+        : def.final
+        ? ouvertes.filter((c) => (c.statuts_actifs?.length ?? 0) > 0 && !c.statuts_actifs?.includes(StatutCommande.A_LIVRER))
         : ouvertes.filter(
             (c) => c.statut_commande === def.statut && (c.statuts_actifs?.length ?? 0) === 0,
           );
@@ -228,7 +239,7 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy {
       const cartes = triees
         .filter((c) => !attend || c.attente_reponse === false)
         .filter((c) => !urgent || this.getDeadlineStatus(c) !== null)
-        .filter((c) => !def.final || !final || !!c.statuts_actifs?.includes(final))
+        .filter((c) => def.cle !== 'cloture' || !final || !!c.statuts_actifs?.includes(final))
         .filter((c) => !texte || this.texteRecherche(c).includes(texte))
         .map((c) => this.versCarte(c, def.statut, def.final));
       return { ...def, total: brutes.length, cartes };
@@ -267,12 +278,43 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy {
       paye: !!c['payé'],
       siteNew: !final && this.estSiteNew(c),
       attend: c.attente_reponse === false,
-      source: final ? (actifs[0] ?? statut) : statut,
+      // Colonne Livraison : la carte part toujours de la livraison (l'ordre de statuts_actifs n'est pas garanti)
+      source: final ? (actifs.includes(StatutCommande.A_LIVRER) ? StatutCommande.A_LIVRER : (actifs[0] ?? statut)) : statut,
       finaux: final
         ? this.statutsFinaux.map((s) => ({ statut: s, label: this.statutLabels[s], fait: !actifs.includes(s) }))
         : [],
+      ville: final && actifs.includes(StatutCommande.A_LIVRER) ? this.ville(c) : '',
     };
   }
+
+  /** « 4000 Liège » → « Liège » ; sinon la dernière partie utile de l'adresse. */
+  private ville(c: Commande): string {
+    const parts = nettoyerAdresse(c.client?.adresse).split(',').map((p) => p.trim()).filter(Boolean);
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const m = parts[i].match(/^\d{4,5}\s+(.+)$/);
+      if (m) return m[1];
+    }
+    const utiles = parts.filter((p) => p.toLowerCase() !== 'belgique');
+    return utiles.length > 1 ? utiles[utiles.length - 1] : '';
+  }
+
+  // ---------- Livraison : km depuis l'atelier ----------
+  private readonly trajetAtelier = inject(TrajetAtelierService);
+  /** id_commande → « 42,4 km » (calculé pour les cartes de la colonne Livraison). */
+  readonly kmLivraison = signal<Record<string, string>>({});
+  private readonly kmEffet = effect(() => {
+    const col = this.colonnesVue().find((c) => c.cle === 'livraison');
+    const deja = untracked(() => this.kmLivraison());
+    (col?.cartes ?? []).forEach((carte) => {
+      const adresse = nettoyerAdresse(carte.c.client?.adresse);
+      if (!adresse || adresse.toLowerCase() === 'belgique' || carte.id in deja) return;
+      this.kmLivraison.update((m) => ({ ...m, [carte.id]: '' }));
+      this.trajetAtelier.trajetDepuisAtelier(adresse).then(
+        (t) => t && this.kmLivraison.update((m) => ({ ...m, [carte.id]: formatDistance(t.distanceM) })),
+        () => undefined,
+      );
+    });
+  });
 
   /** Texte court de l'échéance : « Retard 2 j », « Auj. », « J-3 · 12/11 », sinon la date de réception. */
   private echeance(c: Commande): { txt: string; ton: Ton } {
@@ -495,6 +537,11 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy {
   /** Étape précédente (bouton ← de la carte). */
   reculer(carte: CarteVue, colonne: ColonneVue): void {
     if (this.isStatutMoveInProgress) {
+      return;
+    }
+    if (colonne.cle === 'cloture') {
+      // Retour en Livraison : la livraison redevient à faire
+      this.basculerFinal(carte.c, StatutCommande.A_LIVRER);
       return;
     }
     if (colonne.final) {
@@ -833,9 +880,33 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy {
 
   isColumnDropHighlighted(statut: StatutCommande): boolean {
     if (this.isFinalStatut(statut)) {
+      if (this.estDepotLivree(statut) || this.estRetourLivraison(statut)) return this.dragOverStatut() === statut;
       return this.dragOverFinalsGroup() && this.isFinalsGroupDropValid();
     }
     return this.dragOverStatut() === statut && this.isDropTargetValid(statut);
+  }
+
+  /** Glisser une carte de Clôture vers Livraison = décocher la livraison (elle redevient à faire). */
+  private estRetourLivraison(targetStatut: StatutCommande, commande?: Commande, source?: StatutCommande | null): boolean {
+    const c = commande ?? this.commandes().find((x) => x.id_commande === this.dragCommandeId);
+    const src = source ?? this.dragSourceStatut;
+    return (
+      targetStatut === StatutCommande.A_LIVRER &&
+      !!src && this.isFinalStatut(src) &&
+      (c?.statuts_actifs?.length ?? 0) > 0 &&
+      !c?.statuts_actifs?.includes(StatutCommande.A_LIVRER)
+    );
+  }
+
+  /** Glisser une carte de Livraison vers Clôture = la marquer livrée. */
+  private estDepotLivree(targetStatut: StatutCommande, commande?: Commande, source?: StatutCommande | null): boolean {
+    const c = commande ?? this.commandes().find((x) => x.id_commande === this.dragCommandeId);
+    const src = source ?? this.dragSourceStatut;
+    return (
+      targetStatut === StatutCommande.A_METTRE_EN_LIGNE &&
+      src === StatutCommande.A_LIVRER &&
+      !!c?.statuts_actifs?.includes(StatutCommande.A_LIVRER)
+    );
   }
 
   isFinalsGroupDropValid(): boolean {
@@ -966,7 +1037,14 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy {
       const targetStatut = this.resolveStatutFromPoint(event.clientX, event.clientY);
       this.resetDragState(true);
 
-      if (targetStatut && !this.isStatutMoveInProgress) {
+      if (
+        targetStatut && !this.isStatutMoveInProgress &&
+        (this.estDepotLivree(targetStatut, pending.commande, pending.sourceStatut) ||
+          this.estRetourLivraison(targetStatut, pending.commande, pending.sourceStatut))
+      ) {
+        // Livraison → Clôture : livrée ; Clôture → Livraison : livraison à refaire
+        this.basculerFinal(pending.commande, StatutCommande.A_LIVRER);
+      } else if (targetStatut && !this.isStatutMoveInProgress) {
         const resolvedTarget = this.resolveDropTargetStatut(pending.sourceStatut, targetStatut);
         if (this.canDropCommande(pending.commande, pending.sourceStatut, resolvedTarget)) {
           this.moveCommandeToStatut(pending.commande, resolvedTarget);
@@ -1184,7 +1262,9 @@ export class CommandesEnCoursPageComponent implements OnInit, OnDestroy {
       if (this.isFinalStatut(statut)) {
         if (!this.dragOverFinalsGroup()) {
           this.dragOverFinalsGroup.set(true);
-          this.dragOverStatut.set(null);
+        }
+        if (this.dragOverStatut() !== statut) {
+          this.dragOverStatut.set(statut);
         }
         return;
       }

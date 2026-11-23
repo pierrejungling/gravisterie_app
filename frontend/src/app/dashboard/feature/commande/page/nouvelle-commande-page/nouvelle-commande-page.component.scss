@@ -3391,3 +3391,160 @@
     padding-bottom: calc(var(--gv-shell-bottom) + 64px + 1.5rem + env(safe-area-inset-bottom));
   }
 }
+
+/* =====================================================================
+ * Pop-up « Commande bien enregistrée » : nouvelle DA
+ * ===================================================================== */
+.success-popup-overlay {
+  z-index: 2000;
+  padding: 1rem;
+  background: rgba(13, 12, 11, 0.45);
+  backdrop-filter: blur(3px);
+}
+
+.success-popup.gv-panel {
+  width: min(460px, 100%);
+  max-width: none;
+  padding: 1.3rem 1.4rem;
+  border-radius: var(--border-radius);
+  background: var(--gv-paper);
+  border: 1px solid var(--gv-line-strong);
+  box-shadow: none;
+  overflow: visible;
+
+  .success-popup-header {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0;
+    border: 0;
+    background: none;
+
+    .success-icon {
+      width: 2rem;
+      height: 2rem;
+      flex: none;
+      border-radius: 999px;
+      background: var(--gv-ok);
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    h3 {
+      margin: 0;
+      font-family: var(--font-title);
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--gv-ink);
+    }
+  }
+
+  .success-popup-body {
+    padding: 0.7rem 0 0;
+    background: none;
+
+    p {
+      margin: 0;
+      color: var(--gv-muted);
+      font-size: 0.9rem;
+    }
+  }
+
+  .success-popup-actions {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1.1rem;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+}
+
+/* Dépôt de fichiers sur la fenêtre : nouvelle DA (accent au lieu du bleu, panneau papier) */
+.fichiers-window-drop-overlay {
+  z-index: 2000;
+  background: rgba(13, 12, 11, 0.45);
+  backdrop-filter: blur(3px);
+
+  &__panel {
+    border: 1px dashed var(--gv-accent);
+    border-radius: var(--border-radius);
+    background: var(--gv-paper);
+    box-shadow: none;
+  }
+
+  &__title {
+    font-family: var(--font-title);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--gv-ink);
+  }
+
+  &__hint {
+    color: var(--gv-muted);
+  }
+}
+
+/* Carte de l'adresse + trajet depuis l'atelier (affichés dès qu'il y a une ville) */
+.nc-carte {
+  width: 100%;
+  margin-top: 0.4rem;
+  aspect-ratio: 16 / 7;
+  min-height: 150px;
+  border: 1px solid var(--gv-line);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  background: var(--gv-panel);
+
+  &__frame {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  &__pied {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.3rem 0.8rem;
+
+    gv-trajet-atelier {
+      flex: 1 1 auto;
+    }
+  }
+
+  &__lien {
+    font-size: 0.78rem;
+    color: var(--gv-muted);
+    text-decoration: none;
+
+    &:hover {
+      color: var(--gv-accent);
+    }
+  }
+}
+
+:host-context([data-theme='dark']) .nc-carte__frame {
+  filter: invert(0.9) hue-rotate(180deg) brightness(0.95) contrast(0.9);
+}
+
+.nc-carte__toggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}

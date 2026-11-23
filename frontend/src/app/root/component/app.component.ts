@@ -4,11 +4,11 @@ import { Router, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthSessionService, RealtimeService } from '@api';
-import { Language, ThemeService } from '@shared';
+import { DialogueComponent, Language, ThemeService } from '@shared';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterOutlet],
+  imports: [CommonModule, RouterOutlet, DialogueComponent],
   templateUrl: './app.component.html',
   standalone: true,
   styleUrl: './app.component.scss'

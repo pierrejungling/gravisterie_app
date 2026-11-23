@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HeaderComponent } from '@shared';
+import { DialogueService, HeaderComponent } from '@shared';
 import { RealtimeService } from '@api';
 import { SiteStatutComponent } from '../../component/site-statut/site-statut.component';
 import { SiteApiService } from '../../service/site-api.service';
@@ -83,6 +83,7 @@ export class SiteDetailPageComponent implements OnInit, OnDestroy {
   private readonly realtime = inject(RealtimeService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly zone = inject(NgZone);
+  private readonly dialogue = inject(DialogueService);
 
   readonly item = signal<SiteItem | null>(null);
   readonly nouveau = signal(false);
@@ -204,8 +205,18 @@ export class SiteDetailPageComponent implements OnInit, OnDestroy {
     this.erreur.set('');
   }
 
-  annuler(): void {
-    if (this.unitesModifiees().length > 0 && !confirm('Annuler les modifications non enregistrées ?')) return;
+  async annuler(): Promise<void> {
+    if (this.unitesModifiees().length > 0) {
+      const ok = await this.dialogue.confirmer({
+        eyebrow: 'Modifications non enregistrées',
+        titre: 'Annuler les modifications ?',
+        message: 'Ce que tu as modifié sur cette fiche sera perdu.',
+        confirmer: 'Annuler les modifications',
+        annuler: 'Continuer à modifier',
+        danger: true,
+      });
+      if (!ok) return;
+    }
     this.refermerModification();
   }
 
@@ -278,9 +289,16 @@ export class SiteDetailPageComponent implements OnInit, OnDestroy {
   }
 
   /** Changement de page dans l'app (garde de route). */
-  peutQuitter(): boolean {
+  peutQuitter(): boolean | Promise<boolean> {
     if (this.unitesModifiees().length === 0) return true;
-    return window.confirm('Des modifications ne sont pas enregistrées sur cette fiche. Quitter sans enregistrer ?');
+    return this.dialogue.confirmer({
+      eyebrow: 'Modifications non enregistrées',
+      titre: 'Quitter sans enregistrer ?',
+      message: 'Des modifications ne sont pas enregistrées sur cette fiche.',
+      confirmer: 'Quitter sans enregistrer',
+      annuler: 'Rester sur la fiche',
+      danger: true,
+    });
   }
 
   // ---------- Modification faite ailleurs pendant que la page est ouverte ----------
@@ -493,13 +511,20 @@ export class SiteDetailPageComponent implements OnInit, OnDestroy {
     });
   }
 
-  supprimer(): void {
+  async supprimer(): Promise<void> {
     const i = this.item();
-    const nb = i?.enfants?.length ?? 0;
-    if (!i || !confirm(`Supprimer « ${i.nom} » du site${nb ? ` avec ses ${nb} modèles` : ''} ? Les photos seront aussi supprimées.`)) return;
+    if (!i) return;
+    const nb = i.enfants?.length ?? 0;
+    const ok = await this.dialogue.confirmer({
+      titre: `Supprimer « ${i.nom} » ?`,
+      message: `${nb ? `Cette collection et ses ${nb} modèles seront supprimés du site. ` : 'Cette fiche sera supprimée du site. '}Ses photos seront aussi supprimées. Cette action est irréversible.`,
+      confirmer: 'Supprimer',
+      danger: true,
+    });
+    if (!ok) return;
     this.isEditMode.set(false);
-    this.api.supprimer(i.id).subscribe((ok) => {
-      if (ok) this.router.navigate(i.parent_id ? ['/dashboard', 'site', i.parent_id] : ['/dashboard', 'site']);
+    this.api.supprimer(i.id).subscribe((suppr) => {
+      if (suppr) this.router.navigate(i.parent_id ? ['/dashboard', 'site', i.parent_id] : ['/dashboard', 'site']);
       else {
         this.isEditMode.set(this.nonEnregistre());
         this.erreur.set('Suppression impossible.');
@@ -520,10 +545,15 @@ export class SiteDetailPageComponent implements OnInit, OnDestroy {
     return !!i && !i.parent && ((i.enfants?.length ?? 0) > 0 || i.donnees?.['kind'] === 'collection');
   }
 
-  ajouterModele(): void {
+  async ajouterModele(): Promise<void> {
     const i = this.item();
     if (!i) return;
-    const nom = window.prompt(`Nom du nouveau modèle dans « ${i.nom} » :`)?.trim();
+    const nom = await this.dialogue.saisir({
+      eyebrow: 'Nouveau modèle',
+      titre: `Ajouter un modèle à « ${i.nom} »`,
+      champ: { label: 'Nom du modèle', placeholder: 'Ex. Anneaux épais' },
+      confirmer: 'Créer le modèle',
+    });
     if (!nom) return;
     this.api.creer({ parent_id: i.id, nom, donnees: { price: i.donnees?.['price'] ?? '', features: [], keywords: [], description: '' } }).subscribe((maj) => {
       if (maj) this.router.navigate(['/dashboard', 'site', maj.id]);
@@ -602,9 +632,16 @@ export class SiteDetailPageComponent implements OnInit, OnDestroy {
     });
   }
 
-  retirerPhoto(index: number): void {
+  async retirerPhoto(index: number): Promise<void> {
     const i = this.item();
-    if (!i || !confirm('Retirer cette photo ?')) return;
+    if (!i) return;
+    const ok = await this.dialogue.confirmer({
+      titre: 'Retirer cette photo ?',
+      message: 'La photo sera retirée de la fiche et supprimée du site.',
+      confirmer: 'Retirer',
+      danger: true,
+    });
+    if (!ok) return;
     this.api.definirImages(i.id, i.images.filter((_, n) => n !== index)).subscribe((maj) => maj && this.appliquerPhotos(maj));
   }
 

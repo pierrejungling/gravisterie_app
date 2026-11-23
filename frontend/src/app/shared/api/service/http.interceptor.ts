@@ -17,7 +17,9 @@ const baseURL: string = environment.apiURL;
 const publicRoute: string[] = [
   `${baseURL}`,
   `${baseURL}account/signin`,
-  `${baseURL}account/refresh`
+  `${baseURL}account/refresh`,
+  // Santé du serveur : demandée par les voyants de la page de connexion, donc sans être connecté.
+  `${baseURL}health`
 ];
 
 const setTokenInHeader: AddTokenHeaderFn = (req: HttpRequest<any>, token: string, clientId?: string): HttpRequest<any> => {

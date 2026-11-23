@@ -1,7 +1,7 @@
 import { Component, DestroyRef, NgZone, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { timeout } from 'rxjs/operators';
+import { defaultIfEmpty, timeout } from 'rxjs/operators';
 import { environment } from '../../../../environment/environment';
 
 type Etat = 'verif' | 'ok' | 'ko' | 'inconnu';
@@ -142,9 +142,17 @@ export class StatutServicesComponent implements OnInit {
     const debut = performance.now();
     this.http
       .get<any>(`${environment.apiURL}health`)
-      .pipe(timeout(8000))
+      // `defaultIfEmpty` : si la requête se termine sans réponse (bloquée en route), on le traite comme une panne
+      // au lieu de laisser les voyants en « vérification » indéfiniment.
+      .pipe(timeout(8000), defaultIfEmpty(null))
       .subscribe({
         next: (reponse) => {
+          if (reponse === null) {
+            this.back.set('ko');
+            this.ms.set(null);
+            this.base.set('inconnu');
+            return;
+          }
           // Selon les réponses, les données sont à la racine ou sous `data`.
           const sante = reponse?.data ?? reponse;
           this.back.set('ok');

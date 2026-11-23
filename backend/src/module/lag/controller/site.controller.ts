@@ -26,6 +26,12 @@ export class SiteController {
         return this.site.resume();
     }
 
+    @Get('statut')
+    @ApiOperation({ summary: 'État de la publication vers le site (à jour, en attente, échec) et heure de la dernière publication' })
+    statut() {
+        return this.site.statutPublication();
+    }
+
     @Get('categories')
     @ApiOperation({ summary: 'Catégories utilisées, avec le nombre de fiches' })
     categories() {

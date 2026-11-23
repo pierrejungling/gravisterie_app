@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HeaderComponent } from '@shared';
 import { RealtimeService } from '@api';
+import { SiteStatutComponent } from '../../component/site-statut/site-statut.component';
 import { SiteApiService } from '../../service/site-api.service';
 import { CATEGORIES_SITE, SiteItem, SiteType } from '../../model/site.interface';
 
@@ -69,7 +70,7 @@ const instantane = (f: Fiche): Record<string, string> => Object.fromEntries(UNIT
 @Component({
   selector: 'app-site-detail-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, HeaderComponent],
+  imports: [CommonModule, FormsModule, RouterLink, HeaderComponent, SiteStatutComponent],
   templateUrl: './site-detail-page.component.html',
   styleUrl: './site-detail-page.component.scss',
 })

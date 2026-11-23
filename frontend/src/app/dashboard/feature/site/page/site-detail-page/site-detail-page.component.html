@@ -50,6 +50,7 @@
           @if (item(); as i) { <span class="gv-chip">{{ i.images.length }} photo{{ i.images.length > 1 ? 's' : '' }}</span> }
           @if (item()?.enfants?.length; as n) { <span class="gv-chip">{{ n }} modèles</span> }
           @if (fiche().prix) { <span class="gv-chip gv-chip--accent">{{ fiche().prix }}</span> }
+          <app-site-statut class="sd-statut"></app-site-statut>
         </div>
 
         @if (erreur()) { <div class="gv-error sd-err">{{ erreur() }}</div> }

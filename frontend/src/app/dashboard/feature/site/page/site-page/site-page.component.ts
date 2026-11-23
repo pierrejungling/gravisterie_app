@@ -3,13 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HeaderComponent } from '@shared';
+import { SiteStatutComponent } from '../../component/site-statut/site-statut.component';
 import { SiteApiService } from '../../service/site-api.service';
 import { CATEGORIES_SITE, SiteItem, SiteType } from '../../model/site.interface';
 
 @Component({
   selector: 'app-site-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, HeaderComponent],
+  imports: [CommonModule, FormsModule, HeaderComponent, SiteStatutComponent],
   templateUrl: './site-page.component.html',
   styleUrl: './site-page.component.scss',
 })

@@ -6,7 +6,9 @@
 require('dotenv').config();
 const fs = require('fs'), os = require('os'), path = require('path');
 const { Client } = require('pg');
-const BUCKET = process.env.R2_SITE_BUCKET_NAME || 'gravisterie-site';
+const BUCKET = process.env.R2_SITE_BUCKET_NAME || 'gravisterie-site-dev';
+// Garde-fou : ce script publie les données de la base LOCALE, il ne doit jamais écrire dans le bucket de production.
+if (BUCKET === 'gravisterie-site' && !process.argv.includes('--production')) throw new Error('Bucket de production : refusé (utiliser un bucket de test)');
 const ACCOUNT = process.env.R2_ACCOUNT_ID || '58dcd0759eea7dc927400d57d4ba07b7';
 const BASE = process.env.R2_SITE_PUBLIC_URL.replace(/\/+$/, '');
 

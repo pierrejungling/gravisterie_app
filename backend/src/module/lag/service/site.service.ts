@@ -25,6 +25,9 @@ export function slugifier(texte: string): string {
 export class SiteService implements OnApplicationBootstrap {
     private readonly logger = new Logger(SiteService.name);
     private minuteur: NodeJS.Timeout | null = null;
+    private etat: 'a_jour' | 'en_attente' | 'en_cours' | 'echec' = 'a_jour';
+    private derniere: Date | null = null;
+    private erreurPublication: string | null = null;
 
     constructor(
         @InjectRepository(SiteItem) private readonly repo: Repository<SiteItem>,
@@ -247,6 +250,7 @@ export class SiteService implements OnApplicationBootstrap {
     programmerPublication() {
         if (!this.r2.estConfigure()) return;
         if (this.minuteur) clearTimeout(this.minuteur);
+        if (this.etat !== 'en_cours') this.etat = 'en_attente';
         this.minuteur = setTimeout(() => {
             this.minuteur = null;
             this.publier().catch((e) => this.logger.error(`Publication impossible : ${(e as Error).message}`));
@@ -255,6 +259,39 @@ export class SiteService implements OnApplicationBootstrap {
 
     /** Écrit products-data.js et projects-data.js (même forme qu'avant) dans le bucket public. */
     async publier(): Promise<{ produits: number; projets: number; urlProduits: string; urlProjets: string }> {
+        this.etat = 'en_cours';
+        try {
+            const r = await this.publierInterne();
+            this.derniere = new Date();
+            this.erreurPublication = null;
+            // Une modification arrivée pendant la publication a relancé le minuteur : on reste « en attente ».
+            this.etat = this.minuteur ? 'en_attente' : 'a_jour';
+            return r;
+        } catch (e) {
+            this.etat = 'echec';
+            this.erreurPublication = (e as Error).message;
+            throw e;
+        }
+    }
+
+    /** État de la publication vers le site : à jour, en attente, en cours ou en échec, avec l'heure de la dernière publication. */
+    async statutPublication(): Promise<{ etat: string; derniere: string | null; erreur: string | null; configure: boolean }> {
+        const configure = this.r2.estConfigure();
+        let derniere = this.derniere;
+        if (!derniere && configure) {
+            // Après un redémarrage de l'app : on lit la date du fichier publié sur R2.
+            try {
+                const r = await fetch(this.r2.url('data/products-data.js'), { method: 'HEAD' });
+                const d = r.headers.get('last-modified');
+                if (d) derniere = new Date(d);
+            } catch {
+                /* pas grave : l'heure reste inconnue */
+            }
+        }
+        return { etat: configure ? this.etat : 'non_configure', derniere: derniere?.toISOString() ?? null, erreur: this.erreurPublication, configure };
+    }
+
+    private async publierInterne(): Promise<{ produits: number; projets: number; urlProduits: string; urlProjets: string }> {
         const [produits, projets] = await Promise.all([this.construire('produit'), this.construire('projet')]);
         const entete = (nom: string) => `// Généré par l'app La Gravisterie. Ne pas modifier à la main.\nwindow.${nom} = `;
         await this.r2.put('data/products-data.js', entete('PRODUCTS_DATA') + JSON.stringify(produits) + ';\n', 'application/javascript; charset=utf-8', CACHE_DONNEES);

@@ -11,6 +11,7 @@
         <button type="button" [class.is-active]="vue() === 'produit'" (click)="changerVue('produit')">Produits</button>
         <button type="button" [class.is-active]="vue() === 'projet'" (click)="changerVue('projet')">Projets</button>
       </div>
+      <app-site-statut class="sp-statut"></app-site-statut>
       <button type="button" class="gv-btn" (click)="publier()" title="Régénérer les données du site (automatique après chaque modification)">Republier</button>
       <button type="button" class="gv-btn gv-btn--primary" (click)="ouvrirCreation()">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>{{ vue() === 'produit' ? 'Nouveau produit' : 'Nouveau projet' }}

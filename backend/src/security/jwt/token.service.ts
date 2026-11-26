@@ -19,7 +19,6 @@ export class TokenService {
 
         async getTokens(credential: Credential): Promise<Token> {
             try {
-                await this.repository.delete({credential});
                 const payload = {sub: credential.credential_id};
                 const tokenOptions: any = {
                     secret: configManager.getValue(ConfigKey.JWT_TOKEN_SECRET),
@@ -44,11 +43,9 @@ export class TokenService {
                     ['credential']
                 );
                 
-                const savedToken = await this.repository.findOneBy({token: token});
-                if (!savedToken) {
-                    throw new TokenGenerationException();
-                }
-                return savedToken;
+                // On renvoie directement le token généré : relire en base par valeur échouait
+                // quand deux rafraîchissements se croisaient (autre onglet, téléphone), ce qui déconnectait.
+                return tokenEntity;
             } catch (e) {
                 this.logger.error(e.message);
                 throw new TokenGenerationException();
@@ -56,17 +53,20 @@ export class TokenService {
         }
 
         async refresh(payload: RefreshTokenPayload): Promise<Token> {
+            let id: string;
             try {
-                const id = this.jwtService.verify(payload.refresh, {secret:
+                id = this.jwtService.verify(payload.refresh, {secret:
                 configManager.getValue(ConfigKey.JWT_REFRESH_TOKEN_SECRET)}).sub;
-                const credential = await this.credentialRepository.findOneBy({credential_id: id});
-                if (!credential) {
-                    throw new TokenExpiredException();
-                }
-                return await this.getTokens(credential);
             } catch (e) {
+                // Refresh token invalide ou expiré : seul cas où il faut vraiment se reconnecter (401).
                 this.logger.error(e.message);
                 throw new TokenExpiredException();
             }
+            // Toute autre erreur (base indisponible, redéploiement...) ne doit PAS déconnecter : elle remonte en 500.
+            const credential = await this.credentialRepository.findOneBy({credential_id: id});
+            if (!credential) {
+                throw new TokenExpiredException();
+            }
+            return await this.getTokens(credential);
         }
 }

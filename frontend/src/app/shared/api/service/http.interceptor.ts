@@ -46,9 +46,15 @@ const handleError: HttpInterceptorHandlerFn = (
             catchError((retryErr: HttpErrorResponse) => handleCommonError(retryErr))
           )
         ),
-        catchError(() => {
-          authSession.redirectToSignIn();
-          return EMPTY;
+        catchError((refreshErr: unknown) => {
+          // On ne se déconnecte que si le serveur refuse vraiment le refresh token (401/403) ou s'il manque.
+          // Réseau coupé, serveur en redéploiement (502/503/0) : on garde la session et on remonte l'erreur.
+          const status = refreshErr instanceof HttpErrorResponse ? refreshErr.status : -1;
+          if (status === 401 || status === 403 || status === -1) {
+            authSession.redirectToSignIn();
+            return EMPTY;
+          }
+          return handleCommonError(err);
         })
       );
     }

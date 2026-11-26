@@ -12,6 +12,11 @@ export class CreateOrderFromWebhookDto {
     @IsString()
     product_name?: string;
 
+    @ApiProperty({ required: false, description: 'Fiche produit en JSON (prix, matériau, dimensions, caractéristiques, lien...) envoyée par boutique.js' })
+    @IsOptional()
+    @IsString()
+    product_info?: string;
+
     @ApiProperty({ required: false })
     @IsOptional()
     @IsString()

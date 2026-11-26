@@ -118,7 +118,10 @@ export class CommandeService {
 
         // Description : produit, remarques, deadline, newsletter, CGV
         const descriptionParts: string[] = [];
-        if (dto.product_name?.trim()) {
+        const produit = this.parseProduitWebhook(dto.product_info);
+        if (produit) {
+            descriptionParts.push(this.formaterFicheProduitWebhook(produit, dto.product_name));
+        } else if (dto.product_name?.trim()) {
             descriptionParts.push(`Produit demandé : ${dto.product_name.trim()}`);
         }
         if (dto.message?.trim()) {
@@ -146,6 +149,21 @@ export class CommandeService {
             attente_reponse: false,
         };
 
+        // Fiche produit : dimensions, ligne de prix et prix de la commande quand le prix affiché est exact
+        if (produit) {
+            if (produit.dimensions) {
+                payload.dimensions_souhaitees = produit.dimensions.slice(0, 100);
+            }
+            const prix = this.prixExactDepuisTexte(produit.price);
+            if (prix !== null) {
+                const nomLigne = [produit.collection, produit.name].filter(Boolean).join(' - ').slice(0, 100);
+                payload.quantité = 1;
+                payload.prix_final = prix;
+                payload.prix_unitaire_final = prix;
+                payload.lignes_prix = [{ nom: nomLigne || null, quantite: 1, prix_unitaire: prix, prix_final: prix }];
+            }
+        }
+
         const commande = await this.ajouterCommande(payload);
 
         // ajouterCommande force CGV/newsletter à false : on applique les valeurs du formulaire
@@ -166,6 +184,66 @@ export class CommandeService {
         }
 
         return commandeSauvegardee;
+    }
+
+    /** Lit le JSON de la fiche produit envoyé par le site ; renvoie null s'il est absent ou invalide. */
+    private parseProduitWebhook(raw: string | undefined): Record<string, any> | null {
+        if (!raw?.trim()) {
+            return null;
+        }
+        try {
+            const parsed = JSON.parse(raw);
+            return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+        } catch {
+            return null;
+        }
+    }
+
+    /** « 25 € » ou « 25,50 € » donne un montant exact ; « À partir de 20 € » ou « 1€ HTVA / pièce » donnent null. */
+    private prixExactDepuisTexte(prix: unknown): number | null {
+        if (typeof prix !== 'string') {
+            return null;
+        }
+        const match = prix.trim().match(/^(\d+(?:[.,]\d+)?)\s*€$/);
+        return match ? Number(match[1].replace(',', '.')) : null;
+    }
+
+    /** Bloc de description lisible : produit, prix, matériau, dimensions, caractéristiques, lien de la fiche. */
+    private formaterFicheProduitWebhook(info: Record<string, any>, nomFormulaire?: string): string {
+        const texte = (v: unknown): string => (typeof v === 'string' ? v.trim() : '');
+        const liste = (v: unknown): string[] => (Array.isArray(v) ? v.map(texte).filter(Boolean) : []);
+        const lignes: string[] = [];
+
+        const nom = texte(info.name) || texte(nomFormulaire);
+        const collection = texte(info.collection);
+        lignes.push(`Produit demandé : ${nom}${collection ? ` (collection ${collection})` : ''}`);
+
+        if (texte(info.price)) lignes.push(`Prix affiché sur le site : ${texte(info.price)}`);
+        if (texte(info.price_lot)) lignes.push(`Prix par lot : ${texte(info.price_lot)}`);
+        if (texte(info.price_options)) lignes.push(`Options de prix : ${texte(info.price_options)}`);
+        liste(info.price_details).forEach((d) => lignes.push(`Détail du prix : ${d}`));
+        if (texte(info.material)) lignes.push(`Matériau : ${texte(info.material)}`);
+        if (texte(info.dimensions)) lignes.push(`Dimensions : ${texte(info.dimensions)}`);
+        const categories = liste(info.categories);
+        if (categories.length) lignes.push(`Catégories : ${categories.join(', ')}`);
+        if (typeof info.customizable === 'boolean') lignes.push(`Personnalisable : ${info.customizable ? 'Oui' : 'Non'}`);
+        if (info.in_stock === false) lignes.push('Stock : produit indiqué hors stock sur le site');
+
+        const caracteristiques = liste(info.features);
+        if (caracteristiques.length) lignes.push(`Caractéristiques :\n${caracteristiques.map((c) => `- ${c}`).join('\n')}`);
+        const details = liste(info.details);
+        if (details.length) lignes.push(`Détails :\n${details.map((c) => `- ${c}`).join('\n')}`);
+        const variantes = liste(info.variants);
+        if (variantes.length) lignes.push(`Variantes : ${variantes.join(' | ')}`);
+        const exemples = liste(info.examples);
+        if (exemples.length) lignes.push(`Exemples : ${exemples.join(' | ')}`);
+        const infos = liste(info.additional_info);
+        if (infos.length) lignes.push(`Infos complémentaires : ${infos.join(' | ')}`);
+
+        if (texte(info.description)) lignes.push(`Description du site : ${texte(info.description)}`);
+        if (texte(info.url)) lignes.push(`Fiche produit : ${texte(info.url)}`);
+        if (texte(info.image)) lignes.push(`Image : ${texte(info.image)}`);
+        return lignes.join('\n');
     }
 
     async ajouterCommande(payload: AjouterCommandePayload): Promise<Commande> {

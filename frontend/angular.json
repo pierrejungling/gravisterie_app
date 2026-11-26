@@ -76,6 +76,30 @@
                   "with": "src/environment/environment.dev.ts"
                 }
               ]
+            },
+            "demo": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "100kB",
+                  "maximumError": "150kB"
+                }
+              ],
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environment/environment.ts",
+                  "with": "src/environment/environment.demo.ts"
+                }
+              ],
+              "browser": "src/main.demo.ts",
+              "baseHref": "/demos/app/",
+              "outputPath": "dist/demo"
             }
           },
           "defaultConfiguration": "production"

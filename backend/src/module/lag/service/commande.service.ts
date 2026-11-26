@@ -183,7 +183,40 @@ export class CommandeService {
             }
         }
 
+        // Première image de la fiche produit, ajoutée aux pièces jointes (un échec ne bloque pas la commande)
+        const urlImage = typeof produit?.image === 'string' ? produit.image.trim() : '';
+        if (urlImage) {
+            try {
+                const image = await this.telechargerImageProduit(urlImage);
+                if (image) {
+                    await this.commandeFichierService.upload(commandeSauvegardee.id_commande, image);
+                }
+            } catch (error: any) {
+                this.logger.error(`Webhook : image produit non ajoutée pour la commande ${commandeSauvegardee.id_commande}: ${error?.message ?? error}`);
+            }
+        }
+
         return commandeSauvegardee;
+    }
+
+    /** Télécharge l'image du produit (uniquement depuis les sites de La Gravisterie, 10 Mo max). */
+    private async telechargerImageProduit(rawUrl: string): Promise<Express.Multer.File | null> {
+        const url = new URL(rawUrl);
+        const hotesAutorises = ['gravisterie.be', 'www.gravisterie.be', 'gravitag.be', 'www.gravitag.be'];
+        if (url.protocol !== 'https:' || !hotesAutorises.includes(url.hostname)) {
+            return null;
+        }
+        const reponse = await fetch(url, { signal: AbortSignal.timeout(10000) });
+        const mimetype = reponse.headers.get('content-type')?.split(';')[0].trim() ?? '';
+        if (!reponse.ok || !mimetype.startsWith('image/')) {
+            return null;
+        }
+        const buffer = Buffer.from(await reponse.arrayBuffer());
+        if (buffer.length === 0 || buffer.length > 10 * 1024 * 1024) {
+            return null;
+        }
+        const nom = decodeURIComponent(url.pathname.split('/').pop() || 'produit.jpg');
+        return { originalname: nom, mimetype, buffer, size: buffer.length } as Express.Multer.File;
     }
 
     /** Lit le JSON de la fiche produit envoyé par le site ; renvoie null s'il est absent ou invalide. */

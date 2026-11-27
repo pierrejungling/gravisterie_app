@@ -39,27 +39,28 @@ const handleError: HttpInterceptorHandlerFn = (
   clientId: string
 ): Observable<any> => {
   if (err.status === 401 || err.status === 403) {
-    if (!tokenService.token().isEmpty) {
-      return authSession.refreshAccessToken().pipe(
-        switchMap((newToken) =>
-          next(setTokenInHeader(req, newToken.token, clientId)).pipe(
-            catchError((retryErr: HttpErrorResponse) => handleCommonError(retryErr))
-          )
-        ),
-        catchError((refreshErr: unknown) => {
-          // On ne se déconnecte que si le serveur refuse vraiment le refresh token (401/403) ou s'il manque.
-          // Réseau coupé, serveur en redéploiement (502/503/0) : on garde la session et on remonte l'erreur.
-          const status = refreshErr instanceof HttpErrorResponse ? refreshErr.status : -1;
-          if (status === 401 || status === 403 || status === -1) {
-            authSession.redirectToSignIn();
-            return EMPTY;
-          }
-          return handleCommonError(err);
-        })
-      );
+    if (tokenService.token().isEmpty) {
+      authSession.redirectToSignIn(undefined, `${err.status} sans session`);
+      return EMPTY;
     }
-    authSession.redirectToSignIn();
-    return EMPTY;
+    return authSession.refreshAccessToken().pipe(
+      // Déconnexion uniquement si le REFRESH lui-même est refusé (401/403) ou impossible faute de refresh token.
+      // Réseau coupé ou serveur en redéploiement (0, 502, 503...) : on garde la session et on remonte l'erreur d'origine.
+      catchError((refreshErr: unknown) => {
+        const status = refreshErr instanceof HttpErrorResponse ? refreshErr.status : -1;
+        if (status === 401 || status === 403 || status === -1) {
+          authSession.redirectToSignIn(undefined, `refresh refusé (${status})`);
+          return EMPTY;
+        }
+        return handleCommonError(err);
+      }),
+      // Une erreur de la requête rejouée avec le nouveau token ne déconnecte jamais : elle remonte telle quelle.
+      switchMap((newToken) =>
+        next(setTokenInHeader(req, newToken.token, clientId)).pipe(
+          catchError((retryErr: HttpErrorResponse) => handleCommonError(retryErr))
+        )
+      )
+    );
   }
   return handleCommonError(err);
 };
@@ -84,6 +85,6 @@ export const HttpInterceptor: HttpInterceptorFn = (req: HttpRequest<any>, next: 
     );
   }
 
-  authSession.redirectToSignIn(router.url);
+  authSession.redirectToSignIn(router.url, 'aucun token au démarrage de la requête');
   return EMPTY;
 };

@@ -125,7 +125,14 @@ export class AuthSessionService {
     });
   }
 
-  redirectToSignIn(returnUrl?: string): void {
+  redirectToSignIn(returnUrl?: string, reason = 'inconnue'): void {
+    // Trace de la dernière déconnexion forcée (console + localStorage 'auth-last-logout') pour comprendre les cas rares.
+    console.warn('[auth] déconnexion forcée :', reason);
+    try {
+      localStorage.setItem('auth-last-logout', JSON.stringify({ at: new Date().toISOString(), reason }));
+    } catch {
+      // ignorer si localStorage indisponible
+    }
     this.saveReturnUrl(returnUrl);
     this.tokenService.setToken({ token: '', refreshToken: '', isEmpty: true });
     this.router.navigate([AppNode.REDIRECT_TO_PUBLIC]).then();
